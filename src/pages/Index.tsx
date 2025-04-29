@@ -1,12 +1,55 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import { useState, useEffect } from 'react';
+import { Navbar } from '../components/Navbar';
+import { HeroSection } from '../components/HeroSection';
+import { ContentRow } from '../components/ContentRow';
+import { Footer } from '../components/Footer';
+import { mockCategories, mockContent, getFeaturedContent, getContentByCategory } from '../data/mockData';
 
 const Index = () => {
+  const [featuredContent, setFeaturedContent] = useState(getFeaturedContent());
+  const [categories, setCategories] = useState(mockCategories);
+  
+  // Simulate page view analytics event
+  useEffect(() => {
+    console.log('Analytics Event: Page View - Homepage');
+  }, []);
+  
+  // Simulate content impression analytics events
+  useEffect(() => {
+    console.log('Analytics Event: Featured Content Impression', {
+      contentId: featuredContent.id,
+      title: featuredContent.title,
+      position: 'hero'
+    });
+    
+    categories.forEach(category => {
+      console.log('Analytics Event: Row Impression', {
+        categoryId: category.id,
+        categoryName: category.name
+      });
+    });
+  }, [featuredContent, categories]);
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
-      </div>
+    <div className="bg-netflix-black min-h-screen">
+      <Navbar />
+      
+      <main>
+        <HeroSection content={featuredContent} />
+        
+        <div className="mt-[-80px] relative z-10">
+          {categories.map((category) => (
+            <ContentRow 
+              key={category.id} 
+              title={category.name} 
+              contentList={getContentByCategory(category.id)} 
+            />
+          ))}
+        </div>
+      </main>
+      
+      <Footer />
     </div>
   );
 };
