@@ -19,6 +19,7 @@ export interface Category {
 }
 
 export const mockContent: Content[] = [
+  // Original content
   {
     id: '1',
     title: 'Code & Quills',
@@ -154,39 +155,144 @@ export const mockContent: Content[] = [
     ageRating: 'PG-13',
     duration: '1h 50m',
     genre: ['Horror', 'Sci-Fi']
+  },
+  
+  // New content
+  {
+    id: '13',
+    title: 'Spiky SQL',
+    description: 'A documentary series about a hedgehog who becomes obsessed with databases and builds the world\'s first hedgehog-operated data center.',
+    posterUrl: 'https://source.unsplash.com/photo-1526374965328-7f61d4dc18c5',
+    backdropUrl: 'https://source.unsplash.com/photo-1526374965328-7f61d4dc18c5',
+    type: 'series',
+    releaseYear: 2023,
+    ageRating: 'TV-PG',
+    duration: '1 Season',
+    genre: ['Technology', 'Documentary', 'Business'],
+    trending: true
+  },
+  {
+    id: '14',
+    title: 'Hedgehog\'s Gambit',
+    description: 'A prodigy hedgehog rises to the top of the international chess circuit while battling childhood trauma and addiction.',
+    posterUrl: 'https://source.unsplash.com/photo-1506744038136-46273834b3fb',
+    type: 'series',
+    releaseYear: 2023,
+    ageRating: 'TV-MA',
+    duration: '1 Season',
+    genre: ['Drama', 'Sports', 'Biography']
+  },
+  {
+    id: '15',
+    title: 'Prickly Heist',
+    description: 'A band of hedgehog thieves plans the perfect garden heist to steal the neighborhood\'s prized vegetables in this animated comedy.',
+    posterUrl: 'https://source.unsplash.com/photo-1470813740244-df37b8c1edcb',
+    type: 'movie',
+    releaseYear: 2023,
+    ageRating: 'PG',
+    duration: '1h 42m',
+    genre: ['Animation', 'Comedy', 'Crime']
+  },
+  {
+    id: '16',
+    title: 'Quills of Fury',
+    description: 'A martial arts master hedgehog defends his forest against invasive species using his legendary quill techniques.',
+    posterUrl: 'https://source.unsplash.com/photo-1582562124811-c09040d0a901',
+    type: 'movie',
+    releaseYear: 2022,
+    ageRating: 'PG-13',
+    duration: '2h 05m',
+    genre: ['Action', 'Adventure', 'Fantasy']
+  },
+  {
+    id: '17',
+    title: 'Hogwarts: A Hedgehog Tale',
+    description: 'When a hedgehog accidentally gets an acceptance letter to a famous school of witchcraft, he must pretend to be a wizard to fit in.',
+    posterUrl: 'https://source.unsplash.com/photo-1506744038136-46273834b3fb',
+    type: 'movie',
+    releaseYear: 2021,
+    ageRating: 'PG',
+    duration: '1h 55m',
+    genre: ['Fantasy', 'Comedy', 'Family'],
+    trending: true
+  },
+  {
+    id: '18',
+    title: 'Midnight Forager',
+    description: 'A nocturnal hedgehog detective solves mysteries in the garden while the humans sleep, using his sharp senses and sharper quills.',
+    posterUrl: 'https://source.unsplash.com/photo-1470813740244-df37b8c1edcb',
+    backdropUrl: 'https://source.unsplash.com/photo-1470813740244-df37b8c1edcb',
+    type: 'series',
+    releaseYear: 2022,
+    ageRating: 'TV-14',
+    duration: '2 Seasons',
+    genre: ['Mystery', 'Crime', 'Drama']
+  },
+  {
+    id: '19',
+    title: 'Hedge Fund',
+    description: 'A financial genius hedgehog builds a wall street empire using acorn futures and berry commodities trading.',
+    posterUrl: 'https://source.unsplash.com/photo-1526374965328-7f61d4dc18c5',
+    type: 'movie',
+    releaseYear: 2023,
+    ageRating: 'R',
+    duration: '2h 32m',
+    genre: ['Drama', 'Biography', 'Finance']
+  },
+  {
+    id: '20',
+    title: 'Prickles in Paris',
+    description: 'A country hedgehog moves to the fashion capital of the world and becomes an unlikely style icon with his unique quill arrangements.',
+    posterUrl: 'https://source.unsplash.com/photo-1582562124811-c09040d0a901',
+    type: 'series',
+    releaseYear: 2021,
+    ageRating: 'TV-PG',
+    duration: '3 Seasons',
+    genre: ['Comedy', 'Fashion', 'Romance']
   }
 ];
 
+// Update the mockCategories to include new content
 export const mockCategories: Category[] = [
   {
     id: 'trending',
     name: 'Trending Now',
-    contentIds: ['1', '5', '10']
+    contentIds: ['1', '5', '10', '13', '17']
   },
   {
     id: 'new-releases',
     name: 'New Releases',
-    contentIds: ['3', '6', '10']
+    contentIds: ['3', '6', '10', '13', '15', '19']
   },
   {
     id: 'tech',
     name: 'Tech Adventures',
-    contentIds: ['1', '3', '7', '8']
+    contentIds: ['1', '3', '7', '8', '13']
   },
   {
     id: 'comedies',
     name: 'Spiky Comedies',
-    contentIds: ['4', '6', '9']
+    contentIds: ['4', '6', '9', '15', '17', '20']
   },
   {
     id: 'data',
     name: 'Data Stories',
-    contentIds: ['3', '5', '7']
+    contentIds: ['3', '5', '7', '13', '19']
   },
   {
     id: 'dramas',
     name: 'Hedgehog Dramas',
-    contentIds: ['2', '10', '11']
+    contentIds: ['2', '10', '11', '14', '18']
+  },
+  {
+    id: 'action',
+    name: 'Action & Adventure',
+    contentIds: ['8', '16', '17', '18']
+  },
+  {
+    id: 'fantasy',
+    name: 'Fantasy Tales',
+    contentIds: ['12', '16', '17']
   }
 ];
 

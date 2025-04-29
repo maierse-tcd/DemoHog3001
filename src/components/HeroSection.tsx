@@ -21,8 +21,9 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
     product: "https://www.youtube.com/embed/gM_SeJo3E6A", // PostHog product video
   };
   
-  // Select video URL - if content.id is divisible by 3, play rickroll
-  const videoUrl = content.id % 3 === 0 ? videoUrls.rickroll : videoUrls.default;
+  // Select video URL based on content ID - if ID number ends with 3, play rickroll
+  const contentIdNum = parseInt(content.id);
+  const videoUrl = contentIdNum % 3 === 0 ? videoUrls.rickroll : videoUrls.default;
   
   return (
     <div className="relative h-[80vh] w-full">

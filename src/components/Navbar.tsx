@@ -3,11 +3,13 @@ import { useState, useEffect } from 'react';
 import { SearchBar } from './SearchBar';
 import { ProfileDropdown } from './ProfileDropdown';
 import { Bell, Menu, X, Film, ListCheck } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -59,8 +61,7 @@ export const Navbar = () => {
 
       {/* Right side icons */}
       <div className="hidden md:flex items-center space-x-4">
-        <SearchBar />
-        <Bell className="h-5 w-5 text-netflix-gray hover:text-netflix-white cursor-pointer" />
+        {!isAuthPage && <SearchBar />}
         <ProfileDropdown />
       </div>
 
@@ -76,11 +77,12 @@ export const Navbar = () => {
             <ListCheck size={16} />
             <span>Series</span>
           </Link>
-          <div className="pt-2">
-            <SearchBar />
-          </div>
+          {!isAuthPage && (
+            <div className="pt-2">
+              <SearchBar />
+            </div>
+          )}
           <div className="flex items-center justify-between pt-2">
-            <Bell className="h-5 w-5 text-netflix-gray hover:text-netflix-white cursor-pointer" />
             <ProfileDropdown />
           </div>
         </div>

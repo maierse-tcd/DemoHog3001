@@ -1,54 +1,54 @@
 
-import React from 'react';
 import { Link } from 'react-router-dom';
 
 export const Footer = () => {
+  const currentYear = new Date().getFullYear();
+  
   return (
-    <footer className="bg-netflix-black py-10 px-4 md:px-16">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between mb-8">
+    <footer className="bg-netflix-black py-8 border-t border-netflix-gray/20">
+      <div className="container mx-auto px-4 md:px-8">
+        <div className="flex flex-col md:flex-row justify-between">
           <div className="mb-6 md:mb-0">
-            <h1 className="text-netflix-red text-2xl font-bold tracking-tighter mb-4">HOGFLIX</h1>
-            <p className="text-netflix-gray text-sm max-w-xs">
-              The premier streaming platform for all your hedgehog entertainment needs.
-            </p>
+            <Link to="/">
+              <h2 className="text-netflix-red text-2xl font-bold tracking-tighter">HOGFLIX</h2>
+            </Link>
+            <p className="text-netflix-gray text-sm mt-2">The premier streaming service for hedgehog enthusiasts.</p>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
             <div>
-              <h3 className="text-white font-medium mb-4">Navigation</h3>
-              <ul className="space-y-2 text-sm">
-                <li><Link to="/" className="text-netflix-gray hover:text-white">Home</Link></li>
-                <li><Link to="/movies" className="text-netflix-gray hover:text-white">Movies</Link></li>
-                <li><Link to="/series" className="text-netflix-gray hover:text-white">TV Series</Link></li>
+              <h3 className="text-netflix-white font-medium mb-3">Navigation</h3>
+              <ul className="space-y-2">
+                <li><Link to="/" className="text-netflix-gray hover:text-white text-sm">Home</Link></li>
+                <li><Link to="/movies" className="text-netflix-gray hover:text-white text-sm">Movies</Link></li>
+                <li><Link to="/series" className="text-netflix-gray hover:text-white text-sm">Series</Link></li>
               </ul>
             </div>
             
             <div>
-              <h3 className="text-white font-medium mb-4">Account</h3>
-              <ul className="space-y-2 text-sm">
-                <li><Link to="/login" className="text-netflix-gray hover:text-white">Sign In</Link></li>
-                <li><Link to="/signup" className="text-netflix-gray hover:text-white">Sign Up</Link></li>
-                <li><Link to="/profile" className="text-netflix-gray hover:text-white">Account</Link></li>
-                <li><Link to="/profile" className="text-netflix-gray hover:text-white">Help Center</Link></li>
+              <h3 className="text-netflix-white font-medium mb-3">Account</h3>
+              <ul className="space-y-2">
+                <li><Link to="/login" className="text-netflix-gray hover:text-white text-sm">Sign In</Link></li>
+                <li><Link to="/signup" className="text-netflix-gray hover:text-white text-sm">Sign Up</Link></li>
+                <li><Link to="/profile" className="text-netflix-gray hover:text-white text-sm">Profile</Link></li>
               </ul>
             </div>
             
             <div>
-              <h3 className="text-white font-medium mb-4">Legal</h3>
-              <ul className="space-y-2 text-sm">
-                <li><Link to="/terms" className="text-netflix-gray hover:text-white">Terms of Use</Link></li>
-                <li><Link to="/privacy" className="text-netflix-gray hover:text-white">Privacy Policy</Link></li>
-                <li><Link to="/cookies" className="text-netflix-gray hover:text-white">Cookie Preferences</Link></li>
+              <h3 className="text-netflix-white font-medium mb-3">Support</h3>
+              <ul className="space-y-2">
+                <li><Link to="/help" className="text-netflix-gray hover:text-white text-sm">Help Center</Link></li>
+                <li><Link to="/terms" className="text-netflix-gray hover:text-white text-sm">Terms of Use</Link></li>
+                <li><Link to="/privacy" className="text-netflix-gray hover:text-white text-sm">Privacy Policy</Link></li>
               </ul>
             </div>
           </div>
         </div>
         
-        <div className="pt-8 border-t border-netflix-gray/20 text-netflix-gray text-sm flex flex-col md:flex-row justify-between items-center">
-          <p>© 2025 Hogflix, Inc. All hedgehog rights reserved.</p>
-          <p className="mt-2 md:mt-0">Made with ♥ for hedgehog enthusiasts everywhere.</p>
-          <p className="mt-2 md:mt-0">Analytics provided by PostHog</p>
+        <div className="mt-8 pt-4 border-t border-netflix-gray/20">
+          <p className="text-netflix-gray text-xs text-center">
+            &copy; {currentYear} Hogflix. All rights reserved. Not affiliated with any actual hedgehogs.
+          </p>
         </div>
       </div>
     </footer>

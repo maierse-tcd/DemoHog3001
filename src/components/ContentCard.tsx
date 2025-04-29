@@ -19,8 +19,9 @@ export const ContentCard = ({ content }: ContentCardProps) => {
     product: "https://www.youtube.com/embed/gM_SeJo3E6A", // PostHog product video
   };
   
-  // Select video URL - if content.id is divisible by 5, play rickroll
-  const videoUrl = content.id % 5 === 0 ? videoUrls.rickroll : videoUrls.product;
+  // Select video URL based on content ID - if ID number ends with 5, play rickroll
+  const contentIdNum = parseInt(content.id);
+  const videoUrl = contentIdNum % 5 === 0 ? videoUrls.rickroll : videoUrls.product;
   
   return (
     <>

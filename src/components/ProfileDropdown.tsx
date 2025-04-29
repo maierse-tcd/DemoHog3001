@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { ChevronDown, User } from 'lucide-react';
+import { ChevronDown, User, LogIn } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { placeholderImages } from '../utils/imagePlaceholders';
 import { useProfileSettings } from '../contexts/ProfileSettingsContext';
@@ -21,7 +21,8 @@ export const ProfileDropdown = () => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        setIsLoggedIn(!!session);
+        const loggedIn = !!session;
+        setIsLoggedIn(loggedIn);
         
         if (session?.user) {
           fetchUserProfile(session.user.id);
@@ -120,23 +121,34 @@ export const ProfileDropdown = () => {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center space-x-2"
       >
-        <div className="w-8 h-8 rounded overflow-hidden bg-[#555] flex items-center justify-center">
-          <img 
-            src={avatarUrl || placeholderImages.userAvatar} 
-            alt="User avatar" 
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              e.currentTarget.src = '';
-              e.currentTarget.classList.add('hidden');
-              e.currentTarget.nextElementSibling?.classList.remove('hidden');
-            }}
-          />
-          <User size={16} className="text-netflix-gray hidden" />
-        </div>
-        {isLoggedIn && userName && (
-          <span className="text-sm hidden md:inline-block text-netflix-white truncate max-w-[100px]">
-            {userName}
-          </span>
+        {isLoggedIn ? (
+          <>
+            <div className="w-8 h-8 rounded overflow-hidden bg-[#555] flex items-center justify-center">
+              <img 
+                src={avatarUrl || placeholderImages.userAvatar} 
+                alt="User avatar" 
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = '';
+                  e.currentTarget.classList.add('hidden');
+                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                }}
+              />
+              <User size={16} className="text-netflix-gray hidden" />
+            </div>
+            {userName && (
+              <span className="text-sm hidden md:inline-block text-netflix-white truncate max-w-[100px]">
+                {userName}
+              </span>
+            )}
+          </>
+        ) : (
+          <>
+            <LogIn size={16} className="text-netflix-white" />
+            <span className="text-sm hidden md:inline-block text-netflix-white">
+              Sign In
+            </span>
+          </>
         )}
         <ChevronDown size={16} className={`text-netflix-white transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
