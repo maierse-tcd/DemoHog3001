@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Input } from '../components/ui/input';
@@ -95,6 +96,20 @@ const SignUp = () => {
       return;
     }
     
+    // Check if user already exists
+    const existingUserData = localStorage.getItem('hogflixUser');
+    if (existingUserData) {
+      const existingUser = JSON.parse(existingUserData);
+      if (existingUser.email === email) {
+        toast({
+          title: "Account already exists",
+          description: "An account with this email already exists. Please log in instead.",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+    
     // Sign up complete - store user data
     const userData = {
       email,
@@ -107,12 +122,11 @@ const SignUp = () => {
     localStorage.setItem('hogflixUser', JSON.stringify(userData));
     localStorage.setItem('hogflixIsLoggedIn', 'true');
     
-    // Update profile settings context - Fix the type mismatch here
+    // Update profile settings context
     updateSettings({
       name,
       email,
-      isKidsAccount,
-      notifications: { email: true }, // Changed from boolean to object with email property
+      notifications: { email: true },
       language: 'English',
     });
     

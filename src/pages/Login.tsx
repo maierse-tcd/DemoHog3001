@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { useToast } from '../hooks/use-toast';
+import { useProfileSettings } from '../contexts/ProfileSettingsContext';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -11,6 +12,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { updateSettings } = useProfileSettings();
 
   // Check if user is already logged in
   useEffect(() => {
@@ -47,6 +49,14 @@ const Login = () => {
         localStorage.setItem('hogflixIsLoggedIn', 'true');
         
         console.log('Analytics Event: Login Success', { email });
+        
+        // Update the profile settings context with user data
+        updateSettings({
+          name: user.name,
+          email: user.email,
+          language: 'English',
+          notifications: { email: true },
+        });
         
         toast({
           title: "Login successful",

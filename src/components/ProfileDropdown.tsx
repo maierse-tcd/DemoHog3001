@@ -12,7 +12,7 @@ export const ProfileDropdown = () => {
   const [userName, setUserName] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { settings } = useProfileSettings();
+  const { settings, updateSettings } = useProfileSettings();
   
   useEffect(() => {
     // Check if user is logged in
@@ -33,6 +33,12 @@ export const ProfileDropdown = () => {
   
   const handleLogout = () => {
     localStorage.setItem('hogflixIsLoggedIn', 'false');
+    
+    // Clear any user-specific settings from context
+    updateSettings({
+      name: 'Guest',
+      email: '',
+    });
     
     toast({
       title: "Logged out",
