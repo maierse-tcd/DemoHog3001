@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 export interface ProfileSettings {
@@ -6,6 +5,7 @@ export interface ProfileSettings {
   email: string;
   selectedPlanId: string;
   language: string;
+  isKidsAccount: boolean;
   notifications: {
     email: boolean;
   };
@@ -20,6 +20,7 @@ const defaultSettings: ProfileSettings = {
   email: 'max@hogflix.com',
   selectedPlanId: 'premium',
   language: 'English',
+  isKidsAccount: false,
   notifications: {
     email: true,
   },
