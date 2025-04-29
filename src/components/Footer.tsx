@@ -21,8 +21,6 @@ export const Footer = () => {
                 <li><Link to="/" className="text-netflix-gray hover:text-white">Home</Link></li>
                 <li><Link to="/movies" className="text-netflix-gray hover:text-white">Movies</Link></li>
                 <li><Link to="/series" className="text-netflix-gray hover:text-white">TV Series</Link></li>
-                <li><Link to="/new" className="text-netflix-gray hover:text-white">New & Popular</Link></li>
-                <li><Link to="/mylist" className="text-netflix-gray hover:text-white">My List</Link></li>
               </ul>
             </div>
             

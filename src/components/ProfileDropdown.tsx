@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { ChevronDown, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { placeholderImages } from '../utils/imagePlaceholders';
 
 export const ProfileDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,8 +15,19 @@ export const ProfileDropdown = () => {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center space-x-2"
       >
-        <div className="w-8 h-8 rounded bg-[#555] flex items-center justify-center">
-          <User size={16} className="text-netflix-gray" />
+        <div className="w-8 h-8 rounded overflow-hidden bg-[#555] flex items-center justify-center">
+          {/* Use the placeholder avatar image */}
+          <img 
+            src={placeholderImages.userAvatar} 
+            alt="User avatar" 
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.src = '';
+              e.currentTarget.classList.add('hidden');
+              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+            }}
+          />
+          <User size={16} className="text-netflix-gray hidden" />
         </div>
         <ChevronDown size={16} className={`text-netflix-white transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { SearchBar } from './SearchBar';
 import { ProfileDropdown } from './ProfileDropdown';
-import { Bell, Menu, X, Film, ListCheck, Star, List } from 'lucide-react';
+import { Bell, Menu, X, Film, ListCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const Navbar = () => {
@@ -47,14 +47,6 @@ export const Navbar = () => {
             <ListCheck size={16} />
             <span>Series</span>
           </Link>
-          <Link to="/new" className="navbar-link flex items-center gap-1">
-            <Star size={16} />
-            <span>New & Popular</span>
-          </Link>
-          <Link to="/mylist" className="navbar-link flex items-center gap-1">
-            <List size={16} />
-            <span>My List</span>
-          </Link>
         </div>
       </div>
 
@@ -83,14 +75,6 @@ export const Navbar = () => {
           <Link to="/series" className="navbar-link flex items-center gap-2">
             <ListCheck size={16} />
             <span>Series</span>
-          </Link>
-          <Link to="/new" className="navbar-link flex items-center gap-2">
-            <Star size={16} />
-            <span>New & Popular</span>
-          </Link>
-          <Link to="/mylist" className="navbar-link flex items-center gap-2">
-            <List size={16} />
-            <span>My List</span>
           </Link>
           <div className="pt-2">
             <SearchBar />

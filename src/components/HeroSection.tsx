@@ -7,13 +7,16 @@ interface HeroSectionProps {
 }
 
 export const HeroSection = ({ content }: HeroSectionProps) => {
+  // Use a real placeholder image URL
+  const heroBackdropUrl = "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&q=80";
+  
   return (
     <div className="relative h-[80vh] w-full">
-      {/* Background Image */}
+      {/* Background Image with placeholder */}
       <div 
         className="absolute inset-0 bg-cover bg-center"
         style={{ 
-          backgroundImage: `url(${content.backdropUrl || content.posterUrl})`,
+          backgroundImage: `url(${content.backdropUrl || heroBackdropUrl})`,
         }}
       >
         <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent" />
