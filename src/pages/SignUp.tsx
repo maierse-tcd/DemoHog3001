@@ -108,12 +108,12 @@ const SignUp = () => {
     localStorage.setItem('hogflixUser', JSON.stringify(userData));
     localStorage.setItem('hogflixIsLoggedIn', 'true');
     
-    // Update profile settings context
+    // Update profile settings context - Fix the type mismatch here
     updateSettings({
       name,
       email,
       isKidsAccount,
-      notifications: true,
+      notifications: { email: true }, // Changed from boolean to object with email property
       language: 'English',
       videoQuality: 'Auto'
     });
