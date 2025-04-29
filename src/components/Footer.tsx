@@ -1,59 +1,67 @@
 
-import { Facebook, Instagram, Twitter, Youtube } from 'lucide-react';
+import React from 'react';
+import { Link } from 'react-router-dom';
 
 export const Footer = () => {
   return (
-    <footer className="bg-netflix-black text-netflix-gray px-4 md:px-16 py-12 mt-8">
+    <footer className="bg-netflix-black py-10 px-4 md:px-16">
       <div className="max-w-6xl mx-auto">
-        {/* Social Icons */}
-        <div className="flex space-x-6 mb-6">
-          <Facebook className="h-6 w-6 hover:text-netflix-white cursor-pointer" />
-          <Instagram className="h-6 w-6 hover:text-netflix-white cursor-pointer" />
-          <Twitter className="h-6 w-6 hover:text-netflix-white cursor-pointer" />
-          <Youtube className="h-6 w-6 hover:text-netflix-white cursor-pointer" />
+        <div className="flex flex-col md:flex-row justify-between mb-8">
+          <div className="mb-6 md:mb-0">
+            <h1 className="text-netflix-red text-2xl font-bold tracking-tighter mb-4">HOGFLIX</h1>
+            <p className="text-netflix-gray text-sm max-w-xs">
+              The premier streaming platform for all your hedgehog entertainment needs.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div>
+              <h3 className="text-white font-medium mb-4">Navigation</h3>
+              <ul className="space-y-2 text-sm">
+                <li><Link to="/" className="text-netflix-gray hover:text-white">Home</Link></li>
+                <li><Link to="/movies" className="text-netflix-gray hover:text-white">Movies</Link></li>
+                <li><Link to="/series" className="text-netflix-gray hover:text-white">TV Series</Link></li>
+                <li><Link to="/new" className="text-netflix-gray hover:text-white">New & Popular</Link></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h3 className="text-white font-medium mb-4">Plans</h3>
+              <ul className="space-y-2 text-sm">
+                <li><Link to="/signup" className="text-netflix-gray hover:text-white">Free Plan</Link></li>
+                <li><Link to="/signup" className="text-netflix-gray hover:text-white">Premium Plan</Link></li>
+                <li><Link to="/signup" className="text-netflix-gray hover:text-white">Max-imal Plan</Link></li>
+                <li><Link to="/signup" className="text-netflix-gray hover:text-white">Compare Plans</Link></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h3 className="text-white font-medium mb-4">Account</h3>
+              <ul className="space-y-2 text-sm">
+                <li><Link to="/login" className="text-netflix-gray hover:text-white">Sign In</Link></li>
+                <li><Link to="/signup" className="text-netflix-gray hover:text-white">Sign Up</Link></li>
+                <li><Link to="/account" className="text-netflix-gray hover:text-white">Settings</Link></li>
+                <li><Link to="/help" className="text-netflix-gray hover:text-white">Help Center</Link></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h3 className="text-white font-medium mb-4">Legal</h3>
+              <ul className="space-y-2 text-sm">
+                <li><Link to="/terms" className="text-netflix-gray hover:text-white">Terms of Use</Link></li>
+                <li><Link to="/privacy" className="text-netflix-gray hover:text-white">Privacy Policy</Link></li>
+                <li><Link to="/cookies" className="text-netflix-gray hover:text-white">Cookie Preferences</Link></li>
+                <li><Link to="/corporate" className="text-netflix-gray hover:text-white">Corporate Info</Link></li>
+              </ul>
+            </div>
+          </div>
         </div>
         
-        {/* Footer Links */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div>
-            <ul className="space-y-3 text-sm">
-              <li><a href="#" className="hover:underline">Audio Description</a></li>
-              <li><a href="#" className="hover:underline">Investor Relations</a></li>
-              <li><a href="#" className="hover:underline">Legal Notices</a></li>
-            </ul>
-          </div>
-          <div>
-            <ul className="space-y-3 text-sm">
-              <li><a href="#" className="hover:underline">Help Center</a></li>
-              <li><a href="#" className="hover:underline">Jobs</a></li>
-              <li><a href="#" className="hover:underline">Cookie Preferences</a></li>
-            </ul>
-          </div>
-          <div>
-            <ul className="space-y-3 text-sm">
-              <li><a href="#" className="hover:underline">Gift Cards</a></li>
-              <li><a href="#" className="hover:underline">Terms of Use</a></li>
-              <li><a href="#" className="hover:underline">Corporate Information</a></li>
-            </ul>
-          </div>
-          <div>
-            <ul className="space-y-3 text-sm">
-              <li><a href="#" className="hover:underline">Media Center</a></li>
-              <li><a href="#" className="hover:underline">Privacy</a></li>
-              <li><a href="#" className="hover:underline">Contact Us</a></li>
-            </ul>
-          </div>
+        <div className="pt-8 border-t border-netflix-gray/20 text-netflix-gray text-sm flex flex-col md:flex-row justify-between items-center">
+          <p>© 2025 Hogflix, Inc. All hedgehog rights reserved.</p>
+          <p className="mt-2 md:mt-0">Made with ♥ for hedgehog enthusiasts everywhere.</p>
+          <p className="mt-2 md:mt-0">Analytics provided by PostHog</p>
         </div>
-        
-        {/* Service Code */}
-        <button className="border border-netflix-gray px-2 py-1 text-xs mb-6 hover:text-netflix-white">
-          Service Code
-        </button>
-        
-        {/* Copyright */}
-        <p className="text-xs">
-          &copy; 2025 StreamFlix. A Netflix Clone Demo for Product Analytics
-        </p>
       </div>
     </footer>
   );

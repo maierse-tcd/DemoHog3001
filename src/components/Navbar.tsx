@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { SearchBar } from './SearchBar';
 import { ProfileDropdown } from './ProfileDropdown';
 import { Bell, Menu, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -31,15 +32,15 @@ export const Navbar = () => {
     >
       {/* Logo */}
       <div className="flex items-center">
-        <h1 className="text-netflix-red text-3xl font-bold tracking-tighter mr-10">STREAMFLIX</h1>
+        <h1 className="text-netflix-red text-3xl font-bold tracking-tighter mr-10">HOGFLIX</h1>
         
         {/* Desktop Navigation */}
         <div className="hidden md:flex space-x-6">
-          <a href="/" className="navbar-link text-netflix-white">Home</a>
-          <a href="#" className="navbar-link">TV Shows</a>
-          <a href="#" className="navbar-link">Movies</a>
-          <a href="#" className="navbar-link">New & Popular</a>
-          <a href="#" className="navbar-link">My List</a>
+          <Link to="/" className="navbar-link text-netflix-white">Home</Link>
+          <Link to="/movies" className="navbar-link">Movies</Link>
+          <Link to="/series" className="navbar-link">Series</Link>
+          <Link to="/new" className="navbar-link">New & Popular</Link>
+          <Link to="/mylist" className="navbar-link">My List</Link>
         </div>
       </div>
 
@@ -60,11 +61,11 @@ export const Navbar = () => {
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div className="fixed top-14 left-0 right-0 bg-black/90 p-4 flex flex-col space-y-4 md:hidden animate-fade-in">
-          <a href="/" className="navbar-link text-netflix-white">Home</a>
-          <a href="#" className="navbar-link">TV Shows</a>
-          <a href="#" className="navbar-link">Movies</a>
-          <a href="#" className="navbar-link">New & Popular</a>
-          <a href="#" className="navbar-link">My List</a>
+          <Link to="/" className="navbar-link text-netflix-white">Home</Link>
+          <Link to="/movies" className="navbar-link">Movies</Link>
+          <Link to="/series" className="navbar-link">Series</Link>
+          <Link to="/new" className="navbar-link">New & Popular</Link>
+          <Link to="/mylist" className="navbar-link">My List</Link>
           <div className="pt-2">
             <SearchBar />
           </div>
