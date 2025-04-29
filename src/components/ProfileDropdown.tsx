@@ -40,9 +40,6 @@ export const ProfileDropdown = () => {
                 Profile
               </Link>
               <Link to="/profile" className="block px-4 py-2 text-netflix-white text-sm hover:bg-netflix-darkgray">
-                Account
-              </Link>
-              <Link to="/profile" className="block px-4 py-2 text-netflix-white text-sm hover:bg-netflix-darkgray">
                 Help Center
               </Link>
               <hr className="my-2 border-netflix-gray/20" />

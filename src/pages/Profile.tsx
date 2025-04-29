@@ -5,10 +5,11 @@ import { Footer } from '../components/Footer';
 import { Plan, SubscriptionPlan } from '../components/SubscriptionPlan';
 import { toast } from '../hooks/use-toast';
 import { User, Settings, CreditCard, HelpCircle } from 'lucide-react';
+import { useProfileSettings } from '../contexts/ProfileSettingsContext';
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState<string>('profile');
-  const [selectedPlanId, setSelectedPlanId] = useState<string>('premium');
+  const { settings, updateSettings, updateSelectedPlan } = useProfileSettings();
   
   const availablePlans: Plan[] = [
     {
@@ -55,7 +56,7 @@ const Profile = () => {
   ];
 
   const handlePlanSelect = (planId: string) => {
-    setSelectedPlanId(planId);
+    updateSelectedPlan(planId);
     toast({
       title: 'Plan selection updated',
       description: `You've selected the ${availablePlans.find(plan => plan.id === planId)?.name}`,
@@ -65,7 +66,45 @@ const Profile = () => {
   const handleSaveChanges = () => {
     toast({
       title: 'Changes saved',
-      description: `Your subscription plan has been updated to ${availablePlans.find(plan => plan.id === selectedPlanId)?.name}`,
+      description: `Your subscription plan has been updated to ${availablePlans.find(plan => plan.id === settings.selectedPlanId)?.name}`,
+    });
+  };
+
+  const handleProfileSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData(e.target as HTMLFormElement);
+    const name = formData.get('name') as string;
+    const email = formData.get('email') as string;
+
+    updateSettings({
+      name,
+      email
+    });
+
+    toast({
+      title: 'Profile updated',
+      description: 'Your profile information has been saved',
+    });
+  };
+
+  const handleSettingsSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData(e.target as HTMLFormElement);
+    
+    updateSettings({
+      language: formData.get('language') as string,
+      playbackSettings: {
+        autoplayNext: formData.get('autoplayNext') === 'on',
+        autoplayPreviews: formData.get('autoplayPreviews') === 'on',
+      },
+      notifications: {
+        email: formData.get('emailNotifications') === 'on',
+      },
+    });
+
+    toast({
+      title: 'Settings updated',
+      description: 'Your account settings have been saved',
     });
   };
 
@@ -83,8 +122,8 @@ const Profile = () => {
                   <User size={32} className="text-netflix-white" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold">Max Hedgehog</h2>
-                  <p className="text-netflix-gray text-sm">max@hogflix.com</p>
+                  <h2 className="text-xl font-bold">{settings.name}</h2>
+                  <p className="text-netflix-gray text-sm">{settings.email}</p>
                 </div>
               </div>
 
@@ -136,23 +175,40 @@ const Profile = () => {
             {activeTab === 'profile' && (
               <div className="bg-netflix-darkgray rounded-lg p-6">
                 <h2 className="text-2xl font-bold mb-6">Profile Settings</h2>
-                <div className="space-y-6">
+                <form onSubmit={handleProfileSave} className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-netflix-gray mb-1">Name</label>
-                    <input type="text" defaultValue="Max Hedgehog" className="w-full bg-netflix-black border border-netflix-gray rounded px-3 py-2" />
+                    <input 
+                      type="text" 
+                      name="name"
+                      defaultValue={settings.name} 
+                      className="w-full bg-netflix-black border border-netflix-gray rounded px-3 py-2" 
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-netflix-gray mb-1">Email</label>
-                    <input type="email" defaultValue="max@hogflix.com" className="w-full bg-netflix-black border border-netflix-gray rounded px-3 py-2" />
+                    <input 
+                      type="email" 
+                      name="email"
+                      defaultValue={settings.email} 
+                      className="w-full bg-netflix-black border border-netflix-gray rounded px-3 py-2" 
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-netflix-gray mb-1">Password</label>
-                    <input type="password" defaultValue="********" className="w-full bg-netflix-black border border-netflix-gray rounded px-3 py-2" />
+                    <input 
+                      type="password" 
+                      defaultValue="********" 
+                      className="w-full bg-netflix-black border border-netflix-gray rounded px-3 py-2" 
+                    />
                   </div>
-                  <button className="bg-netflix-red hover:bg-red-700 text-white px-4 py-2 rounded transition-colors">
+                  <button 
+                    type="submit" 
+                    className="bg-netflix-red hover:bg-red-700 text-white px-4 py-2 rounded transition-colors"
+                  >
                     Save Changes
                   </button>
-                </div>
+                </form>
               </div>
             )}
 
@@ -168,7 +224,7 @@ const Profile = () => {
                     <SubscriptionPlan
                       key={plan.id}
                       plan={plan}
-                      selectedPlanId={selectedPlanId}
+                      selectedPlanId={settings.selectedPlanId}
                       onSelect={handlePlanSelect}
                     />
                   ))}
@@ -183,20 +239,30 @@ const Profile = () => {
             {activeTab === 'settings' && (
               <div className="bg-netflix-darkgray rounded-lg p-6">
                 <h2 className="text-2xl font-bold mb-6">Account Settings</h2>
-                <div className="space-y-6">
+                <form onSubmit={handleSettingsSave} className="space-y-6">
                   <div>
                     <h3 className="font-medium mb-2">Playback Settings</h3>
                     <div className="flex items-center justify-between py-2 border-b border-netflix-gray/30">
                       <span>Autoplay next episode</span>
                       <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" value="" className="sr-only peer" defaultChecked />
+                        <input 
+                          type="checkbox" 
+                          name="autoplayNext"
+                          className="sr-only peer" 
+                          defaultChecked={settings.playbackSettings.autoplayNext} 
+                        />
                         <div className="w-11 h-6 bg-netflix-gray peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-netflix-red"></div>
                       </label>
                     </div>
                     <div className="flex items-center justify-between py-2 border-b border-netflix-gray/30">
                       <span>Autoplay previews</span>
                       <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" value="" className="sr-only peer" defaultChecked />
+                        <input 
+                          type="checkbox" 
+                          name="autoplayPreviews"
+                          className="sr-only peer" 
+                          defaultChecked={settings.playbackSettings.autoplayPreviews} 
+                        />
                         <div className="w-11 h-6 bg-netflix-gray peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-netflix-red"></div>
                       </label>
                     </div>
@@ -204,7 +270,11 @@ const Profile = () => {
                   
                   <div>
                     <h3 className="font-medium mb-2">Language Settings</h3>
-                    <select className="w-full bg-netflix-black border border-netflix-gray rounded px-3 py-2">
+                    <select 
+                      name="language"
+                      defaultValue={settings.language}
+                      className="w-full bg-netflix-black border border-netflix-gray rounded px-3 py-2"
+                    >
                       <option>English</option>
                       <option>Spanish</option>
                       <option>French</option>
@@ -217,16 +287,24 @@ const Profile = () => {
                     <div className="flex items-center justify-between py-2 border-b border-netflix-gray/30">
                       <span>Email Notifications</span>
                       <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" value="" className="sr-only peer" defaultChecked />
+                        <input 
+                          type="checkbox" 
+                          name="emailNotifications"
+                          className="sr-only peer" 
+                          defaultChecked={settings.notifications.email} 
+                        />
                         <div className="w-11 h-6 bg-netflix-gray peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-netflix-red"></div>
                       </label>
                     </div>
                   </div>
                   
-                  <button className="bg-netflix-red hover:bg-red-700 text-white px-4 py-2 rounded transition-colors">
+                  <button 
+                    type="submit"
+                    className="bg-netflix-red hover:bg-red-700 text-white px-4 py-2 rounded transition-colors"
+                  >
                     Save Settings
                   </button>
-                </div>
+                </form>
               </div>
             )}
 
