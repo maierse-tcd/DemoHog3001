@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
@@ -8,11 +8,21 @@ import { useToast } from '../hooks/use-toast';
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Check if user is already logged in
+  useEffect(() => {
+    const isLoggedIn = localStorage.getItem('hogflixIsLoggedIn') === 'true';
+    if (isLoggedIn) {
+      navigate('/');
+    }
+  }, [navigate]);
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
     // Basic validation
     if (!email || !password) {
@@ -21,21 +31,51 @@ const Login = () => {
         description: "Please enter both email and password",
         variant: "destructive"
       });
+      setIsLoading(false);
       return;
     }
     
-    // In a real app, you'd verify these credentials against your backend
-    console.log('Analytics Event: Login Attempt', { email });
+    // Check if user exists in localStorage
+    const userData = localStorage.getItem('hogflixUser');
     
-    // Simulate successful login
-    toast({
-      title: "Login successful",
-      description: "Welcome back to Hogflix!",
-    });
-    
-    console.log('Analytics Event: Login Success', { email });
-    
-    navigate('/');
+    if (userData) {
+      const user = JSON.parse(userData);
+      
+      // Simple login check - in a real app, you'd check password hashes
+      if (user.email === email) {
+        // Login successful
+        localStorage.setItem('hogflixIsLoggedIn', 'true');
+        
+        console.log('Analytics Event: Login Success', { email });
+        
+        toast({
+          title: "Login successful",
+          description: `Welcome back, ${user.name}!`,
+        });
+        
+        setTimeout(() => {
+          navigate('/');
+        }, 500);
+      } else {
+        // Login failed
+        console.log('Analytics Event: Login Failed', { email });
+        
+        toast({
+          title: "Login failed",
+          description: "Invalid email or password",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+      }
+    } else {
+      // No user found
+      toast({
+        title: "Account not found",
+        description: "No account exists with this email",
+        variant: "destructive"
+      });
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -74,8 +114,9 @@ const Login = () => {
             <Button
               type="submit"
               className="w-full bg-netflix-red hover:bg-netflix-red/80 text-white"
+              disabled={isLoading}
             >
-              Sign In
+              {isLoading ? 'Signing In...' : 'Sign In'}
             </Button>
           </form>
           

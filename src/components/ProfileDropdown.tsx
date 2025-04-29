@@ -1,13 +1,49 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown, User } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { placeholderImages } from '../utils/imagePlaceholders';
+import { useProfileSettings } from '../contexts/ProfileSettingsContext';
+import { useToast } from '../hooks/use-toast';
 
 export const ProfileDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
-  // In a real app, you would check if the user is logged in
-  const isLoggedIn = true; // Changed to true for demo purposes
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userName, setUserName] = useState('');
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { settings } = useProfileSettings();
+  
+  useEffect(() => {
+    // Check if user is logged in
+    const loginStatus = localStorage.getItem('hogflixIsLoggedIn') === 'true';
+    setIsLoggedIn(loginStatus);
+    
+    // Get username if available
+    if (loginStatus) {
+      const userData = localStorage.getItem('hogflixUser');
+      if (userData) {
+        const user = JSON.parse(userData);
+        setUserName(user.name || 'User');
+      } else {
+        setUserName(settings?.name || 'User');
+      }
+    }
+  }, [settings?.name]);
+  
+  const handleLogout = () => {
+    localStorage.setItem('hogflixIsLoggedIn', 'false');
+    
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out",
+    });
+    
+    console.log('Analytics Event: Logout');
+    
+    setIsOpen(false);
+    navigate('/login');
+  };
 
   return (
     <div className="relative">
@@ -16,7 +52,6 @@ export const ProfileDropdown = () => {
         className="flex items-center space-x-2"
       >
         <div className="w-8 h-8 rounded overflow-hidden bg-[#555] flex items-center justify-center">
-          {/* Use the placeholder avatar image */}
           <img 
             src={placeholderImages.userAvatar} 
             alt="User avatar" 
@@ -29,6 +64,11 @@ export const ProfileDropdown = () => {
           />
           <User size={16} className="text-netflix-gray hidden" />
         </div>
+        {isLoggedIn && userName && (
+          <span className="text-sm hidden md:inline-block text-netflix-white truncate max-w-[100px]">
+            {userName}
+          </span>
+        )}
         <ChevronDown size={16} className={`text-netflix-white transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
@@ -39,13 +79,16 @@ export const ProfileDropdown = () => {
               <Link to="/profile" className="block px-4 py-2 text-netflix-white text-sm hover:bg-netflix-darkgray">
                 Profile
               </Link>
-              <Link to="/profile" className="block px-4 py-2 text-netflix-white text-sm hover:bg-netflix-darkgray">
+              <Link to="/profile?tab=help" className="block px-4 py-2 text-netflix-white text-sm hover:bg-netflix-darkgray">
                 Help Center
               </Link>
               <hr className="my-2 border-netflix-gray/20" />
-              <Link to="/" className="block px-4 py-2 text-netflix-white text-sm hover:bg-netflix-darkgray">
+              <button 
+                onClick={handleLogout}
+                className="block w-full text-left px-4 py-2 text-netflix-white text-sm hover:bg-netflix-darkgray"
+              >
                 Sign out
-              </Link>
+              </button>
             </>
           ) : (
             <>
@@ -56,7 +99,7 @@ export const ProfileDropdown = () => {
                 Sign Up
               </Link>
               <hr className="my-2 border-netflix-gray/20" />
-              <Link to="/help" className="block px-4 py-2 text-netflix-white text-sm hover:bg-netflix-darkgray">
+              <Link to="/profile?tab=help" className="block px-4 py-2 text-netflix-white text-sm hover:bg-netflix-darkgray">
                 Help Center
               </Link>
             </>

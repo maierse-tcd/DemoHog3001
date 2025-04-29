@@ -1,5 +1,6 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { useProfileSettings } from '../contexts/ProfileSettingsContext';
@@ -12,6 +13,24 @@ import { HelpCenter } from '../components/profile/HelpCenter';
 const Profile = () => {
   const [activeTab, setActiveTab] = useState<string>('profile');
   const { settings, updateSettings, updateSelectedPlan } = useProfileSettings();
+  const location = useLocation();
+  
+  useEffect(() => {
+    // Check for tab in URL query params
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab');
+    if (tabParam && ['profile', 'subscription', 'settings', 'help'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [location.search]);
+
+  // Redirect to login if not logged in
+  useEffect(() => {
+    const isLoggedIn = localStorage.getItem('hogflixIsLoggedIn') === 'true';
+    if (!isLoggedIn) {
+      window.location.href = '/login';
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-netflix-black">
