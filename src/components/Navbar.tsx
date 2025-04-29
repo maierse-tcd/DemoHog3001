@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { SearchBar } from './SearchBar';
 import { ProfileDropdown } from './ProfileDropdown';
-import { Bell, Menu, X } from 'lucide-react';
+import { Bell, Menu, X, Film, ListCheck, Star, List } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const Navbar = () => {
@@ -32,15 +32,29 @@ export const Navbar = () => {
     >
       {/* Logo */}
       <div className="flex items-center">
-        <h1 className="text-netflix-red text-3xl font-bold tracking-tighter mr-10">HOGFLIX</h1>
+        <Link to="/">
+          <h1 className="text-netflix-red text-3xl font-bold tracking-tighter mr-10">HOGFLIX</h1>
+        </Link>
         
         {/* Desktop Navigation */}
         <div className="hidden md:flex space-x-6">
           <Link to="/" className="navbar-link text-netflix-white">Home</Link>
-          <Link to="/movies" className="navbar-link">Movies</Link>
-          <Link to="/series" className="navbar-link">Series</Link>
-          <Link to="/new" className="navbar-link">New & Popular</Link>
-          <Link to="/mylist" className="navbar-link">My List</Link>
+          <Link to="/movies" className="navbar-link flex items-center gap-1">
+            <Film size={16} />
+            <span>Movies</span>
+          </Link>
+          <Link to="/series" className="navbar-link flex items-center gap-1">
+            <ListCheck size={16} />
+            <span>Series</span>
+          </Link>
+          <Link to="/new" className="navbar-link flex items-center gap-1">
+            <Star size={16} />
+            <span>New & Popular</span>
+          </Link>
+          <Link to="/mylist" className="navbar-link flex items-center gap-1">
+            <List size={16} />
+            <span>My List</span>
+          </Link>
         </div>
       </div>
 
@@ -62,10 +76,22 @@ export const Navbar = () => {
       {isMobileMenuOpen && (
         <div className="fixed top-14 left-0 right-0 bg-black/90 p-4 flex flex-col space-y-4 md:hidden animate-fade-in">
           <Link to="/" className="navbar-link text-netflix-white">Home</Link>
-          <Link to="/movies" className="navbar-link">Movies</Link>
-          <Link to="/series" className="navbar-link">Series</Link>
-          <Link to="/new" className="navbar-link">New & Popular</Link>
-          <Link to="/mylist" className="navbar-link">My List</Link>
+          <Link to="/movies" className="navbar-link flex items-center gap-2">
+            <Film size={16} />
+            <span>Movies</span>
+          </Link>
+          <Link to="/series" className="navbar-link flex items-center gap-2">
+            <ListCheck size={16} />
+            <span>Series</span>
+          </Link>
+          <Link to="/new" className="navbar-link flex items-center gap-2">
+            <Star size={16} />
+            <span>New & Popular</span>
+          </Link>
+          <Link to="/mylist" className="navbar-link flex items-center gap-2">
+            <List size={16} />
+            <span>My List</span>
+          </Link>
           <div className="pt-2">
             <SearchBar />
           </div>

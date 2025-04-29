@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 export const ProfileDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
   // In a real app, you would check if the user is logged in
-  const isLoggedIn = false;
+  const isLoggedIn = true; // Changed to true for demo purposes
 
   return (
     <div className="relative">
@@ -24,22 +24,16 @@ export const ProfileDropdown = () => {
         <div className="absolute right-0 mt-2 w-48 bg-black border border-netflix-gray/20 rounded py-2 shadow-lg animate-scale-in z-50">
           {isLoggedIn ? (
             <>
-              <div className="px-4 py-2 text-netflix-white text-sm hover:bg-netflix-darkgray cursor-pointer">
-                Profile 1
-              </div>
-              <div className="px-4 py-2 text-netflix-white text-sm hover:bg-netflix-darkgray cursor-pointer">
-                Profile 2
-              </div>
-              <div className="px-4 py-2 text-netflix-white text-sm hover:bg-netflix-darkgray cursor-pointer">
-                Manage Profiles
-              </div>
-              <hr className="my-2 border-netflix-gray/20" />
-              <div className="px-4 py-2 text-netflix-white text-sm hover:bg-netflix-darkgray cursor-pointer">
+              <Link to="/profile" className="block px-4 py-2 text-netflix-white text-sm hover:bg-netflix-darkgray">
+                Profile
+              </Link>
+              <Link to="/profile" className="block px-4 py-2 text-netflix-white text-sm hover:bg-netflix-darkgray">
                 Account
-              </div>
-              <div className="px-4 py-2 text-netflix-white text-sm hover:bg-netflix-darkgray cursor-pointer">
+              </Link>
+              <Link to="/profile" className="block px-4 py-2 text-netflix-white text-sm hover:bg-netflix-darkgray">
                 Help Center
-              </div>
+              </Link>
+              <hr className="my-2 border-netflix-gray/20" />
               <Link to="/" className="block px-4 py-2 text-netflix-white text-sm hover:bg-netflix-darkgray">
                 Sign out
               </Link>
@@ -53,9 +47,9 @@ export const ProfileDropdown = () => {
                 Sign Up
               </Link>
               <hr className="my-2 border-netflix-gray/20" />
-              <div className="px-4 py-2 text-netflix-white text-sm hover:bg-netflix-darkgray cursor-pointer">
+              <Link to="/help" className="block px-4 py-2 text-netflix-white text-sm hover:bg-netflix-darkgray">
                 Help Center
-              </div>
+              </Link>
             </>
           )}
         </div>

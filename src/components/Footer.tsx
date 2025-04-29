@@ -14,7 +14,7 @@ export const Footer = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
             <div>
               <h3 className="text-white font-medium mb-4">Navigation</h3>
               <ul className="space-y-2 text-sm">
@@ -22,16 +22,7 @@ export const Footer = () => {
                 <li><Link to="/movies" className="text-netflix-gray hover:text-white">Movies</Link></li>
                 <li><Link to="/series" className="text-netflix-gray hover:text-white">TV Series</Link></li>
                 <li><Link to="/new" className="text-netflix-gray hover:text-white">New & Popular</Link></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="text-white font-medium mb-4">Plans</h3>
-              <ul className="space-y-2 text-sm">
-                <li><Link to="/signup" className="text-netflix-gray hover:text-white">Free Plan</Link></li>
-                <li><Link to="/signup" className="text-netflix-gray hover:text-white">Premium Plan</Link></li>
-                <li><Link to="/signup" className="text-netflix-gray hover:text-white">Max-imal Plan</Link></li>
-                <li><Link to="/signup" className="text-netflix-gray hover:text-white">Compare Plans</Link></li>
+                <li><Link to="/mylist" className="text-netflix-gray hover:text-white">My List</Link></li>
               </ul>
             </div>
             
@@ -40,8 +31,8 @@ export const Footer = () => {
               <ul className="space-y-2 text-sm">
                 <li><Link to="/login" className="text-netflix-gray hover:text-white">Sign In</Link></li>
                 <li><Link to="/signup" className="text-netflix-gray hover:text-white">Sign Up</Link></li>
-                <li><Link to="/account" className="text-netflix-gray hover:text-white">Settings</Link></li>
-                <li><Link to="/help" className="text-netflix-gray hover:text-white">Help Center</Link></li>
+                <li><Link to="/profile" className="text-netflix-gray hover:text-white">Account</Link></li>
+                <li><Link to="/profile" className="text-netflix-gray hover:text-white">Help Center</Link></li>
               </ul>
             </div>
             
@@ -51,7 +42,6 @@ export const Footer = () => {
                 <li><Link to="/terms" className="text-netflix-gray hover:text-white">Terms of Use</Link></li>
                 <li><Link to="/privacy" className="text-netflix-gray hover:text-white">Privacy Policy</Link></li>
                 <li><Link to="/cookies" className="text-netflix-gray hover:text-white">Cookie Preferences</Link></li>
-                <li><Link to="/corporate" className="text-netflix-gray hover:text-white">Corporate Info</Link></li>
               </ul>
             </div>
           </div>
