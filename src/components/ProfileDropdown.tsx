@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { ChevronDown, User } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { placeholderImages } from '../utils/imagePlaceholders';
 import { useProfileSettings } from '../contexts/ProfileSettingsContext';
 import { useToast } from '../hooks/use-toast';
@@ -13,6 +13,7 @@ export const ProfileDropdown = () => {
   const [userName, setUserName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { settings, updateSettings } = useProfileSettings();
   
@@ -47,6 +48,13 @@ export const ProfileDropdown = () => {
       subscription.unsubscribe();
     };
   }, []);
+
+  // Add this effect to update the username when settings change
+  useEffect(() => {
+    if (settings?.name) {
+      setUserName(settings.name);
+    }
+  }, [settings]);
   
   const fetchUserProfile = async (userId: string) => {
     try {

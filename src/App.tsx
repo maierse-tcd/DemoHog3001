@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import SignUp from "./pages/SignUp";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
+import Movies from "./pages/Movies";
+import Series from "./pages/Series";
 import NotFound from "./pages/NotFound";
 import { ProfileSettingsProvider } from "./contexts/ProfileSettingsContext";
 
@@ -25,6 +27,8 @@ const App = () => (
             <Route path="/signup" element={<SignUp />} />
             <Route path="/login" element={<Login />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/movies" element={<Movies />} />
+            <Route path="/series" element={<Series />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

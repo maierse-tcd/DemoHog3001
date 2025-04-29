@@ -1,35 +1,84 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 
 export const HelpCenter: React.FC = () => {
+  const [activeQuestion, setActiveQuestion] = useState<number | null>(null);
+  
+  const faqs = [
+    {
+      question: "Why is it called Hogflix?",
+      answer: "Because regular pigs can't stream movies, but hogs can! Our founder was inspired by watching a hog trying to operate a remote control with its snout."
+    },
+    {
+      question: "How do I change my plan?",
+      answer: "You can change your plan by going to your Subscription tab. Just make sure you're not a hog, as hogs have difficulty operating dropdown menus."
+    },
+    {
+      question: "How do I cancel my subscription?",
+      answer: "To cancel your subscription, visit your Subscription tab and click 'Cancel Subscription'. But really, who would want to cancel the greatest streaming service for both humans and hogs alike?"
+    },
+    {
+      question: "What devices can I watch on?",
+      answer: "You can watch on any device with a browser including smart TVs, game consoles, phones, tablets, and specially modified hog-friendly touch screens with reinforced snout-proof glass."
+    },
+    {
+      question: "Why do some videos play Rick Astley?",
+      answer: "We believe in the importance of never giving you up and never letting you down. Rick Astley is an integral part of the Hogflix streaming experience."
+    }
+  ];
+  
   return (
     <div className="bg-netflix-darkgray rounded-lg p-6">
       <h2 className="text-2xl font-bold mb-6">Help Center</h2>
+      
       <div className="space-y-6">
         <div>
-          <h3 className="font-medium mb-2">Frequently Asked Questions</h3>
+          <h3 className="font-medium mb-4">Frequently Asked Questions</h3>
           <div className="space-y-3">
-            <div className="border border-netflix-gray/30 rounded-lg p-4">
-              <h4 className="font-medium">How do I change my plan?</h4>
-              <p className="text-netflix-gray mt-2">You can change your plan by going to your Subscription tab in your Profile.</p>
-            </div>
-            <div className="border border-netflix-gray/30 rounded-lg p-4">
-              <h4 className="font-medium">How do I cancel my subscription?</h4>
-              <p className="text-netflix-gray mt-2">To cancel your subscription, go to your Subscription tab and click on "Cancel Subscription".</p>
-            </div>
-            <div className="border border-netflix-gray/30 rounded-lg p-4">
-              <h4 className="font-medium">What devices can I watch on?</h4>
-              <p className="text-netflix-gray mt-2">You can watch on any device that supports a web browser, including your smart TV, game consoles, streaming media players, phones, and tablets.</p>
-            </div>
+            {faqs.map((faq, index) => (
+              <div 
+                key={index} 
+                className="border border-netflix-gray/30 rounded-lg overflow-hidden"
+              >
+                <button 
+                  onClick={() => setActiveQuestion(activeQuestion === index ? null : index)}
+                  className="w-full text-left px-4 py-3 bg-netflix-gray/10 flex justify-between items-center"
+                >
+                  <h4 className="font-medium">{faq.question}</h4>
+                  <span className="text-2xl">{activeQuestion === index ? '−' : '+'}</span>
+                </button>
+                
+                {activeQuestion === index && (
+                  <div className="px-4 py-3 bg-netflix-black/30">
+                    <p className="text-netflix-gray">{faq.answer}</p>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
         
         <div>
-          <h3 className="font-medium mb-2">Contact Support</h3>
-          <p className="text-netflix-gray mb-4">Need more help? Contact our support team.</p>
-          <button className="bg-netflix-red hover:bg-red-700 text-white px-4 py-2 rounded transition-colors">
-            Contact Support
-          </button>
+          <h3 className="font-medium mb-2">Need More Help?</h3>
+          <p className="text-netflix-gray mb-4">Our team of highly trained hogs are standing by to assist you.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="border border-netflix-gray/30 rounded-lg p-4 hover:bg-netflix-gray/10 transition-colors">
+              <h4 className="font-medium mb-2">Email Support</h4>
+              <p className="text-netflix-gray mb-2">Get a response within 24 hours</p>
+              <button className="text-netflix-red hover:underline">Send Email</button>
+            </div>
+            <div className="border border-netflix-gray/30 rounded-lg p-4 hover:bg-netflix-gray/10 transition-colors">
+              <h4 className="font-medium mb-2">Live Chat</h4>
+              <p className="text-netflix-gray mb-2">Chat with our support team</p>
+              <button className="text-netflix-red hover:underline">Start Chat</button>
+            </div>
+          </div>
+        </div>
+        
+        <div className="mt-8 text-center">
+          <p className="text-netflix-gray text-sm italic">
+            "The most entertaining help center since the hog learned to use the remote." - Hogflix Times
+          </p>
         </div>
       </div>
     </div>
