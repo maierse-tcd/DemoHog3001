@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Input } from '../components/ui/input';
@@ -115,7 +114,6 @@ const SignUp = () => {
       isKidsAccount,
       notifications: { email: true }, // Changed from boolean to object with email property
       language: 'English',
-      videoQuality: 'Auto'
     });
     
     updateSelectedPlan(selectedPlanId);
