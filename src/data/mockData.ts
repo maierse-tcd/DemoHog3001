@@ -148,7 +148,7 @@ export const mockContent: Content[] = [
   {
     id: '12',
     title: 'Smart Home',
-    description: 'A family's new AI-powered smart home develops a mind of its own with sinister intentions.',
+    description: 'A family\'s new AI-powered smart home develops a mind of its own with sinister intentions.',
     posterUrl: 'https://source.unsplash.com/photo-1721322800607-8c38375eef04',
     type: 'movie',
     releaseYear: 2022,

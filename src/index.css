@@ -69,6 +69,20 @@
   }
 }
 
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  
+  .scrollbar-thumb-gray-800::-webkit-scrollbar-thumb {
+    background: #1f2937;
+  }
+  
+  .scrollbar-track-transparent::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
 @layer components {
   .content-row {
     @apply flex items-start space-x-2 overflow-x-auto pb-8 pt-2 px-4 md:px-8 lg:px-12 scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent;
