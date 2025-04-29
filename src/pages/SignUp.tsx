@@ -6,6 +6,7 @@ import { Button } from '../components/ui/button';
 import { SubscriptionPlan, Plan } from '../components/SubscriptionPlan';
 import { useToast } from '../hooks/use-toast';
 import { useProfileSettings } from '../contexts/ProfileSettingsContext';
+import { supabase } from '../integrations/supabase/client';
 
 const subscriptionPlans: Plan[] = [
   {
@@ -57,6 +58,7 @@ const SignUp = () => {
   const [name, setName] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [isKidsAccount, setIsKidsAccount] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { updateSettings, updateSelectedPlan } = useProfileSettings();
@@ -65,81 +67,92 @@ const SignUp = () => {
     setSelectedPlanId(planId);
   };
   
-  const handleSignUp = (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
-    // Validate all fields
-    if (!email || !password || password.length < 6) {
-      toast({
-        title: "Invalid credentials",
-        description: "Please enter a valid email and password (min 6 characters)",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!name) {
-      toast({
-        title: "Name required",
-        description: "Please enter your name",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!selectedPlanId) {
-      toast({
-        title: "Plan selection required",
-        description: "Please select a subscription plan",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Check if user already exists
-    const existingUserData = localStorage.getItem('hogflixUser');
-    if (existingUserData) {
-      const existingUser = JSON.parse(existingUserData);
-      if (existingUser.email === email) {
+    try {
+      // Validate all fields
+      if (!email || !password || password.length < 6) {
         toast({
-          title: "Account already exists",
-          description: "An account with this email already exists. Please log in instead.",
+          title: "Invalid credentials",
+          description: "Please enter a valid email and password (min 6 characters)",
           variant: "destructive"
         });
+        setIsLoading(false);
         return;
       }
+      
+      if (!name) {
+        toast({
+          title: "Name required",
+          description: "Please enter your name",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      if (!selectedPlanId) {
+        toast({
+          title: "Plan selection required",
+          description: "Please select a subscription plan",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      // Sign up with Supabase
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            selectedPlanId,
+            isKidsAccount
+          }
+        }
+      });
+      
+      if (error) throw error;
+
+      if (data && data.user) {
+        // Update profile settings context
+        updateSettings({
+          name,
+          email,
+          notifications: { email: true },
+          language: 'English',
+        });
+        
+        updateSelectedPlan(selectedPlanId);
+        
+        console.log('Analytics Event: Sign Up Complete', {
+          email,
+          name,
+          selectedPlanId,
+          isKidsAccount
+        });
+        
+        toast({
+          title: "Sign up successful!",
+          description: "Welcome to Hogflix! Enjoy your hedgehog adventures.",
+        });
+        
+        navigate('/');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Sign up failed",
+        description: error.message || "An error occurred during sign up",
+        variant: "destructive"
+      });
+      console.error("Sign up error:", error);
+    } finally {
+      setIsLoading(false);
     }
-    
-    // Sign up complete - store user data
-    const userData = {
-      email,
-      name,
-      selectedPlanId,
-      isKidsAccount
-    };
-    
-    // Store in localStorage for persistence
-    localStorage.setItem('hogflixUser', JSON.stringify(userData));
-    localStorage.setItem('hogflixIsLoggedIn', 'true');
-    
-    // Update profile settings context
-    updateSettings({
-      name,
-      email,
-      notifications: { email: true },
-      language: 'English',
-    });
-    
-    updateSelectedPlan(selectedPlanId);
-    
-    console.log('Analytics Event: Sign Up Complete', userData);
-    
-    toast({
-      title: "Sign up successful!",
-      description: "Welcome to Hogflix! Enjoy your hedgehog adventures.",
-    });
-    
-    navigate('/');
   };
 
   return (
@@ -225,8 +238,9 @@ const SignUp = () => {
               <Button
                 type="submit"
                 className="bg-netflix-red hover:bg-netflix-red/80 text-white"
+                disabled={isLoading}
               >
-                Complete Sign Up
+                {isLoading ? 'Creating account...' : 'Complete Sign Up'}
               </Button>
             </div>
           </form>

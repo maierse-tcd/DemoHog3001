@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { toast } from '../../hooks/use-toast';
 import { ProfileSettings } from '../../contexts/ProfileSettingsContext';
+import { supabase } from '../../integrations/supabase/client';
 
 interface ProfileInfoProps {
   settings: ProfileSettings;
@@ -9,21 +10,56 @@ interface ProfileInfoProps {
 }
 
 export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettings }) => {
-  const handleProfileSave = (e: React.FormEvent) => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData(e.target as HTMLFormElement);
-    const name = formData.get('name') as string;
-    const email = formData.get('email') as string;
+    setIsLoading(true);
 
-    updateSettings({
-      name,
-      email
-    });
+    try {
+      const formData = new FormData(e.target as HTMLFormElement);
+      const name = formData.get('name') as string;
+      const email = formData.get('email') as string;
 
-    toast({
-      title: 'Profile updated',
-      description: 'Your profile information has been saved',
-    });
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error("No authenticated user found");
+      }
+
+      // Update user's profile in the database
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name,
+          email,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      // Update the context
+      updateSettings({
+        name,
+        email
+      });
+
+      toast({
+        title: 'Profile updated',
+        description: 'Your profile information has been saved',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Update failed',
+        description: error.message || 'Failed to update profile',
+        variant: 'destructive'
+      });
+      console.error('Error updating profile:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -53,15 +89,46 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
           <input 
             type="password" 
             defaultValue="********" 
-            className="w-full bg-netflix-black border border-netflix-gray rounded px-3 py-2" 
+            disabled
+            className="w-full bg-netflix-black border border-netflix-gray rounded px-3 py-2 opacity-50" 
           />
+          <p className="text-sm text-netflix-gray mt-1">To change your password, use the "Reset Password" option</p>
         </div>
-        <button 
-          type="submit" 
-          className="bg-netflix-red hover:bg-red-700 text-white px-4 py-2 rounded transition-colors"
-        >
-          Save Changes
-        </button>
+        <div className="flex space-x-4">
+          <button 
+            type="submit" 
+            className="bg-netflix-red hover:bg-red-700 text-white px-4 py-2 rounded transition-colors"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Saving...' : 'Save Changes'}
+          </button>
+          <button 
+            type="button" 
+            className="border border-netflix-gray text-white px-4 py-2 rounded hover:bg-netflix-black transition-colors"
+            onClick={async () => {
+              try {
+                const { error } = await supabase.auth.resetPasswordForEmail(settings.email, {
+                  redirectTo: window.location.origin + '/profile'
+                });
+                
+                if (error) throw error;
+                
+                toast({
+                  title: 'Password reset email sent',
+                  description: 'Check your email for a link to reset your password',
+                });
+              } catch (error: any) {
+                toast({
+                  title: 'Error',
+                  description: error.message || 'Failed to send password reset email',
+                  variant: 'destructive'
+                });
+              }
+            }}
+          >
+            Reset Password
+          </button>
+        </div>
       </form>
     </div>
   );

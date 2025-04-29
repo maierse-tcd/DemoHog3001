@@ -5,50 +5,105 @@ import { Link, useNavigate } from 'react-router-dom';
 import { placeholderImages } from '../utils/imagePlaceholders';
 import { useProfileSettings } from '../contexts/ProfileSettingsContext';
 import { useToast } from '../hooks/use-toast';
+import { supabase } from '../integrations/supabase/client';
 
 export const ProfileDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
   const { settings, updateSettings } = useProfileSettings();
   
   useEffect(() => {
-    // Check if user is logged in
-    const loginStatus = localStorage.getItem('hogflixIsLoggedIn') === 'true';
-    setIsLoggedIn(loginStatus);
-    
-    // Get username if available
-    if (loginStatus) {
-      const userData = localStorage.getItem('hogflixUser');
-      if (userData) {
-        const user = JSON.parse(userData);
-        setUserName(user.name || 'User');
-      } else {
-        setUserName(settings?.name || 'User');
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setIsLoggedIn(!!session);
+        
+        if (session?.user) {
+          fetchUserProfile(session.user.id);
+        } else {
+          setUserName('Guest');
+          setAvatarUrl('');
+        }
       }
-    }
-  }, [settings?.name]);
+    );
+    
+    // Check for existing session
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setIsLoggedIn(!!data.session);
+      
+      if (data.session?.user) {
+        fetchUserProfile(data.session.user.id);
+      }
+    };
+    
+    checkSession();
+    
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
   
-  const handleLogout = () => {
-    localStorage.setItem('hogflixIsLoggedIn', 'false');
-    
-    // Clear any user-specific settings from context
-    updateSettings({
-      name: 'Guest',
-      email: '',
-    });
-    
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out",
-    });
-    
-    console.log('Analytics Event: Logout');
-    
-    setIsOpen(false);
-    navigate('/login');
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error) throw error;
+      
+      if (profileData) {
+        setUserName(profileData.name || 'User');
+        setAvatarUrl(profileData.avatar_url || '');
+        
+        // Update the profile settings with user data
+        updateSettings({
+          name: profileData.name || 'User',
+          email: profileData.email,
+          selectedPlanId: settings?.selectedPlanId,
+          language: settings?.language || 'English',
+          notifications: settings?.notifications || { email: true },
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
+  
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      // Clear any user-specific settings from context
+      updateSettings({
+        name: 'Guest',
+        email: '',
+      });
+      
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out",
+      });
+      
+      console.log('Analytics Event: Logout');
+      
+      setIsOpen(false);
+      navigate('/login');
+    } catch (error) {
+      console.error('Error during logout:', error);
+      toast({
+        title: "Logout failed",
+        description: "There was an error logging out. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -59,7 +114,7 @@ export const ProfileDropdown = () => {
       >
         <div className="w-8 h-8 rounded overflow-hidden bg-[#555] flex items-center justify-center">
           <img 
-            src={placeholderImages.userAvatar} 
+            src={avatarUrl || placeholderImages.userAvatar} 
             alt="User avatar" 
             className="w-full h-full object-cover"
             onError={(e) => {

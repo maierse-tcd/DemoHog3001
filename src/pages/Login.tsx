@@ -5,6 +5,7 @@ import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { useToast } from '../hooks/use-toast';
 import { useProfileSettings } from '../contexts/ProfileSettingsContext';
+import { supabase } from '../integrations/supabase/client';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -16,74 +17,91 @@ const Login = () => {
 
   // Check if user is already logged in
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem('hogflixIsLoggedIn') === 'true';
-    if (isLoggedIn) {
-      navigate('/');
-    }
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        fetchUserProfile(data.session.user.id);
+        navigate('/');
+      }
+    };
+    
+    checkSession();
   }, [navigate]);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    // Basic validation
-    if (!email || !password) {
-      toast({
-        title: "Missing credentials",
-        description: "Please enter both email and password",
-        variant: "destructive"
-      });
-      setIsLoading(false);
-      return;
-    }
-    
-    // Check if user exists in localStorage
-    const userData = localStorage.getItem('hogflixUser');
-    
-    if (userData) {
-      const user = JSON.parse(userData);
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
       
-      // Simple login check - in a real app, you'd check password hashes
-      if (user.email === email) {
-        // Login successful
-        localStorage.setItem('hogflixIsLoggedIn', 'true');
-        
-        console.log('Analytics Event: Login Success', { email });
-        
+      if (error) throw error;
+      
+      if (profileData) {
         // Update the profile settings context with user data
         updateSettings({
-          name: user.name,
-          email: user.email,
+          name: profileData.name || 'User',
+          email: profileData.email,
           language: 'English',
           notifications: { email: true },
         });
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    try {
+      // Basic validation
+      if (!email || !password) {
+        toast({
+          title: "Missing credentials",
+          description: "Please enter both email and password",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      // Sign in with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) {
+        throw error;
+      }
+
+      if (data && data.user) {
+        console.log('Analytics Event: Login Success', { email });
+        
+        // Fetch user profile data
+        await fetchUserProfile(data.user.id);
         
         toast({
           title: "Login successful",
-          description: `Welcome back, ${user.name}!`,
+          description: `Welcome back!`,
         });
         
         setTimeout(() => {
           navigate('/');
         }, 500);
-      } else {
-        // Login failed
-        console.log('Analytics Event: Login Failed', { email });
-        
-        toast({
-          title: "Login failed",
-          description: "Invalid email or password",
-          variant: "destructive"
-        });
-        setIsLoading(false);
       }
-    } else {
-      // No user found
+    } catch (error: any) {
+      console.log('Analytics Event: Login Failed', { email });
+      
       toast({
-        title: "Account not found",
-        description: "No account exists with this email",
+        title: "Login failed",
+        description: error.message || "Invalid email or password",
         variant: "destructive"
       });
+    } finally {
       setIsLoading(false);
     }
   };

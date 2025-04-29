@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { useProfileSettings } from '../contexts/ProfileSettingsContext';
@@ -9,11 +8,16 @@ import { ProfileInfo } from '../components/profile/ProfileInfo';
 import { SubscriptionSettings } from '../components/profile/SubscriptionSettings';
 import { AccountSettings } from '../components/profile/AccountSettings';
 import { HelpCenter } from '../components/profile/HelpCenter';
+import { supabase } from '../integrations/supabase/client';
+import { useToast } from '../hooks/use-toast';
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState<string>('profile');
   const { settings, updateSettings, updateSelectedPlan } = useProfileSettings();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
     // Check for tab in URL query params
@@ -24,13 +28,60 @@ const Profile = () => {
     }
   }, [location.search]);
 
-  // Redirect to login if not logged in
+  // Check authentication and redirect if not logged in
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem('hogflixIsLoggedIn') === 'true';
-    if (!isLoggedIn) {
-      window.location.href = '/login';
-    }
-  }, []);
+    const checkAuth = async () => {
+      try {
+        setIsLoading(true);
+        const { data } = await supabase.auth.getSession();
+        
+        if (!data.session) {
+          toast({
+            title: "Authentication required",
+            description: "Please log in to access your profile",
+          });
+          navigate('/login');
+          return;
+        }
+        
+        // Fetch user profile data
+        const { data: profileData, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.session.user.id)
+          .single();
+          
+        if (error) {
+          console.error('Error fetching profile:', error);
+        } else if (profileData) {
+          // Update context with profile data
+          updateSettings({
+            name: profileData.name || 'User',
+            email: profileData.email,
+            // Keep other settings from context
+            language: settings.language,
+            notifications: settings.notifications,
+            playbackSettings: settings.playbackSettings,
+          });
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+        navigate('/login');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    checkAuth();
+  }, [navigate, toast, updateSettings, settings]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-netflix-black flex items-center justify-center">
+        <div className="text-netflix-red text-2xl">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-netflix-black">
