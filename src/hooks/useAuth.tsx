@@ -24,44 +24,10 @@ export const useAuth = () => {
   const { settings, updateSettings } = useProfileSettings();
 
   useEffect(() => {
-    // First check for existing session
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      
-      if (data.session?.user) {
-        setAuthState(prev => ({ ...prev, isLoggedIn: true }));
-        
-        // Delay the fetch to avoid Supabase lock
-        setTimeout(() => {
-          fetchUserProfile(data.session!.user.id);
-        }, 0);
-        
-        // Identify user in PostHog on initial load if they're logged in
-        if (window.posthog) {
-          window.posthog.identify(data.session.user.id, {
-            email: data.session.user.email
-          });
-        }
-      } else {
-        setAuthState({
-          isLoggedIn: false,
-          userName: 'Guest',
-          avatarUrl: '',
-          isLoading: false
-        });
-        
-        // Reset PostHog identification when not logged in
-        if (window.posthog) {
-          window.posthog.reset();
-        }
-      }
-    };
-    
-    checkSession();
-    
-    // Set up auth state listener
+    // First set up auth state listener (IMPORTANT: Do this before checking for existing session)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log("Auth state changed:", event, session?.user?.email);
         const loggedIn = !!session;
         
         if (session?.user) {
@@ -93,6 +59,37 @@ export const useAuth = () => {
         }
       }
     );
+    
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user) {
+        setAuthState(prev => ({ ...prev, isLoggedIn: true }));
+        
+        // Delay the fetch to avoid Supabase lock
+        setTimeout(() => {
+          fetchUserProfile(data.session!.user.id);
+        }, 0);
+        
+        // Identify user in PostHog on initial load if they're logged in
+        if (window.posthog) {
+          window.posthog.identify(data.session.user.id, {
+            email: data.session.user.email
+          });
+        }
+      } else {
+        setAuthState({
+          isLoggedIn: false,
+          userName: 'Guest',
+          avatarUrl: '',
+          isLoading: false
+        });
+        
+        // Reset PostHog identification when not logged in
+        if (window.posthog) {
+          window.posthog.reset();
+        }
+      }
+    });
     
     return () => {
       subscription.unsubscribe();

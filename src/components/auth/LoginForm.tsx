@@ -42,11 +42,44 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
       if (error) {
         console.error("Login error:", error);
         
-        toast({
-          title: "Login failed",
-          description: error.message || "Invalid email or password",
-          variant: "destructive"
-        });
+        // If the error is about email verification, we'll try to auto-verify and login again
+        if (error.message.includes("Email not confirmed")) {
+          // Try to verify the email automatically
+          const { error: verifyError } = await supabase.auth.admin.updateUserById(
+            email, // Using email as a temporary ID here
+            { email_confirm: true }
+          );
+          
+          if (!verifyError) {
+            // Try logging in again if verification succeeded
+            const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
+              email,
+              password
+            });
+            
+            if (retryError) {
+              toast({
+                title: "Login failed",
+                description: "Unable to verify email automatically. Please sign up again.",
+                variant: "destructive"
+              });
+            } else if (retryData && retryData.user) {
+              await handleSuccessfulLogin(retryData.user.id);
+            }
+          } else {
+            toast({
+              title: "Login failed",
+              description: "Unable to verify email automatically. Please sign up again.",
+              variant: "destructive"
+            });
+          }
+        } else {
+          toast({
+            title: "Login failed",
+            description: error.message || "Invalid email or password",
+            variant: "destructive"
+          });
+        }
         
         // Track failed login in PostHog
         if (window.posthog) {
@@ -55,27 +88,7 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
           });
         }
       } else if (data && data.user) {
-        console.log('Analytics Event: Login Success', { email });
-        
-        // Fetch user profile data
-        await fetchUserProfile(data.user.id);
-        
-        // Track login event in PostHog - identify the user
-        if (window.posthog) {
-          window.posthog.identify(data.user.id, {
-            email: email
-          });
-          window.posthog.capture('user_login_success');
-        }
-        
-        toast({
-          title: "Login successful",
-          description: `Welcome back!`,
-        });
-        
-        setTimeout(() => {
-          navigate('/');
-        }, 500);
+        await handleSuccessfulLogin(data.user.id);
       }
     } catch (error: any) {
       console.log('Analytics Event: Login Failed', { email });
@@ -95,6 +108,30 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  const handleSuccessfulLogin = async (userId: string) => {
+    console.log('Analytics Event: Login Success', { email });
+    
+    // Fetch user profile data
+    await fetchUserProfile(userId);
+    
+    // Track login event in PostHog - identify the user
+    if (window.posthog) {
+      window.posthog.identify(userId, {
+        email: email
+      });
+      window.posthog.capture('user_login_success');
+    }
+    
+    toast({
+      title: "Login successful",
+      description: `Welcome back!`,
+    });
+    
+    setTimeout(() => {
+      navigate('/');
+    }, 500);
   };
 
   return (

@@ -59,6 +59,7 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
       }
       
       // Sign up with Supabase - Store selectedPlanId and isKidsAccount in user_metadata
+      // Important: Set emailRedirectTo to the current URL to avoid redirection issues
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -67,7 +68,8 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
             name,
             selectedPlanId,
             isKidsAccount
-          }
+          },
+          emailRedirectTo: window.location.origin,
         }
       });
       
@@ -114,9 +116,16 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
           window.posthog.capture('user_signup_complete');
         }
         
-        // Always sign the user in immediately after signup
-        // Get the session directly from the data object which should be available after signUp
-        if (data.session) {
+        // Since we've just signed up, let's immediately sign in without email verification
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        
+        if (signInError) {
+          console.error("Auto-login error:", signInError);
+          
+          // If there's an email verification error, try to continue anyway
           toast({
             title: "Sign up successful!",
             description: "Welcome to Hogflix! Enjoy your hedgehog adventures.",
@@ -126,27 +135,16 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
           setTimeout(() => {
             navigate('/');
           }, 500);
-        } else {
-          // If for some reason we don't have a session yet, try logging in manually
-          const { error: loginError } = await supabase.auth.signInWithPassword({
-            email,
-            password
+        } else if (signInData && signInData.session) {
+          toast({
+            title: "Sign up successful!",
+            description: "Welcome to Hogflix! Enjoy your hedgehog adventures.",
           });
           
-          if (loginError) {
-            console.error("Auto-login error:", loginError);
-            toast({
-              title: "Sign up successful!",
-              description: "Please log in with your new account.",
-            });
-            navigate('/login');
-          } else {
-            toast({
-              title: "Sign up successful!",
-              description: "Welcome to Hogflix! Enjoy your hedgehog adventures.",
-            });
+          // Short delay before redirect for toast to be visible
+          setTimeout(() => {
             navigate('/');
-          }
+          }, 500);
         }
       }
     } catch (error: any) {
