@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { ImageUploader } from '../components/ImageUploader';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
 import { useToast } from '../hooks/use-toast';
-import { mockMovies, mockSeries } from '../data/mockData';
+import { mockContent, Content } from '../data/mockData';
 import { Input } from '../components/ui/input';
 import { Search, Copy } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -14,19 +13,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 const ImageManager = () => {
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredContent, setFilteredContent] = useState<Array<{id: string, title: string, type: string, posterUrl?: string}>>([]);
-  const [selectedContent, setSelectedContent] = useState<{id: string, title: string, type: string, posterUrl?: string} | null>(null);
+  const [filteredContent, setFilteredContent] = useState<Content[]>([]);
+  const [selectedContent, setSelectedContent] = useState<Content | null>(null);
   const { toast } = useToast();
   
-  // Combine movies and series for searching
+  // Use mockContent for searching
   useEffect(() => {
-    const allContent = [
-      ...mockMovies.map(movie => ({ ...movie, type: 'movie' })),
-      ...mockSeries.map(series => ({ ...series, type: 'series' }))
-    ];
-    
     if (searchTerm) {
-      const filtered = allContent.filter(item => 
+      const filtered = mockContent.filter(item => 
         item.title.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredContent(filtered);
@@ -72,7 +66,7 @@ const ImageManager = () => {
       });
   };
   
-  const selectContentItem = (item: typeof filteredContent[0]) => {
+  const selectContentItem = (item: Content) => {
     setSelectedContent(item);
     setSearchTerm(item.title);
     setFilteredContent([]);
@@ -87,10 +81,10 @@ const ImageManager = () => {
     }
   };
   
-  const getCodeSnippet = (imageUrl: string, contentType: string = 'movie') => {
+  const getCodeSnippet = (imageUrl: string) => {
     if (selectedContent) {
       return `// Update in mockData.ts
-const updated${contentType === 'movie' ? 'Movies' : 'Series'} = ${contentType === 'movie' ? 'mockMovies' : 'mockSeries'}.map(item => {
+const updatedContent = mockContent.map(item => {
   if (item.id === "${selectedContent.id}") {
     return { ...item, posterUrl: "${imageUrl}" };
   }
@@ -263,7 +257,7 @@ const updated${contentType === 'movie' ? 'Movies' : 'Series'} = ${contentType ==
                                 size="sm"
                                 className="w-full"
                                 onClick={() => {
-                                  copyToClipboard(getCodeSnippet(url, selectedContent?.type || 'movie'));
+                                  copyToClipboard(getCodeSnippet(url));
                                 }}
                               >
                                 Copy code
