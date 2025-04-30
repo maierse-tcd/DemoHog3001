@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
@@ -49,7 +50,7 @@ const Profile = () => {
           .from('profiles')
           .select('*')
           .eq('id', data.session.user.id)
-          .single();
+          .maybeSingle();
           
         if (error) {
           console.error('Error fetching profile:', error);

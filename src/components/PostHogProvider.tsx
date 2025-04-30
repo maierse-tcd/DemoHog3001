@@ -40,9 +40,7 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
           });
         } else {
           // Reset PostHog if no session found
-          window.posthog.reset(null, {
-            send_identification_request: false // Don't send an identification API request
-          });
+          window.posthog.reset();
           console.log("No authenticated user session found, using anonymous tracking");
         }
       } catch (err) {
@@ -71,9 +69,7 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
         });
       } else if (event === 'SIGNED_OUT') {
         // Clear identity on sign out
-        window.posthog.reset(null, {
-          send_identification_request: false
-        });
+        window.posthog.reset();
       }
     });
     

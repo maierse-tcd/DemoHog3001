@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '../ui/input';
@@ -81,7 +82,7 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
           .upsert({
             id: data.user.id,
             name,
-            email,
+            email
           });
             
         if (profileError) {
