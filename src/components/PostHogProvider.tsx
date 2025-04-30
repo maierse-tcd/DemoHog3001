@@ -119,7 +119,9 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     }, 1000);
     
     return () => {
-      subscription?.unsubscribe();
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, []);
 

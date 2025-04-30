@@ -83,7 +83,7 @@ export const Navbar = () => {
             <span>Series</span>
           </Link>
           {/* Only show Images link if feature flag is enabled */}
-          {showImagesNavigation && (
+          {showImagesNavigation === true && (
             <Link to="/image-manager" className="navbar-link flex items-center gap-1">
               <Image size={16} />
               <span>Images</span>
@@ -118,7 +118,7 @@ export const Navbar = () => {
             <span>Series</span>
           </Link>
           {/* Only show Images link in mobile menu if feature flag is enabled */}
-          {showImagesNavigation && (
+          {showImagesNavigation === true && (
             <Link to="/image-manager" className="navbar-link flex items-center gap-2">
               <Image size={16} />
               <span>Images</span>
