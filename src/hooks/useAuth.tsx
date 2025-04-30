@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from './use-toast';
@@ -27,6 +28,7 @@ export const useAuth = () => {
     try {
       console.log("Fetching profile for user:", userId);
       
+      // For demo purposes, we'll simplify the profile fetch
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
@@ -38,26 +40,26 @@ export const useAuth = () => {
         return;
       }
       
+      // If profile exists, update the auth state
       if (profileData) {
         console.log("Profile data fetched:", profileData);
         
-        // Update auth state with profile data
         setAuthState(prev => ({
           ...prev,
           isLoggedIn: true,
           userName: profileData.name || prev.userName,
-          avatarUrl: profileData.avatar_url || prev.avatarUrl
+          avatarUrl: profileData.avatar_url || prev.avatarUrl,
+          isLoading: false
         }));
         
         // Get user metadata for additional fields
         const { data: { user } } = await supabase.auth.getUser();
         const userMetadata = user?.user_metadata || {};
         
-        // Update the profile settings with user data
+        // Update the profile settings
         updateSettings({
           name: profileData.name || userMetadata.name || 'User',
           email: profileData.email,
-          // Use metadata for fields not in the profiles table
           selectedPlanId: userMetadata.selectedPlanId || settings?.selectedPlanId || 'premium',
           language: settings?.language || 'English',
           notifications: settings?.notifications || { email: true },
@@ -67,8 +69,35 @@ export const useAuth = () => {
             autoplayPreviews: true,
           }
         });
+        
+        // Ensure PostHog knows who the user is
+        if (window.posthog && userId) {
+          window.posthog.identify(userId, {
+            name: profileData.name,
+            email: profileData.email
+          });
+        }
       } else {
         console.log("No profile data found for user:", userId);
+        
+        // For demo purposes, create a simple profile if none exists
+        if (userId) {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data, error } = await supabase.from('profiles').insert({
+              name: user.user_metadata.name || 'User',
+              email: user.email
+            });
+            
+            if (error) {
+              console.error("Error creating default profile:", error);
+            } else {
+              console.log("Created default profile for user");
+              // Retry fetch after creating
+              fetchUserProfile(userId);
+            }
+          }
+        }
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -77,12 +106,15 @@ export const useAuth = () => {
   }, [settings, updateSettings]);
 
   useEffect(() => {
-    // First set up auth state listener before checking for existing session
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log("Auth state changed:", event, session?.user?.email);
         
         if (session?.user) {
+          // Use localStorage to maintain persistent identification
+          localStorage.setItem('hogflix_user_id', session.user.id);
+          
           setAuthState(prev => ({ 
             ...prev, 
             isLoggedIn: true,
@@ -94,7 +126,17 @@ export const useAuth = () => {
           setTimeout(() => {
             fetchUserProfile(session.user.id);
           }, 0);
+          
+          // Ensure PostHog identity is set
+          if (window.posthog) {
+            window.posthog.identify(session.user.id, {
+              email: session.user.email
+            });
+          }
         } else {
+          // Clear the persistent identifier if logged out
+          localStorage.removeItem('hogflix_user_id');
+          
           setAuthState({
             isLoggedIn: false,
             userName: 'Guest',
@@ -110,6 +152,8 @@ export const useAuth = () => {
       const { data } = await supabase.auth.getSession();
       
       if (data.session?.user) {
+        localStorage.setItem('hogflix_user_id', data.session.user.id);
+        
         setAuthState(prev => ({ 
           ...prev, 
           isLoggedIn: true,
@@ -123,7 +167,25 @@ export const useAuth = () => {
         setTimeout(() => {
           fetchUserProfile(data.session.user.id);
         }, 0);
+        
+        // Ensure PostHog identity is set
+        if (window.posthog) {
+          window.posthog.identify(data.session.user.id, {
+            email: data.session.user.email
+          });
+        }
       } else {
+        // Try to use stored user ID for continuity if available
+        const storedUserId = localStorage.getItem('hogflix_user_id');
+        if (storedUserId) {
+          console.log("No active session, but found stored user ID. Attempting to use for analytics:", storedUserId);
+          
+          // Just use this for analytics, don't try to authenticate
+          if (window.posthog) {
+            window.posthog.identify(storedUserId);
+          }
+        }
+        
         console.log("No existing session found");
         setAuthState({
           isLoggedIn: false,
@@ -150,8 +212,11 @@ export const useAuth = () => {
   
   const handleLogout = async () => {
     try {
+      // First store user ID for analytics
+      const userId = localStorage.getItem('hogflix_user_id');
+      
       // Capture logout event before clearing identification
-      if (window.posthog) {
+      if (window.posthog && userId) {
         window.posthog.capture('user_logout');
       }
       

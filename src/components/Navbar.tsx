@@ -32,11 +32,13 @@ export const Navbar = () => {
       const path = location.pathname;
       const title = document.title;
       
-      // Use the current user ID from localStorage if available
+      // Use the current user ID from localStorage if available for persistent identification
       const userId = localStorage.getItem('hogflix_user_id');
+      
       if (userId) {
-        // Re-identify on each navigation to ensure identity
+        // Re-identify on each navigation to ensure identity persistence
         window.posthog.identify(userId);
+        console.log("Re-identified user for persistent tracking:", userId);
       }
       
       // Capture the pageview
@@ -45,6 +47,7 @@ export const Navbar = () => {
         title,
         $current_url: window.location.href
       });
+      
       console.log("Navbar: PageView tracked for path:", path);
     }
   }, [location.pathname]);

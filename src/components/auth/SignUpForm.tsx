@@ -27,7 +27,7 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
     setIsLoading(true);
     
     try {
-      // Validate all fields
+      // Basic validation
       if (!email || !password || password.length < 6) {
         toast({
           title: "Invalid credentials",
@@ -57,9 +57,8 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
         setIsLoading(false);
         return;
       }
-      
-      // Step 1: Sign up with Supabase - Store selectedPlanId and isKidsAccount in user_metadata
-      // Set email_confirmed to true to bypass email verification
+
+      // For demo purposes, use signUp and directly sign in without email verification
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -67,63 +66,69 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
           data: {
             name,
             selectedPlanId,
-            isKidsAccount,
-            email_confirmed: true // Bypass email verification
-          }
+            isKidsAccount
+          },
         }
       });
       
       if (error) throw error;
       
       if (data && data.user) {
-        // Store user ID for persistent identification
-        localStorage.setItem('hogflix_user_id', data.user.id);
+        // For demo, immediately sign in after sign up
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
         
-        // Create profile entry (using upsert to prevent duplicate entries)
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: data.user.id,
+        if (signInError) throw signInError;
+        
+        if (signInData && signInData.user) {
+          // Store user ID in localStorage for persistent identification
+          localStorage.setItem('hogflix_user_id', signInData.user.id);
+          
+          // Create profile record
+          const { error: profileError } = await supabase.from('profiles').insert({
             name,
             email
           });
             
-        if (profileError) {
-          console.error("Error creating profile:", profileError);
-        }
-        
-        // Update profile settings context
-        updateSettings({
-          name,
-          email,
-          notifications: { email: true },
-          language: 'English',
-          selectedPlanId,
-          isKidsAccount
-        });
-        
-        updateSelectedPlan(selectedPlanId);
-        
-        // Identify user in PostHog
-        if (window.posthog) {
-          window.posthog.identify(data.user.id, {
-            email: email,
-            name: name,
-            plan: selectedPlanId,
-            isKidsAccount: isKidsAccount
+          if (profileError) {
+            console.error("Error creating profile:", profileError);
+          }
+          
+          // Update profile settings context
+          updateSettings({
+            name,
+            email,
+            notifications: { email: true },
+            language: 'English',
+            selectedPlanId,
+            isKidsAccount
           });
-          window.posthog.capture('user_signup_complete');
+          
+          updateSelectedPlan(selectedPlanId);
+          
+          // Identify user in PostHog
+          if (window.posthog) {
+            window.posthog.identify(signInData.user.id, {
+              email: email,
+              name: name,
+              plan: selectedPlanId,
+              isKidsAccount: isKidsAccount
+            });
+            window.posthog.capture('user_signup_complete');
+          }
+          
+          toast({
+            title: "Sign up successful!",
+            description: "Welcome to Hogflix! Enjoy your hedgehog adventures.",
+          });
+          
+          // Redirect to home page after short delay
+          setTimeout(() => {
+            navigate('/');
+          }, 500);
         }
-        
-        toast({
-          title: "Sign up successful!",
-          description: "Welcome to Hogflix! Enjoy your hedgehog adventures.",
-        });
-        
-        // Redirect to home page after short delay
-        setTimeout(() => {
-          navigate('/');
-        }, 500);
       }
     } catch (error: any) {
       // Track failed signup in PostHog

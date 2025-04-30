@@ -72,10 +72,17 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
     // Fetch user profile data
     await fetchUserProfile(userId);
     
-    // Track login event in PostHog
+    // Track login event in PostHog with persistent identification
     if (window.posthog) {
+      // Ensure PostHog has the persistent ID
       window.posthog.identify(userId, { email });
       window.posthog.capture('user_login_success');
+      
+      // Set the user properties to make sure they're associated with this user
+      window.posthog.people.set({
+        email: email,
+        $name: email.split('@')[0],
+      });
     }
     
     toast({
