@@ -61,9 +61,10 @@ const Login = () => {
         isKidsAccount: user?.user_metadata?.isKidsAccount || false
       });
       
-      // Make sure PostHog has the correct identity
+      // Make sure PostHog has the correct identity - use email as primary identifier
       if (window.posthog && userEmail) {
         window.posthog.identify(userEmail, {
+          email: userEmail,
           name: userName,
           id: userId
         });

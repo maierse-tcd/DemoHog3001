@@ -78,10 +78,11 @@ export const useAuth = () => {
           }
         });
         
-        // Ensure PostHog knows who the user is
+        // Ensure PostHog knows who the user is - use email as primary identifier
         if (window.posthog && userEmail) {
           try {
             window.posthog.identify(userEmail, {
+              email: userEmail,
               name: displayName,
               id: userId
             });

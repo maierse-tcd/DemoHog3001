@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '../ui/input';
@@ -111,7 +110,6 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
       
       window.posthog.people.set({
         email: email,
-        $name: email.split('@')[0],
         last_login: new Date().toISOString()
       });
     }

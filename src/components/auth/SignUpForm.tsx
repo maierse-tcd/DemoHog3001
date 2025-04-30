@@ -90,9 +90,10 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
             isKidsAccount
           });
           
-          // Identify user in PostHog
+          // Identify user in PostHog using email as primary identifier
           if (window.posthog) {
             window.posthog.identify(email, {
+              email: email,
               name,
               plan: selectedPlanId,
               isKidsAccount

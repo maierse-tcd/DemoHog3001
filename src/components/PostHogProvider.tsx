@@ -40,6 +40,7 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
           try {
             // Use email as the primary identifier
             window.posthog.identify(userEmail, {
+              email: userEmail,
               name: session.user.user_metadata?.name || userEmail.split('@')[0],
               id: session.user.id
             });
@@ -69,6 +70,7 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
           console.log("PostHog: Identifying existing user with email:", session.user.email);
           
           window.posthog.identify(session.user.email, {
+            email: session.user.email,
             name: session.user.user_metadata?.name || session.user.email.split('@')[0],
             id: session.user.id
           });
