@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
@@ -27,7 +28,7 @@ const ImageManager = () => {
   // Use feature flag to determine if images navigation should be shown
   const showImagesNavigation = useFeatureFlag('show_images_navigation');
   
-  // If feature flag is disabled, simply redirect to home
+  // If feature flag is explicitly false (not undefined), redirect to home
   if (showImagesNavigation === false) {
     return <Navigate to="/" replace />;
   }

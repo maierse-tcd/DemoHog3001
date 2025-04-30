@@ -30,6 +30,7 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
       loaded: function(posthog) {
         // Load feature flags as soon as PostHog is loaded
         posthog.reloadFeatureFlags();
+        console.log("PostHog loaded and feature flags requested");
       }
     });
     
@@ -92,7 +93,20 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
       }
     };
     
+    // Ensure we identify the user if they're already logged in
     identifyExistingUser();
+    
+    // Add debug listener to log feature flag changes
+    if (window.posthog) {
+      window.posthog.onFeatureFlags(() => {
+        const flags = window.posthog.getFeatureFlags();
+        console.log("Feature flags updated:", flags);
+        
+        // Specifically check for our feature flag
+        const imageNavFlag = window.posthog.isFeatureEnabled('show_images_navigation');
+        console.log("show_images_navigation flag:", imageNavFlag);
+      });
+    }
     
     return () => {
       subscription.unsubscribe();

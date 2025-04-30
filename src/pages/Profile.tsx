@@ -11,10 +11,12 @@ import { AccountSettings } from '../components/profile/AccountSettings';
 import { HelpCenter } from '../components/profile/HelpCenter';
 import { supabase } from '../integrations/supabase/client';
 import { useToast } from '../hooks/use-toast';
+import { useAuth } from '../hooks/useAuth';
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState<string>('profile');
   const { settings, updateSettings, updateSelectedPlan } = useProfileSettings();
+  const { isLoggedIn, isLoading: authLoading } = useAuth(); // Use auth state from useAuth
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -33,10 +35,11 @@ const Profile = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        setIsLoading(true);
-        const { data } = await supabase.auth.getSession();
+        // Wait for auth state to be determined
+        if (authLoading) return;
         
-        if (!data.session) {
+        // If not logged in, redirect to login
+        if (!isLoggedIn) {
           toast({
             title: "Authentication required",
             description: "Please log in to access your profile",
@@ -45,7 +48,15 @@ const Profile = () => {
           return;
         }
         
-        // Fetch user profile data - using email instead of ID for the query
+        // Fetch user profile data
+        const { data } = await supabase.auth.getSession();
+        
+        if (!data.session) {
+          console.error('No session found');
+          navigate('/login');
+          return;
+        }
+        
         const userEmail = data.session.user.email;
         
         if (!userEmail) {
@@ -83,18 +94,21 @@ const Profile = () => {
             playbackSettings: settings.playbackSettings,
           });
         }
+        
+        // Important: Set loading to false even if there's an error
+        setIsLoading(false);
       } catch (error) {
         console.error('Auth check error:', error);
+        setIsLoading(false); // Ensure loading state is cleared even on error
         navigate('/login');
-      } finally {
-        setIsLoading(false);
       }
     };
     
     checkAuth();
-  }, [navigate, toast, updateSettings, settings]);
+  }, [navigate, toast, updateSettings, settings, isLoggedIn, authLoading]);
 
-  if (isLoading) {
+  // Show loading state only while actually loading and auth is still pending
+  if (isLoading && authLoading) {
     return (
       <div className="min-h-screen bg-netflix-black flex items-center justify-center">
         <div className="text-netflix-red text-2xl">Loading...</div>
@@ -102,6 +116,7 @@ const Profile = () => {
     );
   }
 
+  // Return the profile page even while loading to avoid flickering
   return (
     <div className="min-h-screen bg-netflix-black">
       <Navbar />
