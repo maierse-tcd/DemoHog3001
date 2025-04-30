@@ -20,6 +20,7 @@ export const useAuth = () => {
   // Handle user profile data after fetching
   const processUserProfile = useCallback(async (userId: string) => {
     try {
+      console.log("Processing user profile:", userId);
       const profileInfo = await fetchUserProfile(userId);
       
       if (!profileInfo) {
@@ -73,9 +74,12 @@ export const useAuth = () => {
   }, [fetchUserProfile, createDefaultProfile, updateAuthState, identifyUserInPostHog]);
 
   useEffect(() => {
+    let isMounted = true;
+    let authSubscription = null;
+    
     const checkAuthState = async () => {
       try {
-        // Set up auth state listener FIRST
+        // Set up auth state listener FIRST with flag to prevent multiple profile loads
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
           console.log("Auth state changed:", event, session?.user?.email);
           
@@ -92,9 +96,11 @@ export const useAuth = () => {
               isLoading: false
             });
             
-            // Use timeout to prevent Supabase deadlock
+            // Use setTimeout to prevent Supabase deadlock
             setTimeout(() => {
-              processUserProfile(session.user.id);
+              if (isMounted) {
+                processUserProfile(session.user.id);
+              }
             }, 0);
           } else {
             resetAuthState();
@@ -102,10 +108,12 @@ export const useAuth = () => {
           }
         });
         
+        authSubscription = subscription;
+        
         // THEN check for existing session
         const { data } = await supabase.auth.getSession();
         
-        if (data.session?.user) {
+        if (data.session?.user && isMounted) {
           const userEmail = data.session.user.email || '';
           const displayName = data.session.user.user_metadata?.name || userEmail.split('@')[0];
           
@@ -118,27 +126,34 @@ export const useAuth = () => {
             isLoading: false
           });
           
-          // Delay the fetch to avoid Supabase lock
+          // Process user profile with delay to prevent deadlocks
           setTimeout(() => {
-            processUserProfile(data.session.user.id);
-          }, 0);
-        } else {
+            if (isMounted) {
+              processUserProfile(data.session.user.id);
+            }
+          }, 100);
+        } else if (isMounted) {
           // No active session
           resetAuthState();
           updateAuthState({ isLoading: false });
         }
-        
-        return () => {
-          subscription.unsubscribe();
-        };
       } catch (error) {
         console.error("Error checking auth state:", error);
-        resetAuthState();
-        updateAuthState({ isLoading: false });
+        if (isMounted) {
+          resetAuthState();
+          updateAuthState({ isLoading: false });
+        }
       }
     };
     
     checkAuthState();
+    
+    return () => {
+      isMounted = false;
+      if (authSubscription) {
+        authSubscription.unsubscribe();
+      }
+    };
   }, [processUserProfile, updateAuthState, resetAuthState]);
   
   const handleLogout = async () => {

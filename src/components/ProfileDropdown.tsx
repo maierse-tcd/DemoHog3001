@@ -8,7 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 
 export const ProfileDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { isLoggedIn, userName, avatarUrl, handleLogout } = useAuth();
+  const { isLoggedIn, userName, avatarUrl, userEmail, handleLogout } = useAuth();
 
   return (
     <div className="relative">
@@ -20,7 +20,7 @@ export const ProfileDropdown = () => {
           <ProfileAvatar 
             isLoggedIn={isLoggedIn}
             avatarUrl={avatarUrl}
-            userName={userName}
+            userName={userName || 'User'}
           />
         ) : (
           <>

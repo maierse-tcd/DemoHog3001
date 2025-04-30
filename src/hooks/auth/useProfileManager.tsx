@@ -6,8 +6,18 @@ import { supabase } from '../../integrations/supabase/client';
 export const useProfileManager = () => {
   const { settings, updateSettings } = useProfileSettings();
 
+  // Track profile load attempts to prevent redundant calls
+  const fetchedProfiles = new Set();
+
   const fetchUserProfile = useCallback(async (userId: string) => {
     try {
+      // Skip redundant fetches in the same render cycle
+      if (fetchedProfiles.has(userId)) {
+        console.log("Skipping redundant profile fetch for user:", userId);
+        return null;
+      }
+      
+      fetchedProfiles.add(userId);
       console.log("Fetching profile for user:", userId);
       
       // Get user data from auth
