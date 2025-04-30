@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { ChevronDown, User, LogIn } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -113,6 +114,7 @@ export const ProfileDropdown = () => {
           selectedPlanId: settings?.selectedPlanId || 'premium',
           language: settings?.language || 'English',
           notifications: settings?.notifications || { email: true },
+          isKidsAccount: profileData.is_kids_account || false
         });
       }
     } catch (error) {

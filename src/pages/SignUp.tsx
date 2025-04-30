@@ -116,7 +116,7 @@ const SignUp = () => {
         return;
       }
       
-      // Sign up with Supabase
+      // Sign up with Supabase - IMPORTANT: removed emailRedirectTo option for direct signup without email confirmation
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -125,8 +125,7 @@ const SignUp = () => {
             name,
             selectedPlanId,
             isKidsAccount
-          },
-          emailRedirectTo: window.location.origin
+          }
         }
       });
       
@@ -140,6 +139,7 @@ const SignUp = () => {
           notifications: { email: true },
           language: 'English',
           selectedPlanId,
+          isKidsAccount
         });
         
         updateSelectedPlan(selectedPlanId);
@@ -174,25 +174,39 @@ const SignUp = () => {
           window.posthog.capture('user_signup_complete');
         }
         
+        // Always sign the user in immediately after signup
+        // Get the session directly from the data object which should be available after signUp
         if (data.session) {
-          // User was automatically logged in (email confirmation disabled in Supabase)
           toast({
             title: "Sign up successful!",
             description: "Welcome to Hogflix! Enjoy your hedgehog adventures.",
           });
           
-          navigate('/');
+          // Short delay before redirect for toast to be visible
+          setTimeout(() => {
+            navigate('/');
+          }, 500);
         } else {
-          // Need to confirm email first
-          toast({
-            title: "Account created!",
-            description: "Please check your email to confirm your account before logging in.",
+          // If for some reason we don't have a session yet, try logging in manually
+          const { error: loginError } = await supabase.auth.signInWithPassword({
+            email,
+            password
           });
           
-          // Still redirect to homepage
-          setTimeout(() => {
+          if (loginError) {
+            console.error("Auto-login error:", loginError);
+            toast({
+              title: "Sign up successful!",
+              description: "Please log in with your new account.",
+            });
             navigate('/login');
-          }, 1500);
+          } else {
+            toast({
+              title: "Sign up successful!",
+              description: "Welcome to Hogflix! Enjoy your hedgehog adventures.",
+            });
+            navigate('/');
+          }
         }
       }
     } catch (error: any) {

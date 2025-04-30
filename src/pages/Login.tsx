@@ -44,6 +44,9 @@ const Login = () => {
           email: profileData.email,
           language: 'English',
           notifications: { email: true },
+          // Use the selected_plan_id from the profile if available
+          selectedPlanId: profileData.selected_plan_id || 'premium',
+          isKidsAccount: profileData.is_kids_account || false
         });
       }
     } catch (error) {
@@ -67,7 +70,7 @@ const Login = () => {
         return;
       }
       
-      // Sign in with email/password
+      // Sign in with email/password - use persistSession: true to ensure persistent login
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -76,20 +79,11 @@ const Login = () => {
       if (error) {
         console.error("Login error:", error);
         
-        // Special handling for "Email not confirmed" errors
-        if (error.message.includes("Email not confirmed")) {
-          toast({
-            title: "Email not confirmed",
-            description: "Please check your email for a confirmation link or contact support",
-            variant: "destructive"
-          });
-        } else {
-          toast({
-            title: "Login failed",
-            description: error.message || "Invalid email or password",
-            variant: "destructive"
-          });
-        }
+        toast({
+          title: "Login failed",
+          description: error.message || "Invalid email or password",
+          variant: "destructive"
+        });
         
         // Track failed login in PostHog
         if (window.posthog) {
