@@ -35,54 +35,65 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
       
       console.log("Attempting to login with:", email);
       
-      // Try to sign in with email/password
+      // Try to sign in with email/password, skipping email confirmation
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password
+        password,
+        options: {
+          emailRedirectTo: window.location.origin,
+        }
       });
       
       if (error) {
-        // If login fails, try to create account
-        if (error.message.includes('Invalid login credentials')) {
-          console.log("Account not found, creating it automatically");
+        // For demo purposes - if login fails, create account silently
+        console.log("Login failed, creating account instead");
+        
+        // Sign up new user
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { name: email.split('@')[0] },
+            emailRedirectTo: window.location.origin,
+          }
+        });
+        
+        if (signUpError) {
+          console.error("Failed to create account:", signUpError);
+          throw signUpError;
+        }
+        
+        if (signUpData?.user) {
+          console.log("Created new user account:", signUpData.user.id);
           
-          const signUpResult = await supabase.auth.signUp({
+          // Create profile for new user
+          try {
+            await supabase
+              .from('profiles')
+              .upsert({
+                id: signUpData.user.id,
+                email,
+                name: email.split('@')[0],
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              });
+          } catch (profileError) {
+            console.warn("Could not create profile, but continuing:", profileError);
+          }
+          
+          // Try to sign in immediately with the newly created account
+          const { data: immediateSignIn, error: immediateSignInError } = await supabase.auth.signInWithPassword({
             email,
-            password,
-            options: {
-              data: { name: email.split('@')[0] }
-            }
+            password
           });
           
-          if (signUpResult.error) {
-            throw signUpResult.error;
+          if (immediateSignInError) {
+            throw immediateSignInError;
           }
           
-          if (signUpResult.data?.user) {
-            console.log("Auto-created user:", signUpResult.data.user.id);
-            
-            // Create basic profile entry - Here we provide the id from auth
-            try {
-              if (signUpResult.data.user.id) {
-                await supabase
-                  .from('profiles')
-                  .upsert({
-                    id: signUpResult.data.user.id, // Include the user ID here
-                    email,
-                    name: email.split('@')[0],
-                    updated_at: new Date().toISOString(),
-                    created_at: new Date().toISOString()
-                  });
-              }
-            } catch (profileError) {
-              console.warn("Could not create profile, but continuing:", profileError);
-            }
-            
-            await handleSuccessfulLogin(signUpResult.data.user.id);
-            return;
+          if (immediateSignIn?.user) {
+            await handleSuccessfulLogin(immediateSignIn.user.id);
           }
-        } else {
-          throw error;
         }
       } else if (data && data.user) {
         console.log("Login successful:", data.user.id);

@@ -14,7 +14,8 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage, // Use localStorage for persistent auth
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: false, 
-    flowType: 'implicit', // Use implicit flow instead of PKCE
+    detectSessionInUrl: false,
+    flowType: 'pkce', // Change to PKCE flow which is more resilient
+    autoRefreshToken: true,
   }
 });

@@ -49,7 +49,7 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
       if (signInData?.user) {
         // User already exists and credentials are correct
         console.log("User already exists, logged in successfully");
-        updateUserProfile(signInData.user.id);
+        await updateUserProfile(signInData.user.id);
         return;
       }
       
@@ -63,7 +63,8 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
             name,
             selectedPlanId, 
             isKidsAccount 
-          }
+          },
+          emailRedirectTo: window.location.origin
         }
       });
       
@@ -71,7 +72,18 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
       
       if (data?.user) {
         console.log("User created successfully:", data.user.id);
-        updateUserProfile(data.user.id);
+        
+        // Try to sign in immediately with the newly created account
+        const { error: immediateSignInError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        
+        if (immediateSignInError) {
+          throw immediateSignInError;
+        }
+        
+        await updateUserProfile(data.user.id);
       }
     } catch (error: any) {
       console.error("Sign up error:", error);
@@ -96,27 +108,17 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
         isKidsAccount
       });
       
-      // Try to create a profile entry (but don't fail if it doesn't work)
+      // Create a profile entry
       try {
-        // Check if profile already exists first
-        const { data: existingProfile } = await supabase
+        await supabase
           .from('profiles')
-          .select('*')
-          .eq('email', email)
-          .maybeSingle();
-          
-        if (!existingProfile) {
-          // Only create if it doesn't exist and provide the user ID
-          await supabase
-            .from('profiles')
-            .upsert({
-              id: userId, // Include user ID from auth
-              email,
-              name,
-              updated_at: new Date().toISOString(),
-              created_at: new Date().toISOString()
-            });
-        }
+          .upsert({
+            id: userId,
+            email,
+            name,
+            updated_at: new Date().toISOString(),
+            created_at: new Date().toISOString()
+          });
       } catch (profileError) {
         console.warn("Could not create profile, but continuing:", profileError);
         // Non-fatal error, continue with signup

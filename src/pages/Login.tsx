@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useToast } from '../hooks/use-toast';
@@ -20,7 +21,6 @@ const Login = () => {
         
         if (data.session) {
           console.log("User already logged in, redirecting to homepage");
-          // User is already logged in, redirect to homepage
           navigate('/');
         }
       } catch (error) {
