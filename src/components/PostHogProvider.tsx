@@ -34,44 +34,53 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     });
     
     // Set up auth state listener for PostHog identification
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        const userEmail = session.user.email;
-        
-        if (userEmail && window.posthog) {
-          console.log("PostHog: Identifying user with email:", userEmail);
+    let authSubscriptionActive = false;
+    const setupAuthListener = () => {
+      if (authSubscriptionActive) return;
+      
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        // Only process significant events to avoid loops
+        if (event === 'SIGNED_IN' && session?.user) {
+          const userEmail = session.user.email;
           
-          try {
-            // Use email as identifier
-            window.posthog.identify(userEmail, {
-              email: userEmail,
-              name: session.user.user_metadata?.name || userEmail.split('@')[0],
-              id: session.user.id
-            });
+          if (userEmail && window.posthog) {
+            console.log("PostHog: Identifying user with email:", userEmail);
             
-            // Force reload feature flags after identifying user
-            setTimeout(() => {
-              if (window.posthog && window.posthog.reloadFeatureFlags) {
-                window.posthog.reloadFeatureFlags();
-                console.log("Feature flags reloaded after user identification");
-              }
-            }, 500);
+            try {
+              // Use email as identifier
+              window.posthog.identify(userEmail, {
+                email: userEmail,
+                name: session.user.user_metadata?.name || userEmail.split('@')[0],
+                id: session.user.id
+              });
+              
+              // Force reload feature flags after identifying user
+              setTimeout(() => {
+                if (window.posthog && window.posthog.reloadFeatureFlags) {
+                  window.posthog.reloadFeatureFlags();
+                  console.log("Feature flags reloaded after user identification");
+                }
+              }, 500);
+            } catch (err) {
+              console.error("PostHog event error:", err);
+            }
+          }
+        }
+        
+        if (event === 'SIGNED_OUT' && window.posthog) {
+          try {
+            // Reset identity after sign out
+            window.posthog.reset();
+            console.log("PostHog: User signed out, identity reset");
           } catch (err) {
             console.error("PostHog event error:", err);
           }
         }
-      }
+      });
       
-      if (event === 'SIGNED_OUT' && window.posthog) {
-        try {
-          // Reset identity after sign out
-          window.posthog.reset();
-          console.log("PostHog: User signed out, identity reset");
-        } catch (err) {
-          console.error("PostHog event error:", err);
-        }
-      }
-    });
+      authSubscriptionActive = true;
+      return subscription;
+    };
     
     // Try to identify with existing user data
     const identifyExistingUser = async () => {
@@ -100,6 +109,9 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
       }
     };
     
+    // Setup single auth listener
+    const subscription = setupAuthListener();
+    
     // Identify existing user
     identifyExistingUser();
     
@@ -111,8 +123,8 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
           
           // Check for specific flag
           if (window.posthog.isFeatureEnabled) {
-            const imageNavFlag = window.posthog.isFeatureEnabled('show_images_navigation');
-            console.log("show_images_navigation flag:", imageNavFlag);
+            const isAdminFlag = window.posthog.isFeatureEnabled('is_admin');
+            console.log("is_admin flag:", isAdminFlag);
           }
         });
       }
@@ -121,6 +133,7 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     return () => {
       if (subscription) {
         subscription.unsubscribe();
+        authSubscriptionActive = false;
       }
     };
   }, []);
