@@ -26,9 +26,21 @@ export const ProfileDropdown = () => {
         
         if (session?.user) {
           fetchUserProfile(session.user.id);
+          
+          // Track user identification in PostHog when session changes
+          if (window.posthog && event === 'SIGNED_IN') {
+            window.posthog.identify(session.user.id, {
+              email: session.user.email
+            });
+          }
         } else {
           setUserName('Guest');
           setAvatarUrl('');
+          
+          // Reset PostHog identification when logged out
+          if (window.posthog && event === 'SIGNED_OUT') {
+            window.posthog.reset();
+          }
         }
       }
     );
@@ -40,6 +52,13 @@ export const ProfileDropdown = () => {
       
       if (data.session?.user) {
         fetchUserProfile(data.session.user.id);
+        
+        // Identify user in PostHog on initial load if they're logged in
+        if (window.posthog) {
+          window.posthog.identify(data.session.user.id, {
+            email: data.session.user.email
+          });
+        }
       }
     };
     
@@ -95,6 +114,12 @@ export const ProfileDropdown = () => {
         name: 'Guest',
         email: '',
       });
+      
+      // Track logout in PostHog
+      if (window.posthog) {
+        window.posthog.capture('user_logout');
+        window.posthog.reset(); // Clear user identification after logout
+      }
       
       toast({
         title: "Logged out",

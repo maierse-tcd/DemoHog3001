@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { SearchBar } from './SearchBar';
 import { ProfileDropdown } from './ProfileDropdown';
-import { Bell, Menu, X, Film, ListCheck } from 'lucide-react';
+import { Bell, Menu, X, Film, ListCheck, Image } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 export const Navbar = () => {
@@ -26,6 +26,13 @@ export const Navbar = () => {
     };
   }, []);
 
+  // Track page view in PostHog
+  useEffect(() => {
+    if (window.posthog) {
+      window.posthog.capture('$pageview');
+    }
+  }, [location.pathname]);
+
   return (
     <nav 
       className={`fixed top-0 z-50 w-full px-4 py-2 md:px-8 md:py-4 flex items-center justify-between transition-all duration-500 ${
@@ -48,6 +55,10 @@ export const Navbar = () => {
           <Link to="/series" className="navbar-link flex items-center gap-1">
             <ListCheck size={16} />
             <span>Series</span>
+          </Link>
+          <Link to="/image-manager" className="navbar-link flex items-center gap-1">
+            <Image size={16} />
+            <span>Images</span>
           </Link>
         </div>
       </div>
@@ -76,6 +87,10 @@ export const Navbar = () => {
           <Link to="/series" className="navbar-link flex items-center gap-2">
             <ListCheck size={16} />
             <span>Series</span>
+          </Link>
+          <Link to="/image-manager" className="navbar-link flex items-center gap-2">
+            <Image size={16} />
+            <span>Images</span>
           </Link>
           {!isAuthPage && (
             <div className="pt-2">

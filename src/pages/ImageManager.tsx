@@ -4,21 +4,39 @@ import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { ImageUploader } from '../components/ImageUploader';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
+import { useToast } from '../hooks/use-toast';
 
 const ImageManager = () => {
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const { toast } = useToast();
   
   const handleImageUploaded = (imageUrl: string) => {
     setUploadedImages([...uploadedImages, imageUrl]);
+    
+    if (window.posthog) {
+      window.posthog.capture('image_uploaded');
+    }
   };
   
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
       .then(() => {
-        alert('URL copied to clipboard!');
+        toast({
+          title: 'URL copied to clipboard!',
+          description: 'You can now use this URL in your content.',
+        });
+        
+        if (window.posthog) {
+          window.posthog.capture('image_url_copied');
+        }
       })
       .catch((err) => {
         console.error('Failed to copy URL:', err);
+        toast({
+          title: 'Failed to copy URL',
+          description: 'Please try again or copy manually.',
+          variant: 'destructive',
+        });
       });
   };
   

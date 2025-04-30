@@ -59,8 +59,8 @@ export const ContentRow = ({ title, contentList }: ContentRowProps) => {
           </button>
         )}
         
-        {/* Content row with ScrollArea */}
-        <ScrollArea className="w-full overflow-x-auto pb-4 scrollbar-none">
+        {/* Content row with ScrollArea - Hide scrollbar */}
+        <ScrollArea className="w-full overflow-x-auto pb-4 scrollbar-none" hideScrollbar={true}>
           <div 
             className="flex items-start space-x-3 px-4 md:px-8 lg:px-12 pt-2"
             ref={rowRef}

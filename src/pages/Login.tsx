@@ -79,8 +79,7 @@ const Login = () => {
         // If we found the profile, we'll manually sign in the user
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email,
-          password,
-          // Remove the incorrect options structure with 'data' property
+          password
         });
         
         if (signInError) {
@@ -89,6 +88,15 @@ const Login = () => {
         
         if (signInData && signInData.user) {
           await fetchUserProfile(signInData.user.id);
+          
+          // Track login event in PostHog
+          if (window.posthog) {
+            window.posthog.identify(signInData.user.id, {
+              email: email,
+              name: profileData.name || 'User'
+            });
+            window.posthog.capture('user_login_success');
+          }
           
           toast({
             title: "Login successful",
@@ -107,6 +115,14 @@ const Login = () => {
         // Fetch user profile data
         await fetchUserProfile(data.user.id);
         
+        // Track login event in PostHog
+        if (window.posthog) {
+          window.posthog.identify(data.user.id, {
+            email: email
+          });
+          window.posthog.capture('user_login_success');
+        }
+        
         toast({
           title: "Login successful",
           description: `Welcome back!`,
@@ -118,6 +134,13 @@ const Login = () => {
       }
     } catch (error: any) {
       console.log('Analytics Event: Login Failed', { email });
+      
+      // Track failed login in PostHog
+      if (window.posthog) {
+        window.posthog.capture('user_login_failed', {
+          error: error.message || "Unknown error"
+        });
+      }
       
       toast({
         title: "Login failed",

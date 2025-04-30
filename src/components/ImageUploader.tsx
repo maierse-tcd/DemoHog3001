@@ -1,6 +1,7 @@
 
 import { useState, useRef } from 'react';
 import { Upload, Image, X } from 'lucide-react';
+import { useToast } from '../hooks/use-toast';
 
 interface ImageUploaderProps {
   onImageUploaded?: (imageUrl: string) => void;
@@ -8,27 +9,66 @@ interface ImageUploaderProps {
 
 export const ImageUploader = ({ onImageUploaded }: ImageUploaderProps) => {
   const [preview, setPreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
+    setIsUploading(true);
+    
+    // Track upload start in PostHog
+    if (window.posthog) {
+      window.posthog.capture('image_upload_started', {
+        fileType: file.type,
+        fileSize: file.size
+      });
+    }
+    
     // Create a local URL for preview
     const objectUrl = URL.createObjectURL(file);
-    setPreview(objectUrl);
     
-    // In a real app, you would upload the file to a server/storage here
-    // For now, we'll just use the local URL
-    if (onImageUploaded) {
-      onImageUploaded(objectUrl);
-    }
+    // Simulate upload delay for better UX feedback
+    setTimeout(() => {
+      setPreview(objectUrl);
+      setIsUploading(false);
+      
+      // In a real app, you would upload the file to a server/storage here
+      // For now, we'll just use the local URL
+      if (onImageUploaded) {
+        onImageUploaded(objectUrl);
+      }
+      
+      toast({
+        title: "Image uploaded successfully",
+        description: "You can now use this image for your content."
+      });
+      
+      // Track successful upload in PostHog
+      if (window.posthog) {
+        window.posthog.capture('image_upload_complete', {
+          fileType: file.type,
+          fileSize: file.size
+        });
+      }
+    }, 1000);
   };
   
   const clearImage = () => {
+    if (preview) {
+      URL.revokeObjectURL(preview);
+    }
+    
     setPreview(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+    
+    // Track image removal in PostHog
+    if (window.posthog) {
+      window.posthog.capture('image_removed');
     }
   };
   
@@ -51,12 +91,12 @@ export const ImageUploader = ({ onImageUploaded }: ImageUploaderProps) => {
           </div>
         ) : (
           <div 
-            className="border-2 border-dashed border-gray-300 rounded-md p-6 flex flex-col items-center cursor-pointer"
-            onClick={() => fileInputRef.current?.click()}
+            className={`border-2 border-dashed border-gray-300 rounded-md p-6 flex flex-col items-center cursor-pointer ${isUploading ? 'opacity-50' : ''}`}
+            onClick={() => !isUploading && fileInputRef.current?.click()}
           >
             <Upload className="h-12 w-12 text-gray-400 mb-2" />
             <p className="text-center text-sm text-gray-400">
-              Click to upload an image
+              {isUploading ? 'Uploading...' : 'Click to upload an image'}
             </p>
           </div>
         )}
@@ -67,6 +107,7 @@ export const ImageUploader = ({ onImageUploaded }: ImageUploaderProps) => {
           onChange={handleFileChange}
           accept="image/*"
           className="hidden"
+          disabled={isUploading}
         />
       </div>
       

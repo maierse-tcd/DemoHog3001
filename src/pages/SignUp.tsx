@@ -129,12 +129,16 @@ const SignUp = () => {
         
         updateSelectedPlan(selectedPlanId);
         
-        console.log('Analytics Event: Sign Up Complete', {
-          email,
-          name,
-          selectedPlanId,
-          isKidsAccount
-        });
+        // Track signup event in PostHog
+        if (window.posthog) {
+          window.posthog.identify(data.user.id, {
+            email: email,
+            name: name,
+            plan: selectedPlanId,
+            isKidsAccount: isKidsAccount
+          });
+          window.posthog.capture('user_signup_complete');
+        }
         
         toast({
           title: "Sign up successful!",
@@ -144,6 +148,13 @@ const SignUp = () => {
         navigate('/');
       }
     } catch (error: any) {
+      // Track failed signup in PostHog
+      if (window.posthog) {
+        window.posthog.capture('user_signup_failed', {
+          error: error.message || "Unknown error"
+        });
+      }
+      
       toast({
         title: "Sign up failed",
         description: error.message || "An error occurred during sign up",
