@@ -17,6 +17,9 @@ import { useFeatureFlag } from '../hooks/useFeatureFlag';
 let localMockContent = [...mockContent];
 
 const ImageManager = () => {
+  // Use feature flag to determine if user is an admin
+  const isAdmin = useFeatureFlag('is_admin');
+  
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredContent, setFilteredContent] = useState<Content[]>([]);
@@ -24,9 +27,6 @@ const ImageManager = () => {
   const [updatedContentList, setUpdatedContentList] = useState<Content[]>(localMockContent);
   const [savedChanges, setSavedChanges] = useState(false);
   const { toast } = useToast();
-  
-  // Use feature flag to determine if user is an admin
-  const isAdmin = useFeatureFlag('is_admin');
   
   // If user is not an admin (feature flag is explicitly false), redirect to home
   if (isAdmin === false) {
