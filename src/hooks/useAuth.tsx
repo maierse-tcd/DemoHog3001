@@ -50,8 +50,8 @@ export const useAuth = () => {
         console.log("Profile data fetched:", profileData);
         
         // Safe access to profile data
-        const displayName = profileData?.name || userEmail.split('@')[0];
-        const avatarUrl = profileData?.avatar_url || '';
+        const displayName = profileData.name || userEmail.split('@')[0];
+        const avatarUrl = profileData.avatar_url || '';
         
         setAuthState({
           isLoggedIn: true,
@@ -98,13 +98,15 @@ export const useAuth = () => {
           
           try {
             // Create profile with the user ID from auth.users
-            const { error: insertError } = await supabase.from('profiles').upsert({
-              id: userId, // Must provide the UUID from auth.users
-              name: displayName,
-              email: userEmail,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            });
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .upsert({
+                id: userId, // Must provide the UUID from auth.users
+                name: displayName,
+                email: userEmail,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              });
             
             if (insertError) {
               console.error("Error creating default profile:", insertError);

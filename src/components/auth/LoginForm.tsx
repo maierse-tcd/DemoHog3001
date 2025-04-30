@@ -61,16 +61,19 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
           if (signUpResult.data?.user) {
             console.log("Auto-created user:", signUpResult.data.user.id);
             
-            // Create basic profile entry
+            // Create basic profile entry - Here we provide the id from auth
             try {
-              await supabase
-                .from('profiles')
-                .upsert({
-                  email,
-                  name: email.split('@')[0],
-                  updated_at: new Date().toISOString(),
-                  created_at: new Date().toISOString()
-                }, { onConflict: 'email' });
+              if (signUpResult.data.user.id) {
+                await supabase
+                  .from('profiles')
+                  .upsert({
+                    id: signUpResult.data.user.id, // Include the user ID here
+                    email,
+                    name: email.split('@')[0],
+                    updated_at: new Date().toISOString(),
+                    created_at: new Date().toISOString()
+                  });
+              }
             } catch (profileError) {
               console.warn("Could not create profile, but continuing:", profileError);
             }

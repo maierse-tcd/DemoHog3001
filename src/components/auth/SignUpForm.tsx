@@ -106,15 +106,16 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
           .maybeSingle();
           
         if (!existingProfile) {
-          // Only create if it doesn't exist
+          // Only create if it doesn't exist and provide the user ID
           await supabase
             .from('profiles')
             .upsert({
+              id: userId, // Include user ID from auth
               email,
               name,
               updated_at: new Date().toISOString(),
               created_at: new Date().toISOString()
-            }, { onConflict: 'email' });
+            });
         }
       } catch (profileError) {
         console.warn("Could not create profile, but continuing:", profileError);
