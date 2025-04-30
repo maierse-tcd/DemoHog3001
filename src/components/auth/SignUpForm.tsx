@@ -58,28 +58,7 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
         return;
       }
 
-      // First, check if the user already exists
-      const { data: existingUsers, error: searchError } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('email', email)
-        .limit(1);
-
-      if (searchError) {
-        throw searchError;
-      }
-
-      if (existingUsers && existingUsers.length > 0) {
-        toast({
-          title: "User already exists",
-          description: "This email is already registered. Please log in instead.",
-          variant: "destructive"
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      // For demo purposes, directly create the user without email verification
+      // For demo purposes, use signUp with autoconfirm instead of email verification
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -89,84 +68,83 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
             selectedPlanId,
             isKidsAccount
           },
+          // This bypasses email verification entirely
+          emailRedirectTo: window.location.origin
         }
       });
       
       if (error) throw error;
       
       if (data && data.user) {
-        // For demo, immediately sign in after sign up
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        // Store user ID in localStorage for persistent identification
+        localStorage.setItem('hogflix_user_id', data.user.id);
+        
+        // Create profile record in the profiles table
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,  // Using the user ID from auth
+            name,
+            email
+          });
+          
+        if (profileError) {
+          console.error("Error creating profile:", profileError);
+        }
+        
+        // Update profile settings context
+        updateSettings({
+          name,
           email,
-          password
+          notifications: { email: true },
+          language: 'English',
+          selectedPlanId,
+          isKidsAccount
         });
         
-        if (signInError) throw signInError;
+        updateSelectedPlan(selectedPlanId);
         
-        if (signInData && signInData.user) {
-          // Store user ID in localStorage for persistent identification
-          localStorage.setItem('hogflix_user_id', signInData.user.id);
-          
-          // Create profile record with the user ID
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert({
-              id: signInData.user.id,
-              name,
-              email
-            });
-            
-          if (profileError) {
-            console.error("Error creating profile:", profileError);
-          }
-          
-          // Update profile settings context
-          updateSettings({
-            name,
-            email,
-            notifications: { email: true },
-            language: 'English',
-            selectedPlanId,
-            isKidsAccount
+        // Identify user in PostHog
+        if (window.posthog) {
+          window.posthog.identify(data.user.id, {
+            email: email,
+            name: name,
+            plan: selectedPlanId,
+            isKidsAccount: isKidsAccount
           });
-          
-          updateSelectedPlan(selectedPlanId);
-          
-          // Identify user in PostHog
-          if (window.posthog) {
-            window.posthog.identify(signInData.user.id, {
-              email: email,
-              name: name,
-              plan: selectedPlanId,
-              isKidsAccount: isKidsAccount
-            });
-            window.posthog.capture('user_signup_complete');
-          }
-          
-          toast({
-            title: "Sign up successful!",
-            description: "Welcome to Hogflix! Enjoy your hedgehog adventures.",
-          });
-          
-          // Redirect to home page after short delay
-          setTimeout(() => {
-            navigate('/');
-          }, 500);
+          window.posthog.capture('user_signup_complete');
         }
+        
+        toast({
+          title: "Sign up successful!",
+          description: "Welcome to Hogflix! Enjoy your hedgehog adventures.",
+        });
+        
+        // Immediately redirect to home page
+        navigate('/');
       }
     } catch (error: any) {
-      // Track failed signup in PostHog
-      if (window.posthog) {
-        window.posthog.capture('user_signup_failed', {
-          error: error.message || "Unknown error"
+      // Handle possible duplicate email
+      if (error.message?.includes('already')) {
+        toast({
+          title: "Sign up failed",
+          description: "This email is already registered. Please try logging in instead.",
+          variant: "destructive"
+        });
+      } else {
+        // Track failed signup in PostHog
+        if (window.posthog) {
+          window.posthog.capture('user_signup_failed', {
+            error: error.message || "Unknown error"
+          });
+        }
+        
+        toast({
+          title: "Sign up failed",
+          description: error.message || "An error occurred during sign up",
+          variant: "destructive"
         });
       }
-      
-      toast({
-        title: "Sign up failed",
-        description: error.message || "An error occurred during sign up",
-        variant: "destructive"
-      });
       console.error("Sign up error:", error);
     } finally {
       setIsLoading(false);
@@ -192,7 +170,7 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="bg-black/40 border-netflix-gray/40 text-white"
-          placeholder="Enter your email"
+          placeholder="Enter your email (can use dummy emails)"
         />
       </div>
       <div>

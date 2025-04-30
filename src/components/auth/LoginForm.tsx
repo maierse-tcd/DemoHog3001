@@ -91,9 +91,8 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
       description: `Welcome back!`,
     });
     
-    setTimeout(() => {
-      navigate('/');
-    }, 500);
+    // Immediately redirect to home page
+    navigate('/');
   };
 
   return (
