@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { ChevronDown, User, LogIn } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -106,10 +105,12 @@ export const ProfileDropdown = () => {
         setAvatarUrl(profileData.avatar_url || '');
         
         // Update the profile settings with user data
+        // Fix: Don't try to access selected_plan_id from profileData
         updateSettings({
           name: profileData.name || 'User',
           email: profileData.email,
-          selectedPlanId: profileData.selected_plan_id || settings?.selectedPlanId,
+          // Keep the existing selectedPlanId from settings instead of trying to get it from the profile
+          selectedPlanId: settings?.selectedPlanId || 'premium',
           language: settings?.language || 'English',
           notifications: settings?.notifications || { email: true },
         });
