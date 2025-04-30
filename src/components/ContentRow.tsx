@@ -3,6 +3,7 @@ import { ContentCard } from './ContentCard';
 import { Content } from '../data/mockData';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { ScrollArea } from './ui/scroll-area';
 
 interface ContentRowProps {
   title: string;
@@ -52,28 +53,31 @@ export const ContentRow = ({ title, contentList }: ContentRowProps) => {
         {showLeftArrow && (
           <button 
             onClick={() => scroll('left')}
-            className="absolute left-0 top-0 bottom-0 z-10 w-12 bg-gradient-to-r from-black/80 to-transparent flex items-center justify-start pl-2 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute left-0 top-0 bottom-0 z-20 w-12 bg-gradient-to-r from-black/80 to-transparent flex items-center justify-start pl-2 opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <ChevronLeft className="h-8 w-8 text-white" />
           </button>
         )}
         
-        {/* Content row */}
-        <div 
-          className="content-row" 
-          ref={rowRef}
-          onScroll={handleScroll}
-        >
-          {contentList.map((content) => (
-            <ContentCard key={content.id} content={content} />
-          ))}
-        </div>
+        {/* Content row with ScrollArea */}
+        <ScrollArea className="w-full overflow-x-auto pb-4 scrollbar-none">
+          <div 
+            className="flex items-start space-x-3 px-4 md:px-8 lg:px-12 pt-2"
+            ref={rowRef}
+            onScroll={handleScroll}
+            style={{ minWidth: "100%" }}
+          >
+            {contentList.map((content) => (
+              <ContentCard key={content.id} content={content} />
+            ))}
+          </div>
+        </ScrollArea>
         
         {/* Right scroll button */}
         {showRightArrow && (
           <button 
             onClick={() => scroll('right')}
-            className="absolute right-0 top-0 bottom-0 z-10 w-12 bg-gradient-to-l from-black/80 to-transparent flex items-center justify-end pr-2 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute right-0 top-0 bottom-0 z-20 w-12 bg-gradient-to-l from-black/80 to-transparent flex items-center justify-end pr-2 opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <ChevronRight className="h-8 w-8 text-white" />
           </button>

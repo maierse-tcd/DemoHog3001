@@ -27,8 +27,13 @@ export const ContentCard = ({ content }: ContentCardProps) => {
           className="w-full h-full object-cover rounded-md"
         />
         
+        {/* Always visible title overlay */}
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-2 rounded-b-md">
+          <div className="text-white text-sm font-medium line-clamp-1">{content.title}</div>
+        </div>
+        
         {isHovered && (
-          <div className="absolute inset-0 bg-black/60 rounded-md p-3 flex flex-col justify-between animate-fade-in">
+          <div className="absolute inset-0 bg-black/70 rounded-md p-3 flex flex-col justify-between animate-fade-in z-10">
             <div className="text-white text-sm font-medium line-clamp-1">{content.title}</div>
             
             <div>
