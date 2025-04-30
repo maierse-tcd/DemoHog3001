@@ -29,18 +29,6 @@ export const ProfileDropdown = () => {
     }
   }, [isLoggedIn]);
 
-  // If still loading, show minimal UI
-  if (isLoading) {
-    return (
-      <div className="relative animate-pulse">
-        <button className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
-          <ChevronDown size={16} className="text-netflix-white" />
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="relative">
       <button
