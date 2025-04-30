@@ -41,9 +41,19 @@ const Login = () => {
       const { data: { user } } = await supabase.auth.getUser();
       const userEmail = user?.email || '';
       
+      // Try to fetch the profile from the database
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+        
+      // Use profile data if available, otherwise fallback to user metadata
+      const userName = profileData?.name || user?.user_metadata?.name || userEmail.split('@')[0];
+      
       // Update the profile settings context with basic user data
       updateSettings({
-        name: user?.user_metadata?.name || userEmail.split('@')[0],
+        name: userName,
         email: userEmail,
         language: 'English',
         notifications: { email: true },
@@ -54,7 +64,7 @@ const Login = () => {
       // Make sure PostHog has the correct identity
       if (window.posthog && userEmail) {
         window.posthog.identify(userEmail, {
-          name: user?.user_metadata?.name || userEmail.split('@')[0],
+          name: userName,
           id: userId
         });
       }

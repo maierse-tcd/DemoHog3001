@@ -35,17 +35,16 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
       
       console.log("Attempting to login with:", email);
       
-      // Try to sign in with email/password - removed emailRedirectTo option
+      // Try to sign in with email/password
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
       
       if (error) {
-        // For demo purposes - if login fails, create account silently
         console.log("Login failed, creating account instead");
         
-        // Sign up new user
+        // Sign up new user - simplified with no email confirmation
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -73,22 +72,13 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
               });
+              
+            // Since we've just created the account, let's sign in now
+            await handleSuccessfulLogin(signUpData.user.id);
           } catch (profileError) {
             console.warn("Could not create profile, but continuing:", profileError);
-          }
-          
-          // Try to sign in immediately with the newly created account
-          const { data: immediateSignIn, error: immediateSignInError } = await supabase.auth.signInWithPassword({
-            email,
-            password
-          });
-          
-          if (immediateSignInError) {
-            throw immediateSignInError;
-          }
-          
-          if (immediateSignIn?.user) {
-            await handleSuccessfulLogin(immediateSignIn.user.id);
+            // Still proceed with login
+            await handleSuccessfulLogin(signUpData.user.id);
           }
         }
       } else if (data && data.user) {

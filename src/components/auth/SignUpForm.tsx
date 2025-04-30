@@ -38,23 +38,9 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
         return;
       }
       
-      console.log("Starting signup process");
+      console.log("Starting signup process - simplified without email verification");
       
-      // First check if user exists by trying to log in
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      if (signInData?.user) {
-        // User already exists and credentials are correct
-        console.log("User already exists, logged in successfully");
-        await updateUserProfile(signInData.user.id);
-        return;
-      }
-      
-      // User doesn't exist or wrong password, create new account
-      console.log("Creating new user account");
+      // Create account directly - no email verification
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -72,17 +58,60 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
       if (data?.user) {
         console.log("User created successfully:", data.user.id);
         
-        // Try to sign in immediately with the newly created account
-        const { error: immediateSignInError } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-        
-        if (immediateSignInError) {
-          throw immediateSignInError;
+        try {
+          // Create a profile entry with user ID
+          await supabase
+            .from('profiles')
+            .upsert({
+              id: data.user.id,
+              email,
+              name,
+              updated_at: new Date().toISOString(),
+              created_at: new Date().toISOString()
+            });
+            
+          // Sign in the user immediately
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password
+          });
+          
+          if (signInError) {
+            throw signInError;
+          }
+          
+          // Save the user preferences in context
+          updateSettings({
+            name,
+            email,
+            notifications: { email: true },
+            language: 'English',
+            selectedPlanId: selectedPlanId || 'premium',
+            isKidsAccount
+          });
+          
+          // Identify user in PostHog
+          if (window.posthog) {
+            window.posthog.identify(email, {
+              name,
+              plan: selectedPlanId,
+              isKidsAccount
+            });
+            window.posthog.capture('user_signup_complete');
+          }
+          
+          toast({
+            title: "Sign up successful!",
+            description: "Welcome to Hogflix!",
+          });
+          
+          // Redirect to home page
+          navigate('/');
+          
+        } catch (profileError) {
+          console.error("Error creating profile:", profileError);
+          throw profileError;
         }
-        
-        await updateUserProfile(data.user.id);
       }
     } catch (error: any) {
       console.error("Sign up error:", error);
@@ -91,57 +120,7 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
         description: error.message || "An error occurred during sign up",
         variant: "destructive"
       });
-      setIsLoading(false);
-    }
-  };
-  
-  const updateUserProfile = async (userId: string) => {
-    try {
-      // Save the user preferences in context
-      updateSettings({
-        name,
-        email,
-        notifications: { email: true },
-        language: 'English',
-        selectedPlanId: selectedPlanId || 'premium',
-        isKidsAccount
-      });
-      
-      // Create a profile entry
-      try {
-        await supabase
-          .from('profiles')
-          .upsert({
-            id: userId,
-            email,
-            name,
-            updated_at: new Date().toISOString(),
-            created_at: new Date().toISOString()
-          });
-      } catch (profileError) {
-        console.warn("Could not create profile, but continuing:", profileError);
-        // Non-fatal error, continue with signup
-      }
-      
-      // Identify user in PostHog
-      if (window.posthog) {
-        window.posthog.identify(email, {
-          name,
-          plan: selectedPlanId,
-          isKidsAccount
-        });
-        window.posthog.capture('user_signup_complete');
-      }
-      
-      toast({
-        title: "Sign up successful!",
-        description: "Welcome to Hogflix!",
-      });
-      
-      // Redirect to home page
-      navigate('/');
-    } catch (error) {
-      console.error("Error updating user settings:", error);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -165,7 +144,7 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="bg-black/40 border-netflix-gray/40 text-white"
-          placeholder="Enter any email (for demo purposes)"
+          placeholder="Enter your email"
         />
       </div>
       <div>

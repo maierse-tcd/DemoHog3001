@@ -33,11 +33,11 @@ export const useAuth = () => {
       const { data: userData } = await supabase.auth.getUser();
       const userEmail = userData?.user?.email || '';
       
-      // Fetch profile data from profiles table using email instead of id
+      // Fetch profile data from profiles table using id
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('email', userEmail)
+        .eq('id', userId)
         .maybeSingle();
       
       if (error) {
