@@ -26,7 +26,11 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
       persistence: 'localStorage',
       persistence_name: 'ph_hogflix_user',
       capture_pageview: false, // We handle pageviews manually
-      autocapture: false
+      autocapture: false,
+      loaded: function(posthog) {
+        // Load feature flags as soon as PostHog is loaded
+        posthog.reloadFeatureFlags();
+      }
     });
     
     // Set up ONE stable auth state listener for PostHog identification
@@ -44,6 +48,9 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
               name: session.user.user_metadata?.name || userEmail.split('@')[0],
               id: session.user.id
             });
+            
+            // Reload feature flags after identifying user to get their specific flags
+            window.posthog.reloadFeatureFlags();
             
             window.posthog.capture('user_signed_in');
           } catch (err) {
@@ -76,6 +83,9 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
             name: session.user.user_metadata?.name || session.user.email.split('@')[0],
             id: session.user.id
           });
+          
+          // Reload feature flags after identifying existing user
+          window.posthog.reloadFeatureFlags();
         }
       } catch (err) {
         console.error("Error identifying existing user:", err);
