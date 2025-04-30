@@ -21,16 +21,6 @@ export function useFeatureFlag(flagName: string): boolean | undefined {
         return;
       }
       
-      // Special case for our testing flag
-      if (flagName === 'is_admin') {
-        // For testing, ensure is_admin is always true
-        console.log("Debug: is_admin flag requested - returning true for testing");
-        if (isMounted) {
-          setEnabled(true);
-        }
-        return;
-      }
-      
       try {
         // Initial check when PostHog is available
         const initialValue = window.posthog.isFeatureEnabled(flagName);
@@ -95,11 +85,6 @@ export function useFeatureFlag(flagName: string): boolean | undefined {
       isMounted = false;
     };
   }, [flagName]);
-  
-  // Special case for development/testing - always return true for is_admin
-  if (flagName === 'is_admin') {
-    return true;
-  }
   
   return enabled;
 }
