@@ -54,10 +54,17 @@ const Profile = () => {
         if (error) {
           console.error('Error fetching profile:', error);
         } else if (profileData) {
+          // Get user metadata to supplement profile data
+          const { data: { user } } = await supabase.auth.getUser();
+          const userMetadata = user?.user_metadata || {};
+          
           // Update context with profile data
           updateSettings({
             name: profileData.name || 'User',
             email: profileData.email,
+            // Use metadata for fields not in the profiles table
+            selectedPlanId: userMetadata.selectedPlanId || settings.selectedPlanId,
+            isKidsAccount: userMetadata.isKidsAccount || settings.isKidsAccount,
             // Keep other settings from context
             language: settings.language,
             notifications: settings.notifications,

@@ -106,7 +106,7 @@ export const ProfileDropdown = () => {
         setAvatarUrl(profileData.avatar_url || '');
         
         // Update the profile settings with user data
-        // Fix: Don't try to access selected_plan_id from profileData
+        // Use only the properties that exist in the profileData type
         updateSettings({
           name: profileData.name || 'User',
           email: profileData.email,
@@ -114,7 +114,7 @@ export const ProfileDropdown = () => {
           selectedPlanId: settings?.selectedPlanId || 'premium',
           language: settings?.language || 'English',
           notifications: settings?.notifications || { email: true },
-          isKidsAccount: profileData.is_kids_account || false
+          isKidsAccount: settings?.isKidsAccount || false
         });
       }
     } catch (error) {

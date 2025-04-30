@@ -116,7 +116,7 @@ const SignUp = () => {
         return;
       }
       
-      // Sign up with Supabase - IMPORTANT: removed emailRedirectTo option for direct signup without email confirmation
+      // Sign up with Supabase - Store selectedPlanId and isKidsAccount in user_metadata
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -152,8 +152,9 @@ const SignUp = () => {
               id: data.user.id,
               name,
               email,
-              selected_plan_id: selectedPlanId,
-              is_kids_account: isKidsAccount
+              // Don't store these fields in the profile table as they're not part of the schema
+              // selected_plan_id: selectedPlanId,
+              // is_kids_account: isKidsAccount
             });
             
           if (profileError) {

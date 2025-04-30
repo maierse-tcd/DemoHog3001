@@ -38,15 +38,19 @@ const Login = () => {
       if (error) throw error;
       
       if (profileData) {
+        // Get user metadata from auth to supplement profile data
+        const { data: { user } } = await supabase.auth.getUser();
+        const userMetadata = user?.user_metadata || {};
+        
         // Update the profile settings context with user data
         updateSettings({
           name: profileData.name || 'User',
           email: profileData.email,
           language: 'English',
           notifications: { email: true },
-          // Use the selected_plan_id from the profile if available
-          selectedPlanId: profileData.selected_plan_id || 'premium',
-          isKidsAccount: profileData.is_kids_account || false
+          // Use metadata for fields not in the profile table
+          selectedPlanId: userMetadata.selectedPlanId || 'premium',
+          isKidsAccount: userMetadata.isKidsAccount || false
         });
       }
     } catch (error) {
