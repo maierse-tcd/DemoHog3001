@@ -38,31 +38,46 @@ const Login = () => {
     try {
       console.log("Fetching user profile after login:", userId);
       
+      // Get user data
+      const { data: { user } } = await supabase.auth.getUser();
+      const userEmail = user?.email || '';
+      
+      // Fetch profile data
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching profile:", error);
+        return;
+      }
       
       if (profileData) {
-        // Get user metadata from auth to supplement profile data
-        const { data: { user } } = await supabase.auth.getUser();
+        // Get user metadata
         const userMetadata = user?.user_metadata || {};
+        const displayName = profileData.name || userEmail.split('@')[0];
         
         // Update the profile settings context with user data
         updateSettings({
-          name: profileData.name || userMetadata.name || 'User',
-          email: profileData.email,
+          name: displayName,
+          email: userEmail,
           language: 'English',
           notifications: { email: true },
-          // Use metadata for fields not in the profile table
           selectedPlanId: userMetadata.selectedPlanId || 'premium',
           isKidsAccount: userMetadata.isKidsAccount || false
         });
         
         console.log("Profile settings updated after login");
+        
+        // Make sure PostHog has the correct identity
+        if (window.posthog && userEmail) {
+          window.posthog.identify(userEmail, {
+            name: displayName,
+            id: userId
+          });
+        }
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);

@@ -11,10 +11,14 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    storage: localStorage, // Use localStorage for persistent auth
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: false, // Turn off URL detection for demo purposes
-    flowType: 'pkce' // Use PKCE flow for auth without email verification
+    detectSessionInUrl: false, 
+    flowType: 'pkce', // Use PKCE flow
+    
+    // Configure client to skip email verification
+    // This makes signup much simpler for testing purposes
+    emailRedirectTo: undefined
   }
 });

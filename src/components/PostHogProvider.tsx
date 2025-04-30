@@ -26,47 +26,31 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
       persistence: 'localStorage',
       persistence_name: 'ph_hogflix_user',
       capture_pageview: false, // We handle pageviews manually
-      bootstrap: {
-        distinctID: localStorage.getItem('hogflix_user_id') || undefined,
-        isIdentifiedID: !!localStorage.getItem('hogflix_user_id')
-      },
-      // Disable autocapture to prevent infinite loops
       autocapture: false
     });
-
-    // Only try to identify if we have a user ID
-    const storedUserId = localStorage.getItem('hogflix_user_id');
-    if (storedUserId) {
-      console.log("PostHog: Using stored ID for tracking:", storedUserId);
-      
-      try {
-        window.posthog.identify(storedUserId);
-      } catch (err) {
-        console.error("Error with PostHog identity:", err);
-      }
-    } else {
-      console.log("PostHog: No user ID found, using anonymous tracking");
-    }
     
-    // Set up auth state change listener
+    // Check for auth state changes and update PostHog identification
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
-        const userId = session.user.id;
-        localStorage.setItem('hogflix_user_id', userId);
+        const userEmail = session.user.email;
         
-        try {
-          window.posthog.identify(userId, {
-            email: session.user.email,
-            name: session.user.user_metadata?.name || ''
-          });
+        if (userEmail) {
+          console.log("PostHog: Identifying user with email:", userEmail);
           
-          window.posthog.capture('user_signed_in');
-        } catch (err) {
-          console.error("PostHog event error:", err);
+          try {
+            // Use email as the primary identifier
+            window.posthog.identify(userEmail, {
+              name: session.user.user_metadata?.name || userEmail.split('@')[0],
+              id: session.user.id
+            });
+            
+            window.posthog.capture('user_signed_in');
+          } catch (err) {
+            console.error("PostHog event error:", err);
+          }
         }
       }
       
-      // Don't reset on sign out, just record the event
       if (event === 'SIGNED_OUT') {
         try {
           window.posthog.capture('user_signed_out');
@@ -75,6 +59,26 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
         }
       }
     });
+    
+    // Try to identify with existing user data
+    const identifyExistingUser = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user?.email) {
+          console.log("PostHog: Identifying existing user with email:", session.user.email);
+          
+          window.posthog.identify(session.user.email, {
+            name: session.user.user_metadata?.name || session.user.email.split('@')[0],
+            id: session.user.id
+          });
+        }
+      } catch (err) {
+        console.error("Error identifying existing user:", err);
+      }
+    };
+    
+    identifyExistingUser();
     
     return () => {
       subscription.unsubscribe();

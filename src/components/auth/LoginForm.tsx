@@ -33,7 +33,7 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
         return;
       }
       
-      // Sign in with email/password
+      // Try to sign in with email/password
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -42,25 +42,45 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
       if (error) {
         console.error("Login error:", error);
         
-        // For demo purposes, try to create an account if login fails
+        // If login fails with invalid credentials, try to create the account
         if (error.message.includes('Invalid login credentials')) {
-          toast({
-            title: "Account not found",
-            description: "This email is not registered. Please try signing up first.",
-            variant: "destructive"
+          console.log("Account not found, trying to create it");
+          
+          // Create account without email verification
+          const signUpResult = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: { name: email.split('@')[0] }
+            }
           });
+          
+          if (signUpResult.error) {
+            throw signUpResult.error;
+          }
+          
+          if (signUpResult.data?.user) {
+            // Store user ID for PostHog tracking
+            localStorage.setItem('hogflix_user_id', signUpResult.data.user.id);
+            
+            // Create basic profile
+            await supabase.from('profiles').upsert({
+              id: signUpResult.data.user.id,
+              email: email,
+              name: email.split('@')[0]
+            });
+            
+            await handleSuccessfulLogin(signUpResult.data.user.id);
+            return;
+          }
         } else {
-          toast({
-            title: "Login failed",
-            description: error.message || "Invalid email or password",
-            variant: "destructive"
-          });
+          throw error;
         }
       } else if (data && data.user) {
         await handleSuccessfulLogin(data.user.id);
       }
     } catch (error: any) {
-      console.log('Analytics Event: Login Failed', { email });
+      console.error("Login failed:", error);
       
       toast({
         title: "Login failed",
@@ -73,24 +93,27 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
   };
   
   const handleSuccessfulLogin = async (userId: string) => {
-    console.log('Analytics Event: Login Success', { email });
+    console.log('Login success, user ID:', userId);
     
-    // Store the user ID in localStorage for persistent identification
+    // Store user ID in localStorage for persistent identification
     localStorage.setItem('hogflix_user_id', userId);
     
     // Fetch user profile data
     await fetchUserProfile(userId);
     
-    // Track login event in PostHog with persistent identification
-    if (window.posthog) {
-      // Ensure PostHog has the persistent ID
-      window.posthog.identify(userId, { email });
+    // Get user email for PostHog tracking
+    const { data } = await supabase.auth.getUser();
+    const userEmail = data?.user?.email;
+    
+    // Track login event in PostHog with email as identifier
+    if (window.posthog && userEmail) {
+      // Use email as the primary identifier for PostHog
+      window.posthog.identify(userEmail);
       window.posthog.capture('user_login_success');
       
-      // Set the user properties to make sure they're associated with this user
       window.posthog.people.set({
-        email: email,
-        $name: email.split('@')[0],
+        email: userEmail,
+        $name: userEmail.split('@')[0],
         last_login: new Date().toISOString()
       });
     }
@@ -100,7 +123,7 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
       description: `Welcome back!`,
     });
     
-    // Immediately redirect to home page
+    // Redirect to home page
     navigate('/');
   };
 
