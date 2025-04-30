@@ -42,43 +42,22 @@ const Login = () => {
       const { data: { user } } = await supabase.auth.getUser();
       const userEmail = user?.email || '';
       
-      // Fetch profile data
-      const { data: profileData, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', userEmail)
-        .maybeSingle();
+      // Update the profile settings context with basic user data
+      updateSettings({
+        name: user?.user_metadata?.name || userEmail.split('@')[0],
+        email: userEmail,
+        language: 'English',
+        notifications: { email: true },
+        selectedPlanId: user?.user_metadata?.selectedPlanId || 'premium',
+        isKidsAccount: user?.user_metadata?.isKidsAccount || false
+      });
       
-      if (error) {
-        console.error("Error fetching profile:", error);
-        return;
-      }
-      
-      if (profileData) {
-        console.log("Profile data fetched:", profileData);
-        
-        // Safe access with null checks and proper type handling
-        const displayName = profileData?.name || userEmail.split('@')[0];
-        
-        // Update the profile settings context with user data
-        updateSettings({
-          name: displayName,
-          email: userEmail,
-          language: 'English',
-          notifications: { email: true },
-          selectedPlanId: user?.user_metadata?.selectedPlanId || 'premium',
-          isKidsAccount: user?.user_metadata?.isKidsAccount || false
+      // Make sure PostHog has the correct identity
+      if (window.posthog && userEmail) {
+        window.posthog.identify(userEmail, {
+          name: user?.user_metadata?.name || userEmail.split('@')[0],
+          id: userId
         });
-        
-        console.log("Profile settings updated after login");
-        
-        // Make sure PostHog has the correct identity
-        if (window.posthog && userEmail) {
-          window.posthog.identify(userEmail, {
-            name: displayName,
-            id: userId
-          });
-        }
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);

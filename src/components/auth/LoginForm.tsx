@@ -33,6 +33,8 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
         return;
       }
       
+      console.log("Attempting to login with:", email);
+      
       // Try to sign in with email/password
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -40,13 +42,10 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
       });
       
       if (error) {
-        console.error("Login error:", error);
-        
-        // If login fails with invalid credentials, try to create the account
+        // If login fails, try to create account
         if (error.message.includes('Invalid login credentials')) {
-          console.log("Account not found, trying to create it");
+          console.log("Account not found, creating it automatically");
           
-          // Create account without email verification
           const signUpResult = await supabase.auth.signUp({
             email,
             password,
@@ -60,37 +59,20 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
           }
           
           if (signUpResult.data?.user) {
-            // Store user ID for PostHog tracking
-            localStorage.setItem('hogflix_user_id', signUpResult.data.user.id);
+            console.log("Auto-created user:", signUpResult.data.user.id);
             
-            // Create basic profile - using proper types
-            // Note: We don't supply an ID, as that should come from auth.users
+            // Create basic profile entry
             try {
-              // Check if profile already exists
-              const { data: existingProfile } = await supabase
+              await supabase
                 .from('profiles')
-                .select('*')
-                .eq('email', email)
-                .maybeSingle();
-                
-              // Only create profile if it doesn't exist
-              if (!existingProfile) {
-                const { error: upsertError } = await supabase.from('profiles').upsert(
-                  {
-                    // The profiles table MUST have the UUID from auth.users
-                    id: signUpResult.data.user.id,
-                    email: email,
-                    name: email.split('@')[0],
-                    updated_at: new Date().toISOString(),
-                    created_at: new Date().toISOString()
-                  },
-                  { onConflict: 'email' }
-                );
-                
-                if (upsertError) console.error("Error creating profile:", upsertError);
-              }
+                .upsert({
+                  email,
+                  name: email.split('@')[0],
+                  updated_at: new Date().toISOString(),
+                  created_at: new Date().toISOString()
+                }, { onConflict: 'email' });
             } catch (profileError) {
-              console.error("Error managing profile:", profileError);
+              console.warn("Could not create profile, but continuing:", profileError);
             }
             
             await handleSuccessfulLogin(signUpResult.data.user.id);
@@ -100,6 +82,7 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
           throw error;
         }
       } else if (data && data.user) {
+        console.log("Login successful:", data.user.id);
         await handleSuccessfulLogin(data.user.id);
       }
     } catch (error: any) {
@@ -118,25 +101,17 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
   const handleSuccessfulLogin = async (userId: string) => {
     console.log('Login success, user ID:', userId);
     
-    // Store user ID in localStorage for persistent identification
-    localStorage.setItem('hogflix_user_id', userId);
-    
     // Fetch user profile data
     await fetchUserProfile(userId);
     
-    // Get user email for PostHog tracking
-    const { data } = await supabase.auth.getUser();
-    const userEmail = data?.user?.email;
-    
     // Track login event in PostHog with email as identifier
-    if (window.posthog && userEmail) {
-      // Use email as the primary identifier for PostHog
-      window.posthog.identify(userEmail);
+    if (window.posthog && email) {
+      window.posthog.identify(email);
       window.posthog.capture('user_login_success');
       
       window.posthog.people.set({
-        email: userEmail,
-        $name: userEmail.split('@')[0],
+        email: email,
+        $name: email.split('@')[0],
         last_login: new Date().toISOString()
       });
     }

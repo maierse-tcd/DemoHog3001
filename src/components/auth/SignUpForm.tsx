@@ -38,97 +38,95 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
         return;
       }
       
-      // First try to sign in with the credentials (simplest approach)
+      console.log("Starting signup process");
+      
+      // First check if user exists by trying to log in
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password
       });
       
-      // If sign in succeeds, we're done
       if (signInData?.user) {
-        console.log("User already exists, signed in successfully");
-        await updateUserAndSettings(signInData.user.id);
+        // User already exists and credentials are correct
+        console.log("User already exists, logged in successfully");
+        updateUserProfile(signInData.user.id);
         return;
       }
       
-      // If failed to sign in, create a new user
+      // User doesn't exist or wrong password, create new account
       console.log("Creating new user account");
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { name, selectedPlanId, isKidsAccount }
+          data: { 
+            name,
+            selectedPlanId, 
+            isKidsAccount 
+          }
         }
       });
       
       if (error) throw error;
       
       if (data?.user) {
-        await updateUserAndSettings(data.user.id);
+        console.log("User created successfully:", data.user.id);
+        updateUserProfile(data.user.id);
       }
     } catch (error: any) {
       console.error("Sign up error:", error);
-      
       toast({
         title: "Sign up failed",
         description: error.message || "An error occurred during sign up",
         variant: "destructive"
       });
-    } finally {
       setIsLoading(false);
     }
   };
   
-  const updateUserAndSettings = async (userId: string) => {
+  const updateUserProfile = async (userId: string) => {
     try {
-      // Store user ID in localStorage for PostHog tracking
-      localStorage.setItem('hogflix_user_id', userId);
-      
-      // Create or update profile record - fixed to use proper types
-      try {
-        // First check if profile already exists
-        const { data: existingProfile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('email', email)
-          .maybeSingle();
-        
-        // Only create if it doesn't exist
-        if (!existingProfile) {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert({
-              id: userId, // Must provide the UUID from auth.users
-              email,
-              name,
-              updated_at: new Date().toISOString(),
-              created_at: new Date().toISOString()
-            }, { onConflict: 'email' });
-            
-          if (profileError) {
-            console.error("Error saving profile:", profileError);
-          }
-        }
-      } catch (profileError) {
-        console.error("Error managing profile:", profileError);
-      }
-      
-      // Update profile settings in context
+      // Save the user preferences in context
       updateSettings({
         name,
         email,
         notifications: { email: true },
         language: 'English',
-        selectedPlanId,
+        selectedPlanId: selectedPlanId || 'premium',
         isKidsAccount
       });
       
-      // Identify user in PostHog with email as the ID
+      // Try to create a profile entry (but don't fail if it doesn't work)
+      try {
+        // Check if profile already exists first
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('email', email)
+          .maybeSingle();
+          
+        if (!existingProfile) {
+          // Only create if it doesn't exist
+          await supabase
+            .from('profiles')
+            .upsert({
+              email,
+              name,
+              updated_at: new Date().toISOString(),
+              created_at: new Date().toISOString()
+            }, { onConflict: 'email' });
+        }
+      } catch (profileError) {
+        console.warn("Could not create profile, but continuing:", profileError);
+        // Non-fatal error, continue with signup
+      }
+      
+      // Identify user in PostHog
       if (window.posthog) {
         window.posthog.identify(email, {
-          name: name,
+          name,
           plan: selectedPlanId,
-          isKidsAccount: isKidsAccount
+          isKidsAccount
         });
         window.posthog.capture('user_signup_complete');
       }
@@ -142,6 +140,7 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
       navigate('/');
     } catch (error) {
       console.error("Error updating user settings:", error);
+      setIsLoading(false);
     }
   };
 
@@ -164,7 +163,7 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="bg-black/40 border-netflix-gray/40 text-white"
-          placeholder="Enter any email (can use dummy emails)"
+          placeholder="Enter any email (for demo purposes)"
         />
       </div>
       <div>
