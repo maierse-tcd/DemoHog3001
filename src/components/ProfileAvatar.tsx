@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { User } from 'lucide-react';
-import { placeholderImages } from '../utils/imagePlaceholders';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 
 interface ProfileAvatarProps {

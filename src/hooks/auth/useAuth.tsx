@@ -79,38 +79,7 @@ export const useAuth = () => {
     
     const checkAuthState = async () => {
       try {
-        // Set up auth state listener FIRST with flag to prevent multiple profile loads
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-          console.log("Auth state changed:", event, session?.user?.email);
-          
-          if (session?.user) {
-            const userEmail = session.user.email || '';
-            const displayName = session.user.user_metadata?.name || userEmail.split('@')[0];
-            
-            // Update auth state
-            updateAuthState({ 
-              isLoggedIn: true,
-              userName: displayName,
-              avatarUrl: '',
-              userEmail: userEmail,
-              isLoading: false
-            });
-            
-            // Use setTimeout to prevent Supabase deadlock
-            setTimeout(() => {
-              if (isMounted) {
-                processUserProfile(session.user.id);
-              }
-            }, 0);
-          } else {
-            resetAuthState();
-            updateAuthState({ isLoading: false });
-          }
-        });
-        
-        authSubscription = subscription;
-        
-        // THEN check for existing session
+        // FIRST check for existing session to avoid duplication
         const { data } = await supabase.auth.getSession();
         
         if (data.session?.user && isMounted) {
@@ -137,6 +106,40 @@ export const useAuth = () => {
           resetAuthState();
           updateAuthState({ isLoading: false });
         }
+
+        // THEN set up auth state listener with flag to prevent multiple profile loads
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          // Only log significant events, not just any state change
+          if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+            console.log("Auth state changed:", event, session?.user?.email);
+          }
+          
+          if (session?.user) {
+            const userEmail = session.user.email || '';
+            const displayName = session.user.user_metadata?.name || userEmail.split('@')[0];
+            
+            // Update auth state
+            updateAuthState({ 
+              isLoggedIn: true,
+              userName: displayName,
+              avatarUrl: '', // Will be updated with profile data
+              userEmail: userEmail,
+              isLoading: false
+            });
+            
+            // Use setTimeout to prevent Supabase deadlock
+            setTimeout(() => {
+              if (isMounted) {
+                processUserProfile(session.user.id);
+              }
+            }, 0);
+          } else {
+            resetAuthState();
+            updateAuthState({ isLoading: false });
+          }
+        });
+        
+        authSubscription = subscription;
       } catch (error) {
         console.error("Error checking auth state:", error);
         if (isMounted) {

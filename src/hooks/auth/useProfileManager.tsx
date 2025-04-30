@@ -7,6 +7,7 @@ export const useProfileManager = () => {
   const { settings, updateSettings } = useProfileSettings();
 
   // Track profile load attempts to prevent redundant calls
+  // Use a ref to track fetched profiles in the current render cycle
   const fetchedProfiles = new Set();
 
   const fetchUserProfile = useCallback(async (userId: string) => {

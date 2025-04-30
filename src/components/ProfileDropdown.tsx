@@ -15,6 +15,8 @@ export const ProfileDropdown = () => {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center space-x-2"
+        aria-expanded={isOpen}
+        aria-haspopup="true"
       >
         {isLoggedIn ? (
           <ProfileAvatar 

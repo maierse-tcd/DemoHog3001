@@ -29,7 +29,7 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
       autocapture: false
     });
     
-    // Check for auth state changes and update PostHog identification
+    // Set up ONE stable auth state listener for PostHog identification
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         const userEmail = session.user.email;
@@ -55,13 +55,15 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
       if (event === 'SIGNED_OUT') {
         try {
           window.posthog.capture('user_signed_out');
+          // Reset the identity after sign out
+          window.posthog.reset();
         } catch (err) {
           console.error("PostHog event error:", err);
         }
       }
     });
     
-    // Try to identify with existing user data
+    // Try to identify with existing user data once
     const identifyExistingUser = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
