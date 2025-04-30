@@ -140,6 +140,22 @@ const SignUp = () => {
           window.posthog.capture('user_signup_complete');
         }
         
+        // Sign in automatically after successful registration
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        
+        if (signInError) {
+          console.error("Auto sign-in failed:", signInError);
+          toast({
+            title: "Account created!",
+            description: "Please sign in with your new credentials.",
+          });
+          navigate('/login');
+          return;
+        }
+        
         toast({
           title: "Sign up successful!",
           description: "Welcome to Hogflix! Enjoy your hedgehog adventures.",
