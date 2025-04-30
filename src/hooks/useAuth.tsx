@@ -119,7 +119,10 @@ export const useAuth = () => {
         .eq('id', userId)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return;
+      }
       
       if (profileData) {
         setAuthState({

@@ -15,10 +15,7 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
   avatarUrl,
   userName
 }) => {
-  if (!isLoggedIn) {
-    return null;
-  }
-  
+  // Always render the avatar, to ensure visibility of profile info
   return (
     <>
       <Avatar className="w-8 h-8 bg-[#555]">

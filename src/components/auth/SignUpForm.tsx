@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '../ui/input';
@@ -58,6 +59,7 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
       }
       
       // Sign up with Supabase - Store selectedPlanId and isKidsAccount in user_metadata
+      // And set email_confirmed to true to bypass email verification
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -65,7 +67,8 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
           data: {
             name,
             selectedPlanId,
-            isKidsAccount
+            isKidsAccount,
+            email_confirmed: true // This tells Supabase to treat the email as confirmed
           }
         }
       });

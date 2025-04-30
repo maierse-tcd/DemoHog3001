@@ -29,10 +29,12 @@ export const Navbar = () => {
   // Track page view in PostHog
   useEffect(() => {
     if (window.posthog) {
+      // Ensure we capture a pageview on every route change
       window.posthog.capture('$pageview', {
         path: location.pathname,
         title: document.title
       });
+      console.log("PageView tracked:", location.pathname);
     }
   }, [location.pathname]);
 
