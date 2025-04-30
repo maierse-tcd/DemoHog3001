@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
@@ -6,28 +7,47 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '../hooks/use-toast';
 import { mockContent, Content } from '../data/mockData';
 import { Input } from '../components/ui/input';
-import { Search, Copy } from 'lucide-react';
+import { Search, Copy, Save, CheckCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+
+// Create a copy of mockContent that we can modify
+let localMockContent = [...mockContent];
 
 const ImageManager = () => {
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredContent, setFilteredContent] = useState<Content[]>([]);
   const [selectedContent, setSelectedContent] = useState<Content | null>(null);
+  const [updatedContentList, setUpdatedContentList] = useState<Content[]>(localMockContent);
+  const [savedChanges, setSavedChanges] = useState(false);
   const { toast } = useToast();
   
-  // Use mockContent for searching
+  // Load any previously saved content from localStorage on component mount
+  useEffect(() => {
+    const savedContent = localStorage.getItem('hogflix_content');
+    if (savedContent) {
+      try {
+        const parsed = JSON.parse(savedContent);
+        localMockContent = parsed;
+        setUpdatedContentList(parsed);
+      } catch (e) {
+        console.error("Error parsing saved content:", e);
+      }
+    }
+  }, []);
+  
+  // Handle search
   useEffect(() => {
     if (searchTerm) {
-      const filtered = mockContent.filter(item => 
+      const filtered = updatedContentList.filter(item => 
         item.title.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredContent(filtered);
     } else {
       setFilteredContent([]);
     }
-  }, [searchTerm]);
+  }, [searchTerm, updatedContentList]);
   
   const handleImageUploaded = (imageUrl: string) => {
     setUploadedImages(prevImages => {
@@ -81,6 +101,46 @@ const ImageManager = () => {
     }
   };
   
+  const updateContentImage = (imageUrl: string) => {
+    if (!selectedContent) return;
+    
+    // Update the content item with the new image URL
+    const updatedList = updatedContentList.map(item => {
+      if (item.id === selectedContent.id) {
+        return { ...item, posterUrl: imageUrl };
+      }
+      return item;
+    });
+    
+    // Update the state and local mock
+    localMockContent = updatedList;
+    setUpdatedContentList(updatedList);
+    
+    // Update the selected content to show the new image
+    setSelectedContent({...selectedContent, posterUrl: imageUrl});
+    
+    // Save to localStorage for persistence
+    localStorage.setItem('hogflix_content', JSON.stringify(updatedList));
+    
+    // Show success toast
+    toast({
+      title: "Image updated successfully!",
+      description: `The poster for "${selectedContent.title}" has been updated.`
+    });
+    
+    // Track in PostHog
+    if (window.posthog) {
+      window.posthog.capture('content_image_updated', {
+        contentId: selectedContent.id,
+        contentTitle: selectedContent.title,
+        contentType: selectedContent.type
+      });
+    }
+    
+    setSavedChanges(true);
+    setTimeout(() => setSavedChanges(false), 3000);
+  };
+  
   const getCodeSnippet = (imageUrl: string) => {
     if (selectedContent) {
       return `// Update in mockData.ts
@@ -94,18 +154,116 @@ const updatedContent = mockContent.map(item => {
     return `posterUrl: "${imageUrl}"`;
   };
   
+  // New function to view all content with their images
+  const ContentLibrary = () => {
+    const [viewType, setViewType] = useState<'all' | 'movies' | 'series'>('all');
+    const [librarySearch, setLibrarySearch] = useState('');
+    
+    const filteredLibrary = updatedContentList.filter(item => {
+      const matchesSearch = item.title.toLowerCase().includes(librarySearch.toLowerCase());
+      const matchesType = viewType === 'all' || item.type === viewType;
+      return matchesSearch && matchesType;
+    });
+    
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div className="relative w-full md:w-auto">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search content..."
+              value={librarySearch}
+              onChange={(e) => setLibrarySearch(e.target.value)}
+              className="pl-10 bg-black/40 border-netflix-gray/40"
+            />
+          </div>
+          
+          <div className="flex gap-2">
+            <Button 
+              variant={viewType === 'all' ? "default" : "outline"} 
+              onClick={() => setViewType('all')}
+              className="min-w-20"
+            >
+              All
+            </Button>
+            <Button 
+              variant={viewType === 'movies' ? "default" : "outline"} 
+              onClick={() => setViewType('movies')}
+              className="min-w-20"
+            >
+              Movies
+            </Button>
+            <Button 
+              variant={viewType === 'series' ? "default" : "outline"} 
+              onClick={() => setViewType('series')}
+              className="min-w-20"
+            >
+              Series
+            </Button>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {filteredLibrary.length > 0 ? (
+            filteredLibrary.map(item => (
+              <Card 
+                key={item.id} 
+                className="bg-netflix-darkgray border-netflix-gray/20 overflow-hidden cursor-pointer hover:border-netflix-red transition-colors"
+                onClick={() => selectContentItem(item)}
+              >
+                <div className="aspect-[2/3] relative">
+                  {item.posterUrl ? (
+                    <img 
+                      src={item.posterUrl} 
+                      alt={item.title} 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Image';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-black/50 flex items-center justify-center text-netflix-gray">
+                      No Image
+                    </div>
+                  )}
+                </div>
+                <CardContent className="p-3">
+                  <h3 className="text-sm font-medium line-clamp-1">{item.title}</h3>
+                  <p className="text-xs text-netflix-gray">{item.type}</p>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <div className="col-span-full text-center py-8 text-netflix-gray">
+              <p>No content found matching your search.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+  
   return (
     <div className="bg-netflix-black min-h-screen">
       <Navbar />
       
       <main className="pt-24 pb-12">
         <div className="px-4 md:px-8 lg:px-16 max-w-7xl mx-auto">
-          <h1 className="text-3xl md:text-4xl font-bold mb-8">Image Manager</h1>
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl md:text-4xl font-bold">Image Manager</h1>
+            {savedChanges && (
+              <div className="flex items-center text-green-500">
+                <CheckCircle className="mr-2 h-5 w-5" />
+                <span>Changes saved</span>
+              </div>
+            )}
+          </div>
           
           <Tabs defaultValue="upload" className="w-full">
-            <TabsList className="grid grid-cols-2 w-full max-w-md mb-6">
+            <TabsList className="grid grid-cols-3 w-full max-w-md mb-6">
               <TabsTrigger value="upload">Upload Images</TabsTrigger>
               <TabsTrigger value="map">Map to Content</TabsTrigger>
+              <TabsTrigger value="library">Content Library</TabsTrigger>
             </TabsList>
             
             <TabsContent value="upload">
@@ -197,26 +355,48 @@ const updatedContent = mockContent.map(item => {
                     
                     {selectedContent && (
                       <div className="mt-4 p-4 border border-netflix-gray/20 rounded-md">
-                        <h3 className="text-lg font-medium">{selectedContent.title}</h3>
-                        <p className="text-netflix-gray text-sm">Type: {selectedContent.type}</p>
-                        {selectedContent.posterUrl && (
-                          <div className="mt-2">
-                            <p className="text-sm text-netflix-gray">Current poster URL:</p>
-                            <div className="flex mt-1">
-                              <code className="bg-black/30 p-2 rounded text-xs flex-1 overflow-x-auto">
-                                {selectedContent.posterUrl}
-                              </code>
-                              <Button 
-                                variant="outline" 
-                                size="icon"
-                                className="ml-2"
-                                onClick={() => copyToClipboard(selectedContent.posterUrl || '', selectedContent.title)}
-                              >
-                                <Copy className="h-4 w-4" />
-                              </Button>
-                            </div>
+                        <div className="flex flex-col md:flex-row gap-4">
+                          <div className="w-full md:w-1/3">
+                            {selectedContent.posterUrl ? (
+                              <img 
+                                src={selectedContent.posterUrl} 
+                                alt={selectedContent.title}
+                                className="w-full aspect-[2/3] object-cover rounded"
+                                onError={(e) => {
+                                  e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Image';
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full aspect-[2/3] bg-black/50 flex items-center justify-center text-netflix-gray rounded">
+                                No Image
+                              </div>
+                            )}
                           </div>
-                        )}
+                          
+                          <div className="flex-1">
+                            <h3 className="text-lg font-medium">{selectedContent.title}</h3>
+                            <p className="text-netflix-gray text-sm">Type: {selectedContent.type}</p>
+                            
+                            {selectedContent.posterUrl && (
+                              <div className="mt-2">
+                                <p className="text-sm text-netflix-gray">Current poster URL:</p>
+                                <div className="flex mt-1">
+                                  <code className="bg-black/30 p-2 rounded text-xs flex-1 overflow-x-auto">
+                                    {selectedContent.posterUrl}
+                                  </code>
+                                  <Button 
+                                    variant="outline" 
+                                    size="icon"
+                                    className="ml-2"
+                                    onClick={() => copyToClipboard(selectedContent.posterUrl || '', selectedContent.title)}
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </CardContent>
@@ -240,27 +420,29 @@ const updatedContent = mockContent.map(item => {
                             />
                             <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity p-2">
                               <Button 
-                                variant="outline"
+                                variant="default"
                                 size="sm"
-                                className="w-full mb-1"
+                                className="w-full mb-1 bg-netflix-red hover:bg-netflix-red/80"
                                 disabled={!selectedContent}
                                 onClick={() => {
                                   if (selectedContent) {
-                                    copyToClipboard(url, selectedContent.title);
+                                    updateContentImage(url);
                                   }
                                 }}
                               >
-                                Use for {selectedContent?.title || "selected content"}
+                                <Save className="h-4 w-4 mr-1" />
+                                {selectedContent ? "Save to content" : "Select content first"}
                               </Button>
                               <Button 
                                 variant="ghost"
                                 size="sm"
                                 className="w-full"
                                 onClick={() => {
-                                  copyToClipboard(getCodeSnippet(url));
+                                  copyToClipboard(url);
                                 }}
                               >
-                                Copy code
+                                <Copy className="h-4 w-4 mr-1" />
+                                Copy URL
                               </Button>
                             </div>
                           </div>
@@ -272,13 +454,20 @@ const updatedContent = mockContent.map(item => {
                       </div>
                     )}
                   </CardContent>
-                  <CardFooter>
-                    <p className="text-xs text-netflix-gray">
-                      Note: This tool helps you map images to content by generating code snippets. You'll still need to update the mockData.ts file with the changes.
-                    </p>
-                  </CardFooter>
                 </Card>
               </div>
+            </TabsContent>
+            
+            <TabsContent value="library">
+              <Card className="bg-netflix-darkgray border-netflix-gray/20">
+                <CardHeader>
+                  <CardTitle>Content Library</CardTitle>
+                  <CardDescription>Browse and manage all content images</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ContentLibrary />
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
           
@@ -303,8 +492,8 @@ const updatedContent = mockContent.map(item => {
                   </li>
                 </ol>
                 <p className="mt-4 text-sm text-netflix-gray">
-                  Note: In the current demo, images are stored locally in the browser. For a production environment, 
-                  you would implement image upload to one of these cloud services.
+                  Note: Currently images are stored in localStorage for persistence. For production, we recommend implementing 
+                  Supabase Storage for a fully integrated solution.
                 </p>
               </CardContent>
             </Card>

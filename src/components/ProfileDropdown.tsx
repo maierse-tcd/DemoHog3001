@@ -6,6 +6,7 @@ import { placeholderImages } from '../utils/imagePlaceholders';
 import { useProfileSettings } from '../contexts/ProfileSettingsContext';
 import { useToast } from '../hooks/use-toast';
 import { supabase } from '../integrations/supabase/client';
+import { Avatar, AvatarImage, AvatarFallback } from '../components/ui/avatar';
 
 export const ProfileDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -18,6 +19,36 @@ export const ProfileDropdown = () => {
   const { settings, updateSettings } = useProfileSettings();
   
   useEffect(() => {
+    // First check for existing session
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setIsLoggedIn(!!data.session);
+      
+      if (data.session?.user) {
+        // Delay the fetch to avoid Supabase lock
+        setTimeout(() => {
+          fetchUserProfile(data.session!.user.id);
+        }, 0);
+        
+        // Identify user in PostHog on initial load if they're logged in
+        if (window.posthog) {
+          window.posthog.identify(data.session.user.id, {
+            email: data.session.user.email
+          });
+        }
+      } else {
+        setUserName('Guest');
+        setAvatarUrl('');
+        
+        // Reset PostHog identification when not logged in
+        if (window.posthog) {
+          window.posthog.reset();
+        }
+      }
+    };
+    
+    checkSession();
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -25,7 +56,10 @@ export const ProfileDropdown = () => {
         setIsLoggedIn(loggedIn);
         
         if (session?.user) {
-          fetchUserProfile(session.user.id);
+          // Use timeout to prevent Supabase deadlock
+          setTimeout(() => {
+            fetchUserProfile(session.user.id);
+          }, 0);
           
           // Track user identification in PostHog when session changes
           if (window.posthog && event === 'SIGNED_IN') {
@@ -44,25 +78,6 @@ export const ProfileDropdown = () => {
         }
       }
     );
-    
-    // Check for existing session
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      setIsLoggedIn(!!data.session);
-      
-      if (data.session?.user) {
-        fetchUserProfile(data.session.user.id);
-        
-        // Identify user in PostHog on initial load if they're logged in
-        if (window.posthog) {
-          window.posthog.identify(data.session.user.id, {
-            email: data.session.user.email
-          });
-        }
-      }
-    };
-    
-    checkSession();
     
     return () => {
       subscription.unsubscribe();
@@ -94,7 +109,7 @@ export const ProfileDropdown = () => {
         updateSettings({
           name: profileData.name || 'User',
           email: profileData.email,
-          selectedPlanId: settings?.selectedPlanId,
+          selectedPlanId: profileData.selected_plan_id || settings?.selectedPlanId,
           language: settings?.language || 'English',
           notifications: settings?.notifications || { email: true },
         });

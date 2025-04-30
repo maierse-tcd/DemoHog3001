@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
@@ -63,6 +63,19 @@ const SignUp = () => {
   const { toast } = useToast();
   const { updateSettings, updateSelectedPlan } = useProfileSettings();
   
+  // Check for existing session on component mount
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        // User is already logged in, redirect to homepage
+        navigate('/');
+      }
+    };
+    
+    checkSession();
+  }, [navigate]);
+  
   const handlePlanSelect = (planId: string) => {
     setSelectedPlanId(planId);
   };
@@ -112,7 +125,8 @@ const SignUp = () => {
             name,
             selectedPlanId,
             isKidsAccount
-          }
+          },
+          emailRedirectTo: window.location.origin
         }
       });
       
@@ -125,9 +139,29 @@ const SignUp = () => {
           email,
           notifications: { email: true },
           language: 'English',
+          selectedPlanId,
         });
         
         updateSelectedPlan(selectedPlanId);
+        
+        // Create a profile in the database for this user
+        try {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: data.user.id,
+              name,
+              email,
+              selected_plan_id: selectedPlanId,
+              is_kids_account: isKidsAccount
+            });
+            
+          if (profileError) {
+            console.error("Error creating profile:", profileError);
+          }
+        } catch (profileErr) {
+          console.error("Error creating profile:", profileErr);
+        }
         
         // Track signup event in PostHog
         if (window.posthog) {
@@ -140,28 +174,26 @@ const SignUp = () => {
           window.posthog.capture('user_signup_complete');
         }
         
-        // Sign in automatically after successful registration
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-        
-        if (signInError) {
-          console.error("Auto sign-in failed:", signInError);
+        if (data.session) {
+          // User was automatically logged in (email confirmation disabled in Supabase)
+          toast({
+            title: "Sign up successful!",
+            description: "Welcome to Hogflix! Enjoy your hedgehog adventures.",
+          });
+          
+          navigate('/');
+        } else {
+          // Need to confirm email first
           toast({
             title: "Account created!",
-            description: "Please sign in with your new credentials.",
+            description: "Please check your email to confirm your account before logging in.",
           });
-          navigate('/login');
-          return;
+          
+          // Still redirect to homepage
+          setTimeout(() => {
+            navigate('/login');
+          }, 1500);
         }
-        
-        toast({
-          title: "Sign up successful!",
-          description: "Welcome to Hogflix! Enjoy your hedgehog adventures.",
-        });
-        
-        navigate('/');
       }
     } catch (error: any) {
       // Track failed signup in PostHog

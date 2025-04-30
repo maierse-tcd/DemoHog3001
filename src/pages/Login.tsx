@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
@@ -14,6 +13,19 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { updateSettings } = useProfileSettings();
+
+  // Check for existing session on component mount
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        // User is already logged in, redirect to homepage
+        navigate('/');
+      }
+    };
+    
+    checkSession();
+  }, [navigate]);
 
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -55,67 +67,43 @@ const Login = () => {
         return;
       }
       
-      // First, check if the user exists by trying to sign in
+      // Sign in with email/password
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
       
-      // If there was an error about email confirmation, we'll bypass it
-      if (error && error.message.includes("Email not confirmed")) {
-        console.log("Bypassing email confirmation requirement");
+      if (error) {
+        console.error("Login error:", error);
         
-        // We'll directly look for user in the profiles table
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('email', email)
-          .single();
-        
-        if (profileError || !profileData) {
-          throw new Error("Invalid email or password");
-        }
-        
-        // If we found the profile, we'll manually sign in the user
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-        
-        if (signInError) {
-          throw signInError;
-        }
-        
-        if (signInData && signInData.user) {
-          await fetchUserProfile(signInData.user.id);
-          
-          // Track login event in PostHog
-          if (window.posthog) {
-            window.posthog.identify(signInData.user.id, {
-              email: email,
-              name: profileData.name || 'User'
-            });
-            window.posthog.capture('user_login_success');
-          }
-          
+        // Special handling for "Email not confirmed" errors
+        if (error.message.includes("Email not confirmed")) {
           toast({
-            title: "Login successful",
-            description: `Welcome back!`,
+            title: "Email not confirmed",
+            description: "Please check your email for a confirmation link or contact support",
+            variant: "destructive"
           });
-          
-          setTimeout(() => {
-            navigate('/');
-          }, 500);
+        } else {
+          toast({
+            title: "Login failed",
+            description: error.message || "Invalid email or password",
+            variant: "destructive"
+          });
         }
-      } else if (error) {
-        throw error;
+        
+        // Track failed login in PostHog
+        if (window.posthog) {
+          window.posthog.capture('user_login_failed', {
+            error: error.message
+          });
+        }
       } else if (data && data.user) {
         console.log('Analytics Event: Login Success', { email });
         
         // Fetch user profile data
         await fetchUserProfile(data.user.id);
         
-        // Track login event in PostHog
+        // Track login event in PostHog - identify the user
         if (window.posthog) {
           window.posthog.identify(data.user.id, {
             email: email
