@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { User } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 
@@ -14,6 +14,7 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
   avatarUrl,
   userName
 }) => {
+  const [imageError, setImageError] = useState(false);
   // Use local placeholder image to prevent network errors
   const fallbackImage = '/placeholder.svg';
   
@@ -22,14 +23,9 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
     <>
       <Avatar className="w-8 h-8 bg-[#555]">
         <AvatarImage 
-          src={avatarUrl || fallbackImage}
+          src={imageError || !avatarUrl ? fallbackImage : avatarUrl}
           alt={`${userName}'s avatar`}
-          onError={(e) => {
-            // Fallback to local image on error
-            const target = e.target as HTMLImageElement;
-            target.onerror = null; // Prevent infinite loop
-            target.src = fallbackImage;
-          }}
+          onError={() => setImageError(true)}
         />
         <AvatarFallback>
           <User size={16} className="text-netflix-gray" />

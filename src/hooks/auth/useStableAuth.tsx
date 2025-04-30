@@ -37,7 +37,7 @@ export function useStableAuth() {
           userEmail: auth.userEmail,
           isStable: true
         });
-        loginConfirmationsRef.current = 3; 
+        loginConfirmationsRef.current = 5; // Set high confidence immediately
       }
       return;
     }
@@ -47,9 +47,9 @@ export function useStableAuth() {
       loginConfirmationsRef.current += 1;
       logoutConfirmationsRef.current = 0; // Reset logout counter
       
-      // Update display if we have enough confirmations
-      if (loginConfirmationsRef.current >= 1) {
-        console.log("Confirmed logged in state in useStableAuth");
+      // Update display immediately if we have auth data
+      if (auth.userName || auth.avatarUrl) {
+        console.log("Auth data available, updating stable state");
         setStableState({
           isLoggedIn: true,
           userName: auth.userName || 'User',
@@ -65,7 +65,7 @@ export function useStableAuth() {
       logoutConfirmationsRef.current += 1;
       
       // Only update display after multiple confirmations of logout
-      if (logoutConfirmationsRef.current >= 5) {
+      if (logoutConfirmationsRef.current >= 8) { // Require more confirmations
         console.log("Multiple confirmations of logout in useStableAuth");
         setStableState({
           isLoggedIn: false,
@@ -77,7 +77,7 @@ export function useStableAuth() {
         lastAuthStateRef.current = false;
         loginConfirmationsRef.current = 0;
       } else {
-        console.log(`Potential logout detected (${logoutConfirmationsRef.current}/5), waiting for more confirmation`);
+        console.log(`Potential logout detected (${logoutConfirmationsRef.current}/8), waiting for more confirmation`);
       }
     }
     // Initial loading state when we don't know yet
@@ -95,6 +95,6 @@ export function useStableAuth() {
   return {
     ...stableState,
     handleLogout: auth.handleLogout,
-    isLoading: auth.isLoading
+    isLoading: auth.isLoading || !stableState.isStable
   };
 }
