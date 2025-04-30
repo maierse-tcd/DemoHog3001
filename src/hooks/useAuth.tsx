@@ -33,11 +33,11 @@ export const useAuth = () => {
       const { data: userData } = await supabase.auth.getUser();
       const userEmail = userData?.user?.email || '';
       
-      // Fetch profile data from profiles table
+      // Fetch profile data from profiles table - fixed to use email instead of id for the query
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', userId)
+        .eq('email', userEmail)
         .maybeSingle();
       
       if (error) {
@@ -49,12 +49,14 @@ export const useAuth = () => {
       if (profileData) {
         console.log("Profile data fetched:", profileData);
         
+        // Safe access to profile data with null checks
         const displayName = profileData.name || userEmail.split('@')[0];
+        const avatarUrl = profileData.avatar_url || '';
         
         setAuthState({
           isLoggedIn: true,
           userName: displayName,
-          avatarUrl: profileData.avatar_url || '',
+          avatarUrl: avatarUrl,
           userEmail: userEmail,
           isLoading: false
         });
@@ -94,10 +96,12 @@ export const useAuth = () => {
         if (userData?.user) {
           const displayName = userData.user.user_metadata?.name || userEmail.split('@')[0];
           
+          // Create profile without manually specifying the ID field
           const { error: insertError } = await supabase.from('profiles').upsert({
-            id: userId,
             name: displayName,
-            email: userEmail
+            email: userEmail,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           });
           
           if (insertError) {

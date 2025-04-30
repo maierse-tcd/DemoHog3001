@@ -28,7 +28,7 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
         throw new Error("No authenticated user found");
       }
 
-      // Update user's profile in the database
+      // Update user's profile in the database - fixed to use proper types
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -36,7 +36,7 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
           email,
           updated_at: new Date().toISOString()
         })
-        .eq('id', user.id);
+        .eq('email', email);
 
       if (error) throw error;
 

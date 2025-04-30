@@ -46,7 +46,7 @@ const Login = () => {
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', userId)
+        .eq('email', userEmail)
         .maybeSingle();
       
       if (error) {
@@ -55,8 +55,9 @@ const Login = () => {
       }
       
       if (profileData) {
-        // Get user metadata
-        const userMetadata = user?.user_metadata || {};
+        console.log("Profile data fetched:", profileData);
+        
+        // Safe access with null checks
         const displayName = profileData.name || userEmail.split('@')[0];
         
         // Update the profile settings context with user data
@@ -65,8 +66,8 @@ const Login = () => {
           email: userEmail,
           language: 'English',
           notifications: { email: true },
-          selectedPlanId: userMetadata.selectedPlanId || 'premium',
-          isKidsAccount: userMetadata.isKidsAccount || false
+          selectedPlanId: user?.user_metadata?.selectedPlanId || 'premium',
+          isKidsAccount: user?.user_metadata?.isKidsAccount || false
         });
         
         console.log("Profile settings updated after login");

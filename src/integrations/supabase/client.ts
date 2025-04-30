@@ -16,9 +16,5 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
     detectSessionInUrl: false, 
     flowType: 'pkce', // Use PKCE flow
-    
-    // Configure client to skip email verification
-    // This makes signup much simpler for testing purposes
-    emailRedirectTo: undefined
   }
 });

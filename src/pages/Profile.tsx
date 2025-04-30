@@ -45,11 +45,19 @@ const Profile = () => {
           return;
         }
         
-        // Fetch user profile data
+        // Fetch user profile data - using email instead of ID for the query
+        const userEmail = data.session.user.email;
+        
+        if (!userEmail) {
+          console.error('No email found for user');
+          navigate('/login');
+          return;
+        }
+        
         const { data: profileData, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', data.session.user.id)
+          .eq('email', userEmail)
           .maybeSingle();
           
         if (error) {
@@ -59,10 +67,13 @@ const Profile = () => {
           const { data: { user } } = await supabase.auth.getUser();
           const userMetadata = user?.user_metadata || {};
           
+          // Safe access with null checks
+          const displayName = profileData.name || userEmail.split('@')[0];
+          
           // Update context with profile data
           updateSettings({
-            name: profileData.name || 'User',
-            email: profileData.email,
+            name: displayName,
+            email: profileData.email || userEmail,
             // Use metadata for fields not in the profiles table
             selectedPlanId: userMetadata.selectedPlanId || settings.selectedPlanId,
             isKidsAccount: userMetadata.isKidsAccount || settings.isKidsAccount,

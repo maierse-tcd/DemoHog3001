@@ -84,14 +84,15 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
       // Store user ID in localStorage for PostHog tracking
       localStorage.setItem('hogflix_user_id', userId);
       
-      // Create or update profile record
+      // Create or update profile record - fixed by not providing id directly
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
-          id: userId,
+          email,
           name,
-          email
-        }, { onConflict: 'id' });
+          updated_at: new Date().toISOString(),
+          created_at: new Date().toISOString()
+        }, { onConflict: 'email' });
         
       if (profileError) {
         console.error("Error saving profile:", profileError);

@@ -63,11 +63,12 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
             // Store user ID for PostHog tracking
             localStorage.setItem('hogflix_user_id', signUpResult.data.user.id);
             
-            // Create basic profile
+            // Create basic profile - fixed to use proper typing by removing id
             await supabase.from('profiles').upsert({
-              id: signUpResult.data.user.id,
               email: email,
-              name: email.split('@')[0]
+              name: email.split('@')[0],
+              updated_at: new Date().toISOString(),
+              created_at: new Date().toISOString()
             });
             
             await handleSuccessfulLogin(signUpResult.data.user.id);
