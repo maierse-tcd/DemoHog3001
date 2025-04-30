@@ -15,6 +15,13 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    flowType: 'implicit'
+    flowType: 'implicit',
+    debug: true, // Enable for better debugging
+    cookieOptions: {
+      name: 'hogflix_auth',
+      lifetime: 60 * 60 * 24 * 7, // 7 days
+      sameSite: 'Lax', 
+      path: '/'
+    }
   }
 });

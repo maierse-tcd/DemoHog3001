@@ -29,12 +29,19 @@ export const Navbar = () => {
   // Track page view in PostHog
   useEffect(() => {
     if (window.posthog) {
-      // Ensure we capture a pageview on every route change
-      window.posthog.capture('$pageview', {
-        path: location.pathname,
-        title: document.title
-      });
-      console.log("PageView tracked:", location.pathname);
+      // Capture a pageview on every route change
+      const path = location.pathname;
+      const title = document.title;
+      
+      // Small delay to ensure auth state is checked first
+      setTimeout(() => {
+        window.posthog.capture('$pageview', {
+          path,
+          title,
+          $current_url: window.location.href
+        });
+        console.log("PageView tracked:", path);
+      }, 200);
     }
   }, [location.pathname]);
 

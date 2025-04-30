@@ -33,20 +33,9 @@ export const useAuth = () => {
           setAuthState(prev => ({ 
             ...prev, 
             isLoggedIn: true,
+            userName: session.user.user_metadata?.name || 'User',
             isLoading: false
           }));
-          
-          // Identify user in PostHog whenever there's a valid session
-          if (window.posthog) {
-            window.posthog.identify(session.user.id, {
-              email: session.user.email
-            });
-            
-            // Only capture specific events
-            if (event === 'SIGNED_IN') {
-              window.posthog.capture('session_started');
-            }
-          }
           
           // Use timeout to prevent Supabase deadlock
           setTimeout(() => {
@@ -59,11 +48,6 @@ export const useAuth = () => {
             avatarUrl: '',
             isLoading: false
           });
-          
-          // Reset PostHog identification when logged out
-          if (window.posthog && event === 'SIGNED_OUT') {
-            window.posthog.reset();
-          }
         }
       }
     );
@@ -74,18 +58,11 @@ export const useAuth = () => {
         setAuthState(prev => ({ 
           ...prev, 
           isLoggedIn: true,
+          userName: data.session.user.user_metadata?.name || 'User',
           isLoading: false 
         }));
         
         console.log("Found existing session for:", data.session.user.email);
-        
-        // Identify user in PostHog on initial load if they're logged in
-        if (window.posthog) {
-          window.posthog.identify(data.session.user.id, {
-            email: data.session.user.email
-          });
-          window.posthog.capture('session_resumed');
-        }
         
         // Delay the fetch to avoid Supabase lock
         setTimeout(() => {
@@ -132,12 +109,12 @@ export const useAuth = () => {
       if (profileData) {
         console.log("Profile data fetched:", profileData);
         
-        setAuthState({
+        setAuthState(prev => ({
+          ...prev,
           isLoggedIn: true,
-          userName: profileData.name || 'User',
-          avatarUrl: profileData.avatar_url || '',
-          isLoading: false
-        });
+          userName: profileData.name || prev.userName,
+          avatarUrl: profileData.avatar_url || prev.avatarUrl
+        }));
         
         // Get user metadata for additional fields
         const { data: { user } } = await supabase.auth.getUser();
@@ -145,7 +122,7 @@ export const useAuth = () => {
         
         // Update the profile settings with user data
         updateSettings({
-          name: profileData.name || 'User',
+          name: profileData.name || userMetadata.name || 'User',
           email: profileData.email,
           // Use metadata for fields not in the profiles table
           selectedPlanId: userMetadata.selectedPlanId || settings?.selectedPlanId || 'premium',
@@ -180,10 +157,13 @@ export const useAuth = () => {
         email: '',
       });
       
-      // Reset PostHog identification after logout
-      if (window.posthog) {
-        window.posthog.reset();
-      }
+      // Reset all user data
+      setAuthState({
+        isLoggedIn: false,
+        userName: 'Guest',
+        avatarUrl: '',
+        isLoading: false
+      });
       
       toast({
         title: "Logged out",

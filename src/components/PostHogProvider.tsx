@@ -26,22 +26,59 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
       try {
         const { data } = await supabase.auth.getSession();
         if (data.session?.user) {
+          // Ensure we persist the user identity in PostHog
           window.posthog.identify(data.session.user.id, {
-            email: data.session.user.email
+            email: data.session.user.email,
+            name: data.session.user.user_metadata?.name || ''
           });
           console.log("Restored PostHog identity for", data.session.user.email);
+          
+          // Set up properties that will be sent with every event
+          window.posthog.register({
+            user_logged_in: true,
+            user_email: data.session.user.email
+          });
+        } else {
+          // Reset PostHog if no session found
+          window.posthog.reset(null, {
+            send_identification_request: false // Don't send an identification API request
+          });
+          console.log("No authenticated user session found, using anonymous tracking");
         }
       } catch (err) {
         console.error("Error restoring PostHog identity:", err);
       }
     };
     
-    // Restore identity
+    // Immediately try to restore identity
     restorePosthogIdentity();
     
-    // Clean up on unmount
+    // Handle auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth state changed in PostHogProvider:", event);
+      
+      if (session?.user) {
+        // Re-identify on auth changes
+        window.posthog.identify(session.user.id, {
+          email: session.user.email,
+          name: session.user.user_metadata?.name || ''
+        });
+        
+        // Register persistent properties
+        window.posthog.register({
+          user_logged_in: true,
+          user_email: session.user.email
+        });
+      } else if (event === 'SIGNED_OUT') {
+        // Clear identity on sign out
+        window.posthog.reset(null, {
+          send_identification_request: false
+        });
+      }
+    });
+    
     return () => {
-      // No specific cleanup needed for PostHog
+      subscription.unsubscribe();
     };
   }, []);
 
