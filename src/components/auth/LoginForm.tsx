@@ -63,13 +63,35 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
             // Store user ID for PostHog tracking
             localStorage.setItem('hogflix_user_id', signUpResult.data.user.id);
             
-            // Create basic profile - fixed to use proper typing by removing id
-            await supabase.from('profiles').upsert({
-              email: email,
-              name: email.split('@')[0],
-              updated_at: new Date().toISOString(),
-              created_at: new Date().toISOString()
-            });
+            // Create basic profile - using proper types
+            // Note: We don't supply an ID, as that should come from auth.users
+            try {
+              // Check if profile already exists
+              const { data: existingProfile } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('email', email)
+                .maybeSingle();
+                
+              // Only create profile if it doesn't exist
+              if (!existingProfile) {
+                const { error: upsertError } = await supabase.from('profiles').upsert(
+                  {
+                    // The profiles table MUST have the UUID from auth.users
+                    id: signUpResult.data.user.id,
+                    email: email,
+                    name: email.split('@')[0],
+                    updated_at: new Date().toISOString(),
+                    created_at: new Date().toISOString()
+                  },
+                  { onConflict: 'email' }
+                );
+                
+                if (upsertError) console.error("Error creating profile:", upsertError);
+              }
+            } catch (profileError) {
+              console.error("Error managing profile:", profileError);
+            }
             
             await handleSuccessfulLogin(signUpResult.data.user.id);
             return;

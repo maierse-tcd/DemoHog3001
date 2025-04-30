@@ -33,7 +33,7 @@ export const useAuth = () => {
       const { data: userData } = await supabase.auth.getUser();
       const userEmail = userData?.user?.email || '';
       
-      // Fetch profile data from profiles table - fixed to use email instead of id for the query
+      // Fetch profile data from profiles table using email instead of id
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
@@ -49,9 +49,9 @@ export const useAuth = () => {
       if (profileData) {
         console.log("Profile data fetched:", profileData);
         
-        // Safe access to profile data with null checks
-        const displayName = profileData.name || userEmail.split('@')[0];
-        const avatarUrl = profileData.avatar_url || '';
+        // Safe access to profile data
+        const displayName = profileData?.name || userEmail.split('@')[0];
+        const avatarUrl = profileData?.avatar_url || '';
         
         setAuthState({
           isLoggedIn: true,
@@ -96,26 +96,31 @@ export const useAuth = () => {
         if (userData?.user) {
           const displayName = userData.user.user_metadata?.name || userEmail.split('@')[0];
           
-          // Create profile without manually specifying the ID field
-          const { error: insertError } = await supabase.from('profiles').upsert({
-            name: displayName,
-            email: userEmail,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-          
-          if (insertError) {
-            console.error("Error creating default profile:", insertError);
-          } else {
-            console.log("Created default profile for user");
-            // Set auth state directly instead of recursive call
-            setAuthState({
-              isLoggedIn: true,
-              userName: displayName,
-              avatarUrl: '',
-              userEmail: userEmail,
-              isLoading: false
+          try {
+            // Create profile with the user ID from auth.users
+            const { error: insertError } = await supabase.from('profiles').upsert({
+              id: userId, // Must provide the UUID from auth.users
+              name: displayName,
+              email: userEmail,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
             });
+            
+            if (insertError) {
+              console.error("Error creating default profile:", insertError);
+            } else {
+              console.log("Created default profile for user");
+              // Set auth state directly instead of recursive call
+              setAuthState({
+                isLoggedIn: true,
+                userName: displayName,
+                avatarUrl: '',
+                userEmail: userEmail,
+                isLoading: false
+              });
+            }
+          } catch (err) {
+            console.error("Profile creation error:", err);
           }
         }
       }

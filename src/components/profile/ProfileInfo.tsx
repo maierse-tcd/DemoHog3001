@@ -21,14 +21,14 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
       const name = formData.get('name') as string;
       const email = formData.get('email') as string;
 
-      // Get current user
+      // Get current user to get the ID
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
         throw new Error("No authenticated user found");
       }
 
-      // Update user's profile in the database - fixed to use proper types
+      // Update user's profile in the database - using email for the query
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -41,8 +41,8 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
       if (error) throw error;
 
       // Store the name in PostHog for better identification
-      if (window.posthog && name) {
-        window.posthog.identify(user.id, { name });
+      if (window.posthog && email) {
+        window.posthog.identify(email, { name });
       }
 
       // Update the context

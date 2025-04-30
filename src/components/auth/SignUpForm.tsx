@@ -84,18 +84,33 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
       // Store user ID in localStorage for PostHog tracking
       localStorage.setItem('hogflix_user_id', userId);
       
-      // Create or update profile record - fixed by not providing id directly
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          email,
-          name,
-          updated_at: new Date().toISOString(),
-          created_at: new Date().toISOString()
-        }, { onConflict: 'email' });
+      // Create or update profile record - fixed to use proper types
+      try {
+        // First check if profile already exists
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('email', email)
+          .maybeSingle();
         
-      if (profileError) {
-        console.error("Error saving profile:", profileError);
+        // Only create if it doesn't exist
+        if (!existingProfile) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: userId, // Must provide the UUID from auth.users
+              email,
+              name,
+              updated_at: new Date().toISOString(),
+              created_at: new Date().toISOString()
+            }, { onConflict: 'email' });
+            
+          if (profileError) {
+            console.error("Error saving profile:", profileError);
+          }
+        }
+      } catch (profileError) {
+        console.error("Error managing profile:", profileError);
       }
       
       // Update profile settings in context

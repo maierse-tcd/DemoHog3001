@@ -67,13 +67,13 @@ const Profile = () => {
           const { data: { user } } = await supabase.auth.getUser();
           const userMetadata = user?.user_metadata || {};
           
-          // Safe access with null checks
-          const displayName = profileData.name || userEmail.split('@')[0];
+          // Safe access with proper type handling
+          const displayName = profileData?.name || userEmail.split('@')[0];
           
           // Update context with profile data
           updateSettings({
             name: displayName,
-            email: profileData.email || userEmail,
+            email: profileData?.email || userEmail,
             // Use metadata for fields not in the profiles table
             selectedPlanId: userMetadata.selectedPlanId || settings.selectedPlanId,
             isKidsAccount: userMetadata.isKidsAccount || settings.isKidsAccount,

@@ -57,8 +57,8 @@ const Login = () => {
       if (profileData) {
         console.log("Profile data fetched:", profileData);
         
-        // Safe access with null checks
-        const displayName = profileData.name || userEmail.split('@')[0];
+        // Safe access with null checks and proper type handling
+        const displayName = profileData?.name || userEmail.split('@')[0];
         
         // Update the profile settings context with user data
         updateSettings({
