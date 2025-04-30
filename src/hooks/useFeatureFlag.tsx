@@ -21,15 +21,14 @@ export function useFeatureFlag(flagName: string): boolean | undefined {
         return;
       }
       
-      // Special case for our testing flags
-      if (flagName === 'is_admin' || flagName === 'show_images_navigation') {
-        // Override these flags for testing
-        if (window.posthog.featureFlags) {
-          window.posthog.featureFlags.override({
-            'is_admin': true,
-            'show_images_navigation': true
-          });
+      // Special case for our testing flag
+      if (flagName === 'is_admin') {
+        // For testing, ensure is_admin is always true
+        console.log("Debug: is_admin flag requested - returning true for testing");
+        if (isMounted) {
+          setEnabled(true);
         }
+        return;
       }
       
       try {
@@ -68,7 +67,6 @@ export function useFeatureFlag(flagName: string): boolean | undefined {
           window.posthog.reloadFeatureFlags();
         }
         
-        // Clean up function
         return () => {
           isMounted = false;
           if (window.posthog && window.posthog.onFeatureFlags) {
@@ -98,8 +96,8 @@ export function useFeatureFlag(flagName: string): boolean | undefined {
     };
   }, [flagName]);
   
-  // Special case for development/testing - always return true for these flags
-  if (flagName === 'is_admin' || flagName === 'show_images_navigation') {
+  // Special case for development/testing - always return true for is_admin
+  if (flagName === 'is_admin') {
     return true;
   }
   

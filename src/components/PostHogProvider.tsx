@@ -39,50 +39,6 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
       }
     });
     
-    // Identify existing user once on mount
-    const identifyExistingUser = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user?.email && window.posthog) {
-          const userEmail = session.user.email;
-          const eventKey = `identify_${session.user.id}`;
-          
-          // Only identify if not already done
-          if (!processedAuthEvents.current.has(eventKey)) {
-            processedAuthEvents.current.add(eventKey);
-            
-            console.log("PostHog: Identifying existing user with email:", userEmail);
-            
-            window.posthog.identify(userEmail, {
-              email: userEmail,
-              name: session.user.user_metadata?.name || userEmail.split('@')[0],
-              id: session.user.id
-            });
-            
-            // Force flag reload with delay after identifying
-            setTimeout(() => {
-              if (window.posthog) {
-                window.posthog.reloadFeatureFlags();
-                console.log("Feature flags reloaded after existing user identification");
-                
-                // Force set is_admin to true for testing
-                if (window.posthog.featureFlags) {
-                  window.posthog.featureFlags.override({
-                    'is_admin': true,
-                    'show_images_navigation': true
-                  });
-                  console.log("Feature flags overridden for testing: is_admin=true, show_images_navigation=true");
-                }
-              }
-            }, 500);
-          }
-        }
-      } catch (err) {
-        console.error("Error identifying existing user:", err);
-      }
-    };
-    
     // Set up single auth state listener
     const setupAuthListener = () => {
       // Clear any existing subscription to prevent duplicates
@@ -93,6 +49,7 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
         // Only process significant events
         if (['SIGNED_IN', 'SIGNED_OUT', 'USER_UPDATED'].includes(event)) {
+          // Create a unique key for this event to prevent duplicate processing
           const eventKey = `${event}_${session?.user?.id || 'anonymous'}_${Date.now()}`;
           
           // Prevent duplicate processing
@@ -123,13 +80,12 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
                     window.posthog.reloadFeatureFlags();
                     console.log("Feature flags reloaded after user identification");
                     
-                    // Force set is_admin to true for testing
+                    // Override is_admin flag for testing
                     if (window.posthog.featureFlags) {
                       window.posthog.featureFlags.override({
-                        'is_admin': true,
-                        'show_images_navigation': true
+                        'is_admin': true
                       });
-                      console.log("Feature flags overridden for testing: is_admin=true, show_images_navigation=true");
+                      console.log("Feature flag overridden for testing: is_admin=true");
                     }
                   }
                 }, 500);
@@ -156,11 +112,8 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
       return subscription;
     };
     
-    // First set up the auth listener
+    // Set up the auth listener
     const subscription = setupAuthListener();
-    
-    // Then identify existing user
-    identifyExistingUser();
     
     return () => {
       if (authSubscriptionRef.current) {

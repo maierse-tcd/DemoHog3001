@@ -21,6 +21,7 @@ export const useAuth = () => {
   const processedAuthEvents = useRef<Set<string>>(new Set());
   const authSubscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
   const checkingSessionRef = useRef<boolean>(false);
+  const isInitializedRef = useRef<boolean>(false);
 
   // Handle user profile data after fetching
   const processUserProfile = useCallback(async (userId: string) => {
@@ -86,6 +87,9 @@ export const useAuth = () => {
   }, [fetchUserProfile, createDefaultProfile, updateAuthState, identifyUserInPostHog]);
 
   useEffect(() => {
+    if (isInitializedRef.current) return;
+    isInitializedRef.current = true;
+    
     let isMounted = true;
     
     // Clean up existing subscription if present
@@ -136,45 +140,47 @@ export const useAuth = () => {
         }
 
         // THEN set up auth state listener with flag to prevent multiple profile loads
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-          // Only process significant events
-          if (['SIGNED_IN', 'SIGNED_OUT', 'USER_UPDATED'].includes(event)) {
-            const authEventKey = `auth_${event}_${session?.user?.id || 'anonymous'}_${Date.now()}`;
-            
-            // Avoid processing duplicate events
-            if (processedAuthEvents.current.has(authEventKey)) {
-              return;
-            }
-            processedAuthEvents.current.add(authEventKey);
-            
-            if (session?.user) {
-              const userEmail = session.user.email || '';
-              const displayName = session.user.user_metadata?.name || userEmail.split('@')[0];
+        if (!authSubscriptionRef.current) {
+          const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            // Only process significant events and avoid duplicates
+            if (['SIGNED_IN', 'SIGNED_OUT', 'USER_UPDATED'].includes(event)) {
+              const authEventKey = `auth_${event}_${session?.user?.id || 'anonymous'}_${Date.now()}`;
               
-              // Update auth state
-              updateAuthState({ 
-                isLoggedIn: true,
-                userName: displayName,
-                avatarUrl: '', // Will be updated with profile data
-                userEmail: userEmail,
-                isLoading: false
-              });
+              // Avoid processing duplicate events
+              if (processedAuthEvents.current.has(authEventKey)) {
+                return;
+              }
+              processedAuthEvents.current.add(authEventKey);
               
-              // Use setTimeout to prevent Supabase deadlock
-              setTimeout(() => {
-                if (isMounted) {
-                  processUserProfile(session.user.id);
-                }
-              }, 0);
-            } else if (event === 'SIGNED_OUT') {
-              resetAuthState();
-              updateAuthState({ isLoading: false });
-              processedAuthEvents.current.clear(); // Clear processed events on sign out
+              if (session?.user) {
+                const userEmail = session.user.email || '';
+                const displayName = session.user.user_metadata?.name || userEmail.split('@')[0];
+                
+                // Update auth state
+                updateAuthState({ 
+                  isLoggedIn: true,
+                  userName: displayName,
+                  avatarUrl: '', // Will be updated with profile data
+                  userEmail: userEmail,
+                  isLoading: false
+                });
+                
+                // Use setTimeout to prevent Supabase deadlock
+                setTimeout(() => {
+                  if (isMounted) {
+                    processUserProfile(session.user.id);
+                  }
+                }, 0);
+              } else if (event === 'SIGNED_OUT') {
+                resetAuthState();
+                updateAuthState({ isLoading: false });
+                processedAuthEvents.current.clear(); // Clear processed events on sign out
+              }
             }
-          }
-        });
-        
-        authSubscriptionRef.current = subscription;
+          });
+          
+          authSubscriptionRef.current = subscription;
+        }
       } catch (error) {
         console.error("Error checking auth state:", error);
         if (isMounted) {

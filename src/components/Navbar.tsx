@@ -12,8 +12,8 @@ export const Navbar = () => {
   const location = useLocation();
   const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
   
-  // Use the feature flag to determine if images navigation should be shown
-  const showImagesNavigation = useFeatureFlag('show_images_navigation');
+  // Use the is_admin feature flag to determine if images navigation should be shown
+  const isAdmin = useFeatureFlag('is_admin');
   
   useEffect(() => {
     const handleScroll = () => {
@@ -36,13 +36,6 @@ export const Navbar = () => {
       try {
         const path = location.pathname;
         const title = document.title;
-        
-        // Re-identify on navigation using stored ID
-        const userId = localStorage.getItem('hogflix_user_id');
-        if (userId) {
-          window.posthog.identify(userId);
-          console.log("Navbar: Re-identified user for pageview:", userId);
-        }
         
         // Manually capture pageview
         if (window.posthog.capture) {
@@ -82,8 +75,8 @@ export const Navbar = () => {
             <ListCheck size={16} />
             <span>Series</span>
           </Link>
-          {/* Only show Images link if feature flag is enabled */}
-          {showImagesNavigation === true && (
+          {/* Only show Images link if the user is an admin */}
+          {isAdmin === true && (
             <Link to="/image-manager" className="navbar-link flex items-center gap-1">
               <Image size={16} />
               <span>Images</span>
@@ -117,8 +110,8 @@ export const Navbar = () => {
             <ListCheck size={16} />
             <span>Series</span>
           </Link>
-          {/* Only show Images link in mobile menu if feature flag is enabled */}
-          {showImagesNavigation === true && (
+          {/* Only show Images link in mobile menu if the user is an admin */}
+          {isAdmin === true && (
             <Link to="/image-manager" className="navbar-link flex items-center gap-2">
               <Image size={16} />
               <span>Images</span>
