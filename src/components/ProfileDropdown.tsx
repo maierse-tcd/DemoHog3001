@@ -105,16 +105,23 @@ export const ProfileDropdown = () => {
         setUserName(profileData.name || 'User');
         setAvatarUrl(profileData.avatar_url || '');
         
+        // Get user metadata for additional fields
+        const { data: { user } } = await supabase.auth.getUser();
+        const userMetadata = user?.user_metadata || {};
+        
         // Update the profile settings with user data
-        // Use only the properties that exist in the profileData type
         updateSettings({
           name: profileData.name || 'User',
           email: profileData.email,
-          // Keep the existing selectedPlanId from settings instead of trying to get it from the profile
-          selectedPlanId: settings?.selectedPlanId || 'premium',
+          // Use metadata for fields not in the profiles table
+          selectedPlanId: userMetadata.selectedPlanId || settings?.selectedPlanId || 'premium',
           language: settings?.language || 'English',
           notifications: settings?.notifications || { email: true },
-          isKidsAccount: settings?.isKidsAccount || false
+          isKidsAccount: userMetadata.isKidsAccount || settings?.isKidsAccount || false,
+          playbackSettings: settings?.playbackSettings || {
+            autoplayNext: true,
+            autoplayPreviews: true,
+          }
         });
       }
     } catch (error) {
