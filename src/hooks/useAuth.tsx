@@ -85,6 +85,7 @@ export const useAuth = () => {
           const { data: { user } } = await supabase.auth.getUser();
           if (user) {
             const { data, error } = await supabase.from('profiles').insert({
+              id: userId, // Include the user ID when creating the profile
               name: user.user_metadata.name || 'User',
               email: user.email
             });
@@ -258,6 +259,7 @@ export const useAuth = () => {
 
   return {
     ...authState,
-    handleLogout
+    handleLogout,
+    fetchUserProfile
   };
 };

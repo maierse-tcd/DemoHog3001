@@ -86,11 +86,14 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
           // Store user ID in localStorage for persistent identification
           localStorage.setItem('hogflix_user_id', signInData.user.id);
           
-          // Create profile record
-          const { error: profileError } = await supabase.from('profiles').insert({
-            name,
-            email
-          });
+          // Create profile record with the user ID
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: signInData.user.id, // Include the user ID when creating the profile
+              name,
+              email
+            });
             
           if (profileError) {
             console.error("Error creating profile:", profileError);
