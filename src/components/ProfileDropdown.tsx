@@ -1,47 +1,14 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown, LogIn } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ProfileAvatar } from './ProfileAvatar';
 import { ProfileDropdownMenu } from './ProfileDropdownMenu';
-import { useAuth } from '../hooks/useAuth';
+import { useStableAuth } from '../hooks/auth/useStableAuth';
 
 export const ProfileDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { isLoggedIn, userName, avatarUrl, userEmail, handleLogout, isLoading } = useAuth();
-  const [stableAuth, setStableAuth] = useState({ isLoggedIn, userName, avatarUrl });
-  const prevLoggedInRef = useRef(isLoggedIn);
-  const sessionCheckCountRef = useRef(0);
-  
-  // When auth state changes, update the stable state to prevent flickering
-  useEffect(() => {
-    // Only update the stable state if:
-    // 1. User is definitively logged in (isLoggedIn is true)
-    // 2. Or we're certain user is logged out (after multiple checks)
-    if (isLoggedIn) {
-      // Always update when logged in state is detected
-      setStableAuth({ isLoggedIn, userName, avatarUrl });
-      prevLoggedInRef.current = true;
-      sessionCheckCountRef.current = 0; // Reset counter when logged in
-    } else if (!isLoading && prevLoggedInRef.current) {
-      // If we were previously logged in but now appear logged out,
-      // we need multiple confirmations to prevent flickering
-      sessionCheckCountRef.current += 1;
-      
-      // Only update UI after receiving multiple logged-out signals
-      if (sessionCheckCountRef.current >= 3) {
-        console.log("Multiple confirmations of logout received, updating UI");
-        setStableAuth({ isLoggedIn: false, userName: '', avatarUrl: '' });
-        prevLoggedInRef.current = false;
-        sessionCheckCountRef.current = 0;
-      } else {
-        console.log(`Potential logout detected (${sessionCheckCountRef.current}/3), waiting for confirmation`);
-      }
-    } else if (!isLoading && !isLoggedIn && !prevLoggedInRef.current) {
-      // If we were already logged out and still are, just update
-      setStableAuth({ isLoggedIn: false, userName: '', avatarUrl: '' });
-    }
-  }, [isLoggedIn, userName, avatarUrl, isLoading]);
+  const { isLoggedIn, userName, avatarUrl, handleLogout } = useStableAuth();
   
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -64,11 +31,11 @@ export const ProfileDropdown = () => {
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
-        {stableAuth.isLoggedIn ? (
+        {isLoggedIn ? (
           <ProfileAvatar 
-            isLoggedIn={stableAuth.isLoggedIn}
-            avatarUrl={stableAuth.avatarUrl}
-            userName={stableAuth.userName || 'User'}
+            isLoggedIn={isLoggedIn}
+            avatarUrl={avatarUrl}
+            userName={userName || 'User'}
           />
         ) : (
           <>
@@ -86,7 +53,7 @@ export const ProfileDropdown = () => {
 
       <ProfileDropdownMenu 
         isOpen={isOpen}
-        isLoggedIn={stableAuth.isLoggedIn}
+        isLoggedIn={isLoggedIn}
         handleLogout={handleLogout}
       />
     </div>
