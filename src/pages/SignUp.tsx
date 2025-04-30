@@ -1,11 +1,10 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Input } from '../components/ui/input';
-import { Button } from '../components/ui/button';
-import { SubscriptionPlan, Plan } from '../components/SubscriptionPlan';
-import { useToast } from '../hooks/use-toast';
-import { useProfileSettings } from '../contexts/ProfileSettingsContext';
+import { AuthLayout } from '../components/auth/AuthLayout';
+import { SignUpForm } from '../components/auth/SignUpForm';
+import { PlanSelector } from '../components/auth/PlanSelector';
+import { Plan } from '../components/SubscriptionPlan';
 import { supabase } from '../integrations/supabase/client';
 
 const subscriptionPlans: Plan[] = [
@@ -53,15 +52,8 @@ const subscriptionPlans: Plan[] = [
 ];
 
 const SignUp = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
-  const [isKidsAccount, setIsKidsAccount] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { updateSettings, updateSelectedPlan } = useProfileSettings();
   
   // Check for existing session on component mount
   useEffect(() => {
@@ -79,155 +71,6 @@ const SignUp = () => {
   const handlePlanSelect = (planId: string) => {
     setSelectedPlanId(planId);
   };
-  
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    try {
-      // Validate all fields
-      if (!email || !password || password.length < 6) {
-        toast({
-          title: "Invalid credentials",
-          description: "Please enter a valid email and password (min 6 characters)",
-          variant: "destructive"
-        });
-        setIsLoading(false);
-        return;
-      }
-      
-      if (!name) {
-        toast({
-          title: "Name required",
-          description: "Please enter your name",
-          variant: "destructive"
-        });
-        setIsLoading(false);
-        return;
-      }
-      
-      if (!selectedPlanId) {
-        toast({
-          title: "Plan selection required",
-          description: "Please select a subscription plan",
-          variant: "destructive"
-        });
-        setIsLoading(false);
-        return;
-      }
-      
-      // Sign up with Supabase - Store selectedPlanId and isKidsAccount in user_metadata
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name,
-            selectedPlanId,
-            isKidsAccount
-          }
-        }
-      });
-      
-      if (error) throw error;
-
-      if (data && data.user) {
-        // Update profile settings context
-        updateSettings({
-          name,
-          email,
-          notifications: { email: true },
-          language: 'English',
-          selectedPlanId,
-          isKidsAccount
-        });
-        
-        updateSelectedPlan(selectedPlanId);
-        
-        // Create a profile in the database for this user
-        try {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert({
-              id: data.user.id,
-              name,
-              email,
-              // Don't store these fields in the profile table as they're not part of the schema
-              // selected_plan_id: selectedPlanId,
-              // is_kids_account: isKidsAccount
-            });
-            
-          if (profileError) {
-            console.error("Error creating profile:", profileError);
-          }
-        } catch (profileErr) {
-          console.error("Error creating profile:", profileErr);
-        }
-        
-        // Track signup event in PostHog
-        if (window.posthog) {
-          window.posthog.identify(data.user.id, {
-            email: email,
-            name: name,
-            plan: selectedPlanId,
-            isKidsAccount: isKidsAccount
-          });
-          window.posthog.capture('user_signup_complete');
-        }
-        
-        // Always sign the user in immediately after signup
-        // Get the session directly from the data object which should be available after signUp
-        if (data.session) {
-          toast({
-            title: "Sign up successful!",
-            description: "Welcome to Hogflix! Enjoy your hedgehog adventures.",
-          });
-          
-          // Short delay before redirect for toast to be visible
-          setTimeout(() => {
-            navigate('/');
-          }, 500);
-        } else {
-          // If for some reason we don't have a session yet, try logging in manually
-          const { error: loginError } = await supabase.auth.signInWithPassword({
-            email,
-            password
-          });
-          
-          if (loginError) {
-            console.error("Auto-login error:", loginError);
-            toast({
-              title: "Sign up successful!",
-              description: "Please log in with your new account.",
-            });
-            navigate('/login');
-          } else {
-            toast({
-              title: "Sign up successful!",
-              description: "Welcome to Hogflix! Enjoy your hedgehog adventures.",
-            });
-            navigate('/');
-          }
-        }
-      }
-    } catch (error: any) {
-      // Track failed signup in PostHog
-      if (window.posthog) {
-        window.posthog.capture('user_signup_failed', {
-          error: error.message || "Unknown error"
-        });
-      }
-      
-      toast({
-        title: "Sign up failed",
-        description: error.message || "An error occurred during sign up",
-        variant: "destructive"
-      });
-      console.error("Sign up error:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-netflix-black flex flex-col">
@@ -240,84 +83,29 @@ const SignUp = () => {
         <div className="max-w-4xl w-full bg-netflix-darkgray rounded-lg p-8 shadow-lg">
           <h2 className="text-2xl font-bold mb-6">Create your account</h2>
           
-          <form onSubmit={handleSignUp} className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Personal Information Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h3 className="text-xl font-medium">Personal Information</h3>
-                <div>
-                  <label className="block text-sm mb-1">Full Name</label>
-                  <Input 
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="bg-black/40 border-netflix-gray/40 text-white"
-                    placeholder="Enter your name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm mb-1">Email</label>
-                  <Input 
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="bg-black/40 border-netflix-gray/40 text-white"
-                    placeholder="Enter your email"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm mb-1">Password</label>
-                  <Input 
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="bg-black/40 border-netflix-gray/40 text-white"
-                    placeholder="Create a password (min 6 characters)"
-                  />
-                </div>
-                <div className="flex items-center space-x-2 pt-2">
-                  <input
-                    type="checkbox"
-                    id="kidsAccount"
-                    checked={isKidsAccount}
-                    onChange={(e) => setIsKidsAccount(e.target.checked)}
-                    className="rounded border-netflix-gray/40 bg-black/40"
-                  />
-                  <label htmlFor="kidsAccount" className="cursor-pointer">
-                    This is a kids account
-                  </label>
-                </div>
-              </div>
-              
-              <div>
-                <h3 className="text-xl font-medium mb-4">Choose your plan</h3>
-                <p className="text-netflix-gray mb-4">Select the subscription plan that works for you.</p>
-                <div className="space-y-4">
-                  {subscriptionPlans.map(plan => (
-                    <SubscriptionPlan
-                      key={plan.id}
-                      plan={plan}
-                      selectedPlanId={selectedPlanId}
-                      onSelect={handlePlanSelect}
-                    />
-                  ))}
-                </div>
-              </div>
+            <div className="space-y-4">
+              <h3 className="text-xl font-medium">Personal Information</h3>
+              <SignUpForm 
+                selectedPlanId={selectedPlanId}
+                setSelectedPlanId={setSelectedPlanId}
+              />
             </div>
             
-            <div className="flex items-center justify-between pt-4 border-t border-netflix-gray/20">
-              <p className="text-netflix-gray text-sm">
-                Already have an account? <Link to="/login" className="text-white hover:underline">Sign in</Link>
-              </p>
-              <Button
-                type="submit"
-                className="bg-netflix-red hover:bg-netflix-red/80 text-white"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Creating account...' : 'Complete Sign Up'}
-              </Button>
-            </div>
-          </form>
+            {/* Plan Selection Section */}
+            <PlanSelector 
+              plans={subscriptionPlans}
+              selectedPlanId={selectedPlanId}
+              onPlanSelect={handlePlanSelect}
+            />
+          </div>
+          
+          <div className="flex items-center justify-between pt-4 border-t border-netflix-gray/20 mt-6">
+            <p className="text-netflix-gray text-sm">
+              Already have an account? <Link to="/login" className="text-white hover:underline">Sign in</Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>
