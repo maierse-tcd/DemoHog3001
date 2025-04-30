@@ -22,6 +22,7 @@ export const useAuth = () => {
   const authSubscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
   const checkingSessionRef = useRef<boolean>(false);
   const isInitializedRef = useRef<boolean>(false);
+  const lastKnownSessionRef = useRef<string | null>(null);
 
   // Handle user profile data after fetching
   const processUserProfile = useCallback(async (userId: string) => {
@@ -107,6 +108,10 @@ export const useAuth = () => {
         const { data } = await supabase.auth.getSession();
         
         if (data.session?.user && isMounted) {
+          // Store session hash to avoid duplicate processing
+          const sessionHash = `${data.session.user.id}_${Date.now()}`;
+          lastKnownSessionRef.current = sessionHash;
+          
           const userEmail = data.session.user.email || '';
           const displayName = data.session.user.user_metadata?.name || userEmail.split('@')[0];
           const authEventKey = `auth_${data.session.user.id}`;
@@ -127,7 +132,7 @@ export const useAuth = () => {
             
             // Process user profile with delay to prevent deadlocks
             setTimeout(() => {
-              if (isMounted) {
+              if (isMounted && lastKnownSessionRef.current === sessionHash) {
                 console.log("Fetching user profile after login:", data.session.user.id);
                 processUserProfile(data.session.user.id);
               }
@@ -137,6 +142,7 @@ export const useAuth = () => {
           // No active session
           resetAuthState();
           updateAuthState({ isLoading: false });
+          lastKnownSessionRef.current = null;
         }
 
         // THEN set up auth state listener with flag to prevent multiple profile loads
@@ -144,7 +150,16 @@ export const useAuth = () => {
           const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             // Only process significant events and avoid duplicates
             if (['SIGNED_IN', 'SIGNED_OUT', 'USER_UPDATED'].includes(event)) {
+              // Generate unique event key
+              const sessionHash = session ? `${session.user.id}_${Date.now()}` : `anon_${Date.now()}`;
               const authEventKey = `auth_${event}_${session?.user?.id || 'anonymous'}_${Date.now()}`;
+              
+              // For signed in events, update the session hash reference
+              if (session) {
+                lastKnownSessionRef.current = sessionHash;
+              } else {
+                lastKnownSessionRef.current = null;
+              }
               
               // Avoid processing duplicate events
               if (processedAuthEvents.current.has(authEventKey)) {
@@ -152,11 +167,13 @@ export const useAuth = () => {
               }
               processedAuthEvents.current.add(authEventKey);
               
+              console.log(`Auth state changed: ${event}`, session?.user?.email);
+              
               if (session?.user) {
                 const userEmail = session.user.email || '';
                 const displayName = session.user.user_metadata?.name || userEmail.split('@')[0];
                 
-                // Update auth state
+                // Immediately update basic auth state for responsive UI
                 updateAuthState({ 
                   isLoggedIn: true,
                   userName: displayName,
@@ -167,7 +184,7 @@ export const useAuth = () => {
                 
                 // Use setTimeout to prevent Supabase deadlock
                 setTimeout(() => {
-                  if (isMounted) {
+                  if (isMounted && lastKnownSessionRef.current === sessionHash) {
                     processUserProfile(session.user.id);
                   }
                 }, 0);
@@ -202,6 +219,46 @@ export const useAuth = () => {
       }
     };
   }, [processUserProfile, updateAuthState, resetAuthState]);
+
+  // Add periodic session check to recover from potential desynchronization
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      if (!authState.isLoggedIn && !authState.isLoading) {
+        // Only check if we think we're not logged in
+        supabase.auth.getSession().then(({ data }) => {
+          if (data.session?.user) {
+            console.log("Session recovery: Found active session");
+            // We have a session but UI doesn't reflect it
+            const userEmail = data.session.user.email || '';
+            const displayName = data.session.user.user_metadata?.name || userEmail.split('@')[0];
+            
+            // Update auth state
+            updateAuthState({ 
+              isLoggedIn: true,
+              userName: displayName,
+              avatarUrl: '', // Will be updated with profile data
+              userEmail: userEmail,
+              isLoading: false
+            });
+            
+            // Fetch full profile
+            const sessionHash = `${data.session.user.id}_${Date.now()}`;
+            lastKnownSessionRef.current = sessionHash;
+            
+            setTimeout(() => {
+              if (lastKnownSessionRef.current === sessionHash) {
+                processUserProfile(data.session.user.id);
+              }
+            }, 100);
+          }
+        }).catch(error => {
+          console.error("Error in session recovery check:", error);
+        });
+      }
+    }, 10000); // Check every 10 seconds
+    
+    return () => clearInterval(intervalId);
+  }, [authState.isLoggedIn, authState.isLoading, updateAuthState, processUserProfile]);
   
   const handleLogout = async () => {
     try {
@@ -219,6 +276,7 @@ export const useAuth = () => {
       // Clear user data
       resetAuthState();
       processedAuthEvents.current.clear(); // Clear processed events on sign out
+      lastKnownSessionRef.current = null;
       
       toast({
         title: "Logged out",
