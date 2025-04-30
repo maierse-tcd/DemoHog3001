@@ -26,22 +26,26 @@ export const Navbar = () => {
     };
   }, []);
 
-  // Track page view in PostHog
+  // Track page view in PostHog whenever the route changes
   useEffect(() => {
     if (window.posthog) {
-      // Capture a pageview on every route change
       const path = location.pathname;
       const title = document.title;
       
-      // Small delay to ensure auth state is checked first
-      setTimeout(() => {
-        window.posthog.capture('$pageview', {
-          path,
-          title,
-          $current_url: window.location.href
-        });
-        console.log("PageView tracked:", path);
-      }, 200);
+      // Use the current user ID from localStorage if available
+      const userId = localStorage.getItem('hogflix_user_id');
+      if (userId) {
+        // Re-identify on each navigation to ensure identity
+        window.posthog.identify(userId);
+      }
+      
+      // Capture the pageview
+      window.posthog.capture('$pageview', {
+        path,
+        title,
+        $current_url: window.location.href
+      });
+      console.log("Navbar: PageView tracked for path:", path);
     }
   }, [location.pathname]);
 

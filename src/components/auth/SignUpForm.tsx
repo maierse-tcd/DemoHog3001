@@ -76,7 +76,10 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
       if (error) throw error;
       
       if (data && data.user) {
-        // Step 2: Create a profile in the database for this user
+        // Store user ID for persistent identification
+        localStorage.setItem('hogflix_user_id', data.user.id);
+        
+        // Create profile entry (using upsert to prevent duplicate entries)
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert({
@@ -89,7 +92,7 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
           console.error("Error creating profile:", profileError);
         }
         
-        // Step 3: Update profile settings context
+        // Update profile settings context
         updateSettings({
           name,
           email,
@@ -101,7 +104,7 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
         
         updateSelectedPlan(selectedPlanId);
         
-        // Step 4: Identify user in PostHog
+        // Identify user in PostHog
         if (window.posthog) {
           window.posthog.identify(data.user.id, {
             email: email,
@@ -117,7 +120,7 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
           description: "Welcome to Hogflix! Enjoy your hedgehog adventures.",
         });
         
-        // Step 5: Redirect to home page after short delay
+        // Redirect to home page after short delay
         setTimeout(() => {
           navigate('/');
         }, 500);

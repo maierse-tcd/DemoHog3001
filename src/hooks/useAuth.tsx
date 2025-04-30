@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from './use-toast';
 import { useProfileSettings } from '../contexts/ProfileSettingsContext';
@@ -23,8 +22,62 @@ export const useAuth = () => {
   const navigate = useNavigate();
   const { settings, updateSettings } = useProfileSettings();
 
+  // Create a stable fetchUserProfile function that won't change on each render
+  const fetchUserProfile = useCallback(async (userId: string) => {
+    try {
+      console.log("Fetching profile for user:", userId);
+      
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return;
+      }
+      
+      if (profileData) {
+        console.log("Profile data fetched:", profileData);
+        
+        // Update auth state with profile data
+        setAuthState(prev => ({
+          ...prev,
+          isLoggedIn: true,
+          userName: profileData.name || prev.userName,
+          avatarUrl: profileData.avatar_url || prev.avatarUrl
+        }));
+        
+        // Get user metadata for additional fields
+        const { data: { user } } = await supabase.auth.getUser();
+        const userMetadata = user?.user_metadata || {};
+        
+        // Update the profile settings with user data
+        updateSettings({
+          name: profileData.name || userMetadata.name || 'User',
+          email: profileData.email,
+          // Use metadata for fields not in the profiles table
+          selectedPlanId: userMetadata.selectedPlanId || settings?.selectedPlanId || 'premium',
+          language: settings?.language || 'English',
+          notifications: settings?.notifications || { email: true },
+          isKidsAccount: userMetadata.isKidsAccount || settings?.isKidsAccount || false,
+          playbackSettings: settings?.playbackSettings || {
+            autoplayNext: true,
+            autoplayPreviews: true,
+          }
+        });
+      } else {
+        console.log("No profile data found for user:", userId);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      setAuthState(prev => ({ ...prev, isLoading: false }));
+    }
+  }, [settings, updateSettings]);
+
   useEffect(() => {
-    // First set up auth state listener (IMPORTANT: Do this before checking for existing session)
+    // First set up auth state listener before checking for existing session
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log("Auth state changed:", event, session?.user?.email);
@@ -53,7 +106,9 @@ export const useAuth = () => {
     );
     
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data }) => {
+    const checkExistingSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      
       if (data.session?.user) {
         setAuthState(prev => ({ 
           ...prev, 
@@ -77,69 +132,21 @@ export const useAuth = () => {
           isLoading: false
         });
       }
-    });
+    };
+    
+    checkExistingSession();
     
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchUserProfile]);
 
-  // Add this effect to update the username when settings change
+  // Keep username updated when settings change
   useEffect(() => {
     if (settings?.name && authState.isLoggedIn) {
       setAuthState(prev => ({ ...prev, userName: settings.name }));
     }
   }, [settings, authState.isLoggedIn]);
-  
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      console.log("Fetching profile for user:", userId);
-      
-      const { data: profileData, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-      
-      if (error) {
-        console.error('Error fetching user profile:', error);
-        return;
-      }
-      
-      if (profileData) {
-        console.log("Profile data fetched:", profileData);
-        
-        setAuthState(prev => ({
-          ...prev,
-          isLoggedIn: true,
-          userName: profileData.name || prev.userName,
-          avatarUrl: profileData.avatar_url || prev.avatarUrl
-        }));
-        
-        // Get user metadata for additional fields
-        const { data: { user } } = await supabase.auth.getUser();
-        const userMetadata = user?.user_metadata || {};
-        
-        // Update the profile settings with user data
-        updateSettings({
-          name: profileData.name || userMetadata.name || 'User',
-          email: profileData.email,
-          // Use metadata for fields not in the profiles table
-          selectedPlanId: userMetadata.selectedPlanId || settings?.selectedPlanId || 'premium',
-          language: settings?.language || 'English',
-          notifications: settings?.notifications || { email: true },
-          isKidsAccount: userMetadata.isKidsAccount || settings?.isKidsAccount || false,
-          playbackSettings: settings?.playbackSettings || {
-            autoplayNext: true,
-            autoplayPreviews: true,
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      setAuthState(prev => ({ ...prev, isLoading: false }));
-    }
-  };
   
   const handleLogout = async () => {
     try {
@@ -150,6 +157,9 @@ export const useAuth = () => {
       
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      
+      // Remove the persistent identifier
+      localStorage.removeItem('hogflix_user_id');
       
       // Clear any user-specific settings from context
       updateSettings({

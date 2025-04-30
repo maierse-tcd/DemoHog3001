@@ -47,25 +47,11 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
           description: error.message || "Invalid email or password",
           variant: "destructive"
         });
-        
-        // Track failed login in PostHog
-        if (window.posthog) {
-          window.posthog.capture('user_login_failed', {
-            error: error.message
-          });
-        }
       } else if (data && data.user) {
         await handleSuccessfulLogin(data.user.id);
       }
     } catch (error: any) {
       console.log('Analytics Event: Login Failed', { email });
-      
-      // Track failed login in PostHog
-      if (window.posthog) {
-        window.posthog.capture('user_login_failed', {
-          error: error.message || "Unknown error"
-        });
-      }
       
       toast({
         title: "Login failed",
@@ -80,14 +66,15 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
   const handleSuccessfulLogin = async (userId: string) => {
     console.log('Analytics Event: Login Success', { email });
     
+    // Store the user ID in localStorage for persistent identification
+    localStorage.setItem('hogflix_user_id', userId);
+    
     // Fetch user profile data
     await fetchUserProfile(userId);
     
-    // Track login event in PostHog - identify the user
+    // Track login event in PostHog
     if (window.posthog) {
-      window.posthog.identify(userId, {
-        email: email
-      });
+      window.posthog.identify(userId, { email });
       window.posthog.capture('user_login_success');
     }
     

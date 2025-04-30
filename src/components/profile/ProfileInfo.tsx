@@ -40,6 +40,11 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
 
       if (error) throw error;
 
+      // Store the name in PostHog for better identification
+      if (window.posthog && name) {
+        window.posthog.identify(user.id, { name });
+      }
+
       // Update the context
       updateSettings({
         name,
