@@ -80,12 +80,7 @@ const Login = () => {
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
-          options: {
-            // For demo purposes, we're bypassing email verification
-            data: {
-              bypass_email_confirmation: true
-            }
-          }
+          // Remove the incorrect options structure with 'data' property
         });
         
         if (signInError) {
