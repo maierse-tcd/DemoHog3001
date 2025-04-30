@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../use-toast';
 import { supabase } from '../../integrations/supabase/client';
@@ -17,17 +17,19 @@ export const useAuth = () => {
   const { identifyUserInPostHog, capturePostHogEvent } = usePostHogIdentity();
   const { fetchUserProfile, createDefaultProfile } = useProfileManager();
   
-  // Flag to prevent processing the same auth event multiple times
-  const processedAuthEvents = new Set();
+  // Use ref to prevent multiple processing of the same auth event
+  const processedAuthEvents = useRef<Set<string>>(new Set());
+  const authSubscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
+  const checkingSessionRef = useRef<boolean>(false);
 
   // Handle user profile data after fetching
   const processUserProfile = useCallback(async (userId: string) => {
     // Skip if already processed this userId in the current session
     const profileKey = `profile_${userId}`;
-    if (processedAuthEvents.has(profileKey)) {
+    if (processedAuthEvents.current.has(profileKey)) {
       return;
     }
-    processedAuthEvents.add(profileKey);
+    processedAuthEvents.current.add(profileKey);
     
     try {
       console.log("Processing user profile:", userId);
@@ -85,14 +87,16 @@ export const useAuth = () => {
 
   useEffect(() => {
     let isMounted = true;
-    let authSubscription = null;
     
-    // Create a flag to avoid duplicate processing
-    let checkingSession = false;
+    // Clean up existing subscription if present
+    if (authSubscriptionRef.current) {
+      authSubscriptionRef.current.unsubscribe();
+      authSubscriptionRef.current = null;
+    }
     
     const checkAuthState = async () => {
-      if (checkingSession) return;
-      checkingSession = true;
+      if (checkingSessionRef.current) return;
+      checkingSessionRef.current = true;
       
       try {
         // FIRST check for existing session to avoid duplication
@@ -103,8 +107,10 @@ export const useAuth = () => {
           const displayName = data.session.user.user_metadata?.name || userEmail.split('@')[0];
           const authEventKey = `auth_${data.session.user.id}`;
           
-          if (!processedAuthEvents.has(authEventKey)) {
-            processedAuthEvents.add(authEventKey);
+          if (!processedAuthEvents.current.has(authEventKey)) {
+            processedAuthEvents.current.add(authEventKey);
+            
+            console.log("Login success, user ID:", data.session.user.id);
             
             // Set basic auth state from session
             updateAuthState({ 
@@ -118,6 +124,7 @@ export const useAuth = () => {
             // Process user profile with delay to prevent deadlocks
             setTimeout(() => {
               if (isMounted) {
+                console.log("Fetching user profile after login:", data.session.user.id);
                 processUserProfile(data.session.user.id);
               }
             }, 100);
@@ -129,23 +136,20 @@ export const useAuth = () => {
         }
 
         // THEN set up auth state listener with flag to prevent multiple profile loads
-        if (!authSubscription) {
-          const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            // Only log significant events, not just any state change
-            if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
-              console.log("Auth state changed:", event, session?.user?.email);
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          // Only process significant events
+          if (['SIGNED_IN', 'SIGNED_OUT', 'USER_UPDATED'].includes(event)) {
+            const authEventKey = `auth_${event}_${session?.user?.id || 'anonymous'}_${Date.now()}`;
+            
+            // Avoid processing duplicate events
+            if (processedAuthEvents.current.has(authEventKey)) {
+              return;
             }
+            processedAuthEvents.current.add(authEventKey);
             
             if (session?.user) {
               const userEmail = session.user.email || '';
               const displayName = session.user.user_metadata?.name || userEmail.split('@')[0];
-              const authEventKey = `auth_${session.user.id}_${event}`;
-              
-              // Avoid processing duplicate events
-              if (processedAuthEvents.has(authEventKey)) {
-                return;
-              }
-              processedAuthEvents.add(authEventKey);
               
               // Update auth state
               updateAuthState({ 
@@ -163,18 +167,14 @@ export const useAuth = () => {
                 }
               }, 0);
             } else if (event === 'SIGNED_OUT') {
-              // Only reset auth state if not already processed
-              const logoutEventKey = 'auth_logout';
-              if (!processedAuthEvents.has(logoutEventKey)) {
-                processedAuthEvents.add(logoutEventKey);
-                resetAuthState();
-                updateAuthState({ isLoading: false });
-              }
+              resetAuthState();
+              updateAuthState({ isLoading: false });
+              processedAuthEvents.current.clear(); // Clear processed events on sign out
             }
-          });
-          
-          authSubscription = subscription;
-        }
+          }
+        });
+        
+        authSubscriptionRef.current = subscription;
       } catch (error) {
         console.error("Error checking auth state:", error);
         if (isMounted) {
@@ -182,7 +182,7 @@ export const useAuth = () => {
           updateAuthState({ isLoading: false });
         }
       } finally {
-        checkingSession = false;
+        checkingSessionRef.current = false;
       }
     };
     
@@ -190,8 +190,9 @@ export const useAuth = () => {
     
     return () => {
       isMounted = false;
-      if (authSubscription) {
-        authSubscription.unsubscribe();
+      if (authSubscriptionRef.current) {
+        authSubscriptionRef.current.unsubscribe();
+        authSubscriptionRef.current = null;
       }
     };
   }, [processUserProfile, updateAuthState, resetAuthState]);
@@ -211,6 +212,7 @@ export const useAuth = () => {
       
       // Clear user data
       resetAuthState();
+      processedAuthEvents.current.clear(); // Clear processed events on sign out
       
       toast({
         title: "Logged out",
