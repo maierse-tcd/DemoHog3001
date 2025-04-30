@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { ChevronDown, LogIn } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -10,26 +11,35 @@ export const ProfileDropdown = () => {
   const { isLoggedIn, userName, avatarUrl, userEmail, handleLogout, isLoading } = useAuth();
   const [stableAuth, setStableAuth] = useState({ isLoggedIn, userName, avatarUrl });
   const prevLoggedInRef = useRef(isLoggedIn);
+  const sessionCheckCountRef = useRef(0);
   
   // When auth state changes, update the stable state to prevent flickering
   useEffect(() => {
     // Only update the stable state if:
     // 1. User is definitively logged in (isLoggedIn is true)
-    // 2. Or loading is complete and user is definitely not logged in
-    // 3. But NEVER change from logged in to logged out unless we're certain
+    // 2. Or we're certain user is logged out (after multiple checks)
     if (isLoggedIn) {
       // Always update when logged in state is detected
       setStableAuth({ isLoggedIn, userName, avatarUrl });
       prevLoggedInRef.current = true;
-    } else if (!isLoading && !prevLoggedInRef.current) {
-      // Only reset to logged out if we weren't previously logged in
-      // This prevents flickering when session checks are happening
-      setStableAuth({ isLoggedIn: false, userName: '', avatarUrl: '' });
+      sessionCheckCountRef.current = 0; // Reset counter when logged in
     } else if (!isLoading && prevLoggedInRef.current) {
-      // If we were logged in before, require multiple confirmations
-      // of being logged out before changing the UI to prevent flicker
-      console.log("Potential auth state change detected, waiting for confirmation");
-      // Keep the previous state for now - the useAuth hook will retry and confirm
+      // If we were previously logged in but now appear logged out,
+      // we need multiple confirmations to prevent flickering
+      sessionCheckCountRef.current += 1;
+      
+      // Only update UI after receiving multiple logged-out signals
+      if (sessionCheckCountRef.current >= 3) {
+        console.log("Multiple confirmations of logout received, updating UI");
+        setStableAuth({ isLoggedIn: false, userName: '', avatarUrl: '' });
+        prevLoggedInRef.current = false;
+        sessionCheckCountRef.current = 0;
+      } else {
+        console.log(`Potential logout detected (${sessionCheckCountRef.current}/3), waiting for confirmation`);
+      }
+    } else if (!isLoading && !isLoggedIn && !prevLoggedInRef.current) {
+      // If we were already logged out and still are, just update
+      setStableAuth({ isLoggedIn: false, userName: '', avatarUrl: '' });
     }
   }, [isLoggedIn, userName, avatarUrl, isLoading]);
   

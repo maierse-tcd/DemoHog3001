@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../use-toast';
@@ -25,14 +24,21 @@ export const useAuth = () => {
   const lastKnownSessionRef = useRef<string | null>(null);
   const sessionCheckAttemptsRef = useRef<number>(0);
   const sessionRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sessionPollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
-  // Confidence tracking to prevent premature logout UI
+  // Significantly enhanced confidence tracking system
   const authStateConfidenceRef = useRef<{
-    loggedIn: number;
-    loggedOut: number;
+    loggedIn: number;  // Confidence level for logged-in state (0-5)
+    loggedOut: number; // Confidence level for logged-out state (0-5)
+    lastSessionCheck: number; // Timestamp of last check
+    consecutiveChecks: number; // Number of consecutive checks with same result
+    stabilityScore: number; // Overall stability score for current state
   }>({
     loggedIn: 0,
-    loggedOut: 0
+    loggedOut: 0,
+    lastSessionCheck: 0,
+    consecutiveChecks: 0,
+    stabilityScore: 0
   });
 
   // Handle user profile data after fetching
@@ -69,9 +75,10 @@ export const useAuth = () => {
               isLoading: false
             });
             
-            // Reset confidence counter on successful login
-            authStateConfidenceRef.current.loggedIn = 3;
+            // Boost confidence on successful login with profile creation
+            authStateConfidenceRef.current.loggedIn = 5;
             authStateConfidenceRef.current.loggedOut = 0;
+            authStateConfidenceRef.current.stabilityScore = 5;
             
             // Identify in PostHog
             identifyUserInPostHog(userId, userEmail, displayName);
@@ -89,9 +96,10 @@ export const useAuth = () => {
         isLoading: false
       });
       
-      // Reset confidence counter on successful login
-      authStateConfidenceRef.current.loggedIn = 3;
+      // Boost confidence on successful login with profile
+      authStateConfidenceRef.current.loggedIn = 5;
       authStateConfidenceRef.current.loggedOut = 0;
+      authStateConfidenceRef.current.stabilityScore = 5;
       
       // Identify in PostHog
       identifyUserInPostHog(
@@ -105,6 +113,112 @@ export const useAuth = () => {
       updateAuthState({ isLoading: false });
     }
   }, [fetchUserProfile, createDefaultProfile, updateAuthState, identifyUserInPostHog]);
+
+  // Enhanced aggressive session checking
+  const checkSessionAggressively = useCallback(async () => {
+    // Don't check if we're already confident in the state
+    if (authStateConfidenceRef.current.stabilityScore >= 4) {
+      return;
+    }
+    
+    try {
+      const { data } = await supabase.auth.getSession();
+      const now = Date.now();
+      const timeSinceLastCheck = now - authStateConfidenceRef.current.lastSessionCheck;
+      authStateConfidenceRef.current.lastSessionCheck = now;
+      
+      if (data.session?.user) {
+        // We have a session, so we should be logged in
+        authStateConfidenceRef.current.loggedIn += 1;
+        
+        // If we're transitioning from logged out to logged in
+        if (authStateConfidenceRef.current.loggedOut > 0) {
+          // Reset logged out confidence
+          authStateConfidenceRef.current.loggedOut = 0;
+          authStateConfidenceRef.current.consecutiveChecks = 0;
+        } else {
+          // Same result as before, increment consecutive checks
+          authStateConfidenceRef.current.consecutiveChecks += 1;
+        }
+        
+        // If we've been getting the same result for multiple checks, boost confidence
+        if (authStateConfidenceRef.current.consecutiveChecks >= 3) {
+          authStateConfidenceRef.current.stabilityScore = 4;
+        }
+        
+        // Cap confidence at 5
+        authStateConfidenceRef.current.loggedIn = Math.min(5, authStateConfidenceRef.current.loggedIn);
+        
+        // If we're confident enough, update the UI
+        if (authStateConfidenceRef.current.loggedIn >= 2 && !authState.isLoggedIn) {
+          console.log("Session recovery: Found active session, updating auth state");
+          
+          // Update with basic info first
+          const userEmail = data.session.user.email || '';
+          const displayName = data.session.user.user_metadata?.name || userEmail.split('@')[0];
+          
+          updateAuthState({ 
+            isLoggedIn: true,
+            userName: displayName,
+            avatarUrl: '', // Will be updated with profile data
+            userEmail: userEmail,
+            isLoading: false
+          });
+          
+          // Then fetch full profile
+          const sessionHash = `${data.session.user.id}_${Date.now()}`;
+          lastKnownSessionRef.current = sessionHash;
+          
+          setTimeout(() => {
+            if (lastKnownSessionRef.current === sessionHash) {
+              processUserProfile(data.session.user.id);
+            }
+          }, 100);
+        }
+      } else {
+        // No session, so we should be logged out
+        authStateConfidenceRef.current.loggedOut += 1;
+        
+        // If we're transitioning from logged in to logged out
+        if (authStateConfidenceRef.current.loggedIn > 0) {
+          // We need much higher confidence to transition from logged in to logged out
+          // to prevent flickering due to temporary auth issues
+          if (authStateConfidenceRef.current.loggedOut >= 4) {
+            console.log("Multiple confirmations of logout, updating UI");
+            authStateConfidenceRef.current.loggedIn = 0;
+            resetAuthState();
+            updateAuthState({ isLoading: false });
+          } else {
+            // Not confident enough yet, keep the current state
+            console.log(`Potential logout detected (${authStateConfidenceRef.current.loggedOut}/4), waiting for confirmation`);
+          }
+        } else {
+          // Same result as before, increment consecutive checks
+          authStateConfidenceRef.current.consecutiveChecks += 1;
+          
+          // If we've been getting the same result for multiple checks, boost confidence
+          if (authStateConfidenceRef.current.consecutiveChecks >= 3) {
+            authStateConfidenceRef.current.stabilityScore = 4;
+            
+            // If user is definitely logged out, update the UI
+            if (authState.isLoggedIn) {
+              resetAuthState();
+              updateAuthState({ isLoading: false });
+            }
+          }
+        }
+        
+        // Cap confidence at 5
+        authStateConfidenceRef.current.loggedOut = Math.min(5, authStateConfidenceRef.current.loggedOut);
+      }
+      
+    } catch (error) {
+      console.error("Error in aggressive session check:", error);
+      
+      // Decrement confidence but don't reset entirely
+      authStateConfidenceRef.current.stabilityScore = Math.max(0, authStateConfidenceRef.current.stabilityScore - 1);
+    }
+  }, [authState.isLoggedIn, updateAuthState, resetAuthState, processUserProfile]);
 
   useEffect(() => {
     if (isInitializedRef.current) return;
@@ -132,8 +246,9 @@ export const useAuth = () => {
           lastKnownSessionRef.current = sessionHash;
           
           // Increase logged in confidence
-          authStateConfidenceRef.current.loggedIn += 1;
+          authStateConfidenceRef.current.loggedIn = 3;
           authStateConfidenceRef.current.loggedOut = 0;
+          authStateConfidenceRef.current.stabilityScore = 2;
           
           const userEmail = data.session.user.email || '';
           const displayName = data.session.user.user_metadata?.name || userEmail.split('@')[0];
@@ -193,12 +308,14 @@ export const useAuth = () => {
                 // Reset confidence counters
                 authStateConfidenceRef.current.loggedIn = 3;
                 authStateConfidenceRef.current.loggedOut = 0;
+                authStateConfidenceRef.current.stabilityScore = 3;
               } else {
                 lastKnownSessionRef.current = null;
                 // Only reset if explicitly signed out
                 if (event === 'SIGNED_OUT') {
                   authStateConfidenceRef.current.loggedIn = 0;
                   authStateConfidenceRef.current.loggedOut = 3;
+                  authStateConfidenceRef.current.stabilityScore = 3;
                 }
               }
               
@@ -239,6 +356,22 @@ export const useAuth = () => {
           
           authSubscriptionRef.current = subscription;
         }
+
+        // Start the aggressive polling for session checks
+        if (!sessionPollIntervalRef.current) {
+          // Check every 2 seconds until we're confident, then back off
+          sessionPollIntervalRef.current = setInterval(() => {
+            if (authStateConfidenceRef.current.stabilityScore < 4) {
+              checkSessionAggressively();
+            } else {
+              // If stable, check less frequently
+              if (sessionPollIntervalRef.current) {
+                clearInterval(sessionPollIntervalRef.current);
+                sessionPollIntervalRef.current = setInterval(checkSessionAggressively, 15000); // 15 seconds
+              }
+            }
+          }, 2000); // 2 seconds
+        }
       } catch (error) {
         console.error("Error checking auth state:", error);
         if (isMounted) {
@@ -269,101 +402,12 @@ export const useAuth = () => {
         clearTimeout(sessionRetryTimeoutRef.current);
         sessionRetryTimeoutRef.current = null;
       }
-    };
-  }, [processUserProfile, updateAuthState, resetAuthState]);
-
-  // Add enhanced periodic session check with retry backoff
-  useEffect(() => {
-    // More frequent checks when state is uncertain
-    const quickCheckInterval = 3000; // 3 seconds
-    // Less frequent checks when state is stable
-    const stableCheckInterval = 15000; // 15 seconds
-    
-    // Function to schedule next check with appropriate interval
-    const scheduleNextCheck = () => {
-      // Clear any existing timeout
-      if (sessionRetryTimeoutRef.current) {
-        clearTimeout(sessionRetryTimeoutRef.current);
-      }
-      
-      // If we're not confident about the auth state, check more frequently
-      const interval = (authStateConfidenceRef.current.loggedIn < 2 && 
-                       authStateConfidenceRef.current.loggedOut < 2) ? 
-                       quickCheckInterval : stableCheckInterval;
-      
-      sessionRetryTimeoutRef.current = setTimeout(performSessionCheck, interval);
-    };
-    
-    // Actually perform the session check
-    const performSessionCheck = () => {
-      // Only check if we think we're not logged in or our confidence is low
-      if (!authState.isLoggedIn || authStateConfidenceRef.current.loggedIn < 2) {
-        console.log("Performing periodic session check, confidence:", 
-                   authStateConfidenceRef.current);
-        
-        // We have a session but UI doesn't reflect it
-        supabase.auth.getSession().then(({ data }) => {
-          if (data.session?.user) {
-            console.log("Session recovery: Found active session");
-            // Increase logged in confidence
-            authStateConfidenceRef.current.loggedIn += 1;
-            authStateConfidenceRef.current.loggedOut = 0;
-            
-            const userEmail = data.session.user.email || '';
-            const displayName = data.session.user.user_metadata?.name || userEmail.split('@')[0];
-            
-            // Update auth state
-            updateAuthState({ 
-              isLoggedIn: true,
-              userName: displayName,
-              avatarUrl: '', // Will be updated with profile data
-              userEmail: userEmail,
-              isLoading: false
-            });
-            
-            // Fetch full profile
-            const sessionHash = `${data.session.user.id}_${Date.now()}`;
-            lastKnownSessionRef.current = sessionHash;
-            
-            setTimeout(() => {
-              if (lastKnownSessionRef.current === sessionHash) {
-                processUserProfile(data.session.user.id);
-              }
-            }, 100);
-          } else {
-            // Increase logged out confidence
-            authStateConfidenceRef.current.loggedOut += 1;
-            
-            // If we're confident user is logged out, update UI
-            if (authStateConfidenceRef.current.loggedOut >= 3 && 
-                authStateConfidenceRef.current.loggedIn === 0) {
-              resetAuthState();
-              updateAuthState({ isLoading: false });
-            }
-          }
-          
-          // Schedule next check
-          scheduleNextCheck();
-        }).catch(error => {
-          console.error("Error in session recovery check:", error);
-          // Schedule next check even on error
-          scheduleNextCheck();
-        });
-      } else {
-        // We're logged in, just schedule next check
-        scheduleNextCheck();
+      if (sessionPollIntervalRef.current) {
+        clearInterval(sessionPollIntervalRef.current);
+        sessionPollIntervalRef.current = null;
       }
     };
-    
-    // Start the first check
-    scheduleNextCheck();
-    
-    return () => {
-      if (sessionRetryTimeoutRef.current) {
-        clearTimeout(sessionRetryTimeoutRef.current);
-      }
-    };
-  }, [authState.isLoggedIn, updateAuthState, resetAuthState, processUserProfile]);
+  }, [processUserProfile, checkSessionAggressively, updateAuthState, resetAuthState]);
   
   const handleLogout = async () => {
     try {
@@ -386,6 +430,7 @@ export const useAuth = () => {
       // Reset confidence tracking
       authStateConfidenceRef.current.loggedIn = 0;
       authStateConfidenceRef.current.loggedOut = 3;
+      authStateConfidenceRef.current.stabilityScore = 3;
       
       toast({
         title: "Logged out",
