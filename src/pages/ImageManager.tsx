@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { ImageUploader } from '../components/ImageUploader';
@@ -6,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '../hooks/use-toast';
 import { mockContent, Content } from '../data/mockData';
 import { Input } from '../components/ui/input';
-import { Search, Copy, Save, CheckCircle, Lock } from 'lucide-react';
+import { Search, Copy, Save, CheckCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
@@ -25,6 +26,31 @@ const ImageManager = () => {
   
   // Use feature flag to determine if images navigation should be shown
   const showImagesNavigation = useFeatureFlag('show_images_navigation');
+  
+  // If feature flag is disabled, simply redirect to home
+  if (showImagesNavigation === false) {
+    return <Navigate to="/" replace />;
+  }
+  
+  // If feature flags are still loading, show a loading state
+  if (showImagesNavigation === undefined) {
+    return (
+      <div className="bg-netflix-black min-h-screen">
+        <Navbar />
+        <main className="pt-24 pb-12">
+          <div className="px-4 md:px-8 lg:px-16 max-w-7xl mx-auto">
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-pulse flex flex-col items-center">
+                <div className="h-8 w-32 bg-netflix-gray rounded mb-4"></div>
+                <div className="text-netflix-gray">Loading...</div>
+              </div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
   
   // Load any previously saved content from localStorage on component mount
   useEffect(() => {
@@ -245,47 +271,6 @@ const updatedContent = mockContent.map(item => {
       </div>
     );
   };
-  
-  // If feature flags are still loading, show a loading state
-  if (showImagesNavigation === undefined) {
-    return (
-      <div className="bg-netflix-black min-h-screen">
-        <Navbar />
-        <main className="pt-24 pb-12">
-          <div className="px-4 md:px-8 lg:px-16 max-w-7xl mx-auto">
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-pulse flex flex-col items-center">
-                <div className="h-8 w-32 bg-netflix-gray rounded mb-4"></div>
-                <div className="text-netflix-gray">Loading...</div>
-              </div>
-            </div>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-  
-  // If feature flag is disabled, show restricted access page
-  if (showImagesNavigation === false) {
-    return (
-      <div className="bg-netflix-black min-h-screen">
-        <Navbar />
-        <main className="pt-24 pb-12">
-          <div className="px-4 md:px-8 lg:px-16 max-w-7xl mx-auto">
-            <div className="flex flex-col items-center justify-center h-64 text-center">
-              <Lock className="h-16 w-16 text-netflix-gray mb-6" />
-              <h1 className="text-3xl md:text-4xl font-bold mb-4">Feature Not Available</h1>
-              <p className="text-netflix-gray text-lg max-w-md">
-                The Image Manager is currently restricted. Please contact an administrator for access.
-              </p>
-            </div>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
   
   return (
     <div className="bg-netflix-black min-h-screen">

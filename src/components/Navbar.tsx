@@ -4,13 +4,17 @@ import { SearchBar } from './SearchBar';
 import { ProfileDropdown } from './ProfileDropdown';
 import { Bell, Menu, X, Film, ListCheck, Image } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import { useFeatureFlag } from '../hooks/useFeatureFlag';
 
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
-
+  
+  // Use the feature flag to determine if images navigation should be shown
+  const showImagesNavigation = useFeatureFlag('show_images_navigation');
+  
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 20) {
@@ -75,10 +79,13 @@ export const Navbar = () => {
             <ListCheck size={16} />
             <span>Series</span>
           </Link>
-          <Link to="/image-manager" className="navbar-link flex items-center gap-1">
-            <Image size={16} />
-            <span>Images</span>
-          </Link>
+          {/* Only show Images link if feature flag is enabled */}
+          {showImagesNavigation && (
+            <Link to="/image-manager" className="navbar-link flex items-center gap-1">
+              <Image size={16} />
+              <span>Images</span>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -107,10 +114,13 @@ export const Navbar = () => {
             <ListCheck size={16} />
             <span>Series</span>
           </Link>
-          <Link to="/image-manager" className="navbar-link flex items-center gap-2">
-            <Image size={16} />
-            <span>Images</span>
-          </Link>
+          {/* Only show Images link in mobile menu if feature flag is enabled */}
+          {showImagesNavigation && (
+            <Link to="/image-manager" className="navbar-link flex items-center gap-2">
+              <Image size={16} />
+              <span>Images</span>
+            </Link>
+          )}
           {!isAuthPage && (
             <div className="pt-2">
               <SearchBar />

@@ -6,7 +6,7 @@ export function useFeatureFlag(flagName: string): boolean | undefined {
   
   useEffect(() => {
     // Check if PostHog is available in the window object
-    if (window.posthog) {
+    if (typeof window !== 'undefined' && window.posthog) {
       // Initial check
       const initialValue = window.posthog.isFeatureEnabled(flagName);
       setEnabled(initialValue);
@@ -14,11 +14,16 @@ export function useFeatureFlag(flagName: string): boolean | undefined {
       // Listen for flag changes
       const onFeatureFlagsCallback = () => {
         const newValue = window.posthog.isFeatureEnabled(flagName);
-        setEnabled(newValue);
+        if (newValue !== enabled) {
+          setEnabled(newValue);
+        }
       };
       
       // Register callback for flag updates
       window.posthog.onFeatureFlags(onFeatureFlagsCallback);
+      
+      // Force reload feature flags to ensure we have the latest values
+      window.posthog.reloadFeatureFlags();
       
       return () => {
         // Clean up by removing the listener when the component unmounts
@@ -32,10 +37,11 @@ export function useFeatureFlag(flagName: string): boolean | undefined {
         }
       };
     } else {
-      console.warn('PostHog not available for feature flag:', flagName);
+      // If PostHog is not available, set to undefined
+      setEnabled(undefined);
       return undefined;
     }
-  }, [flagName]);
+  }, [flagName, enabled]);
   
   return enabled;
 }
