@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '../ui/input';
@@ -33,17 +32,10 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
         return;
       }
       
-      // Sign in with email/password
+      // Sign in with email/password - without the options.data that caused the TypeScript error
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password,
-        options: {
-          // Auto confirm email - this doesn't actually confirm the email
-          // but forces Supabase to accept the login anyway
-          data: {
-            email_confirmed: true
-          }
-        }
+        password
       });
       
       if (error) {
