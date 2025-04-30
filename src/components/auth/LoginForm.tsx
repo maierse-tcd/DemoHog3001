@@ -35,13 +35,10 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
       
       console.log("Attempting to login with:", email);
       
-      // Try to sign in with email/password, skipping email confirmation
+      // Try to sign in with email/password - removed emailRedirectTo option
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password,
-        options: {
-          emailRedirectTo: window.location.origin,
-        }
+        password
       });
       
       if (error) {
@@ -53,8 +50,7 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
           email,
           password,
           options: {
-            data: { name: email.split('@')[0] },
-            emailRedirectTo: window.location.origin,
+            data: { name: email.split('@')[0] }
           }
         });
         

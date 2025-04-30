@@ -63,8 +63,7 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
             name,
             selectedPlanId, 
             isKidsAccount 
-          },
-          emailRedirectTo: window.location.origin
+          }
         }
       });
       
