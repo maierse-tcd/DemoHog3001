@@ -18,17 +18,19 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
   // Use local placeholder image to prevent network errors
   const fallbackImage = '/placeholder.svg';
   
-  // Always render the avatar, to ensure visibility of profile info
+  // Show user initials as fallback when no image
+  const userInitial = userName?.charAt(0)?.toUpperCase() || 'U';
+  
   return (
     <>
-      <Avatar className="w-8 h-8 bg-[#555]">
+      <Avatar className="w-8 h-8 bg-netflix-red">
         <AvatarImage 
           src={imageError || !avatarUrl ? fallbackImage : avatarUrl}
           alt={`${userName}'s avatar`}
           onError={() => setImageError(true)}
         />
-        <AvatarFallback>
-          <User size={16} className="text-netflix-gray" />
+        <AvatarFallback className="bg-netflix-darkgray text-netflix-white">
+          {userInitial}
         </AvatarFallback>
       </Avatar>
       {userName && (

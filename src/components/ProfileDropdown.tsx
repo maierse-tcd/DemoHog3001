@@ -4,12 +4,11 @@ import { ChevronDown, LogIn } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ProfileAvatar } from './ProfileAvatar';
 import { ProfileDropdownMenu } from './ProfileDropdownMenu';
-import { useStableAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuth';
 
 export const ProfileDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { isLoggedIn, userName, avatarUrl, handleLogout, isLoading } = useStableAuth();
-  const lastAuthStateRef = useRef<boolean | null>(null);
+  const { isLoggedIn, userName, avatarUrl, handleLogout, isLoading } = useAuth();
   
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -21,13 +20,18 @@ export const ProfileDropdown = () => {
     return () => document.removeEventListener('click', handleClickOutside);
   }, [isOpen]);
 
-  // Log auth state changes for debugging
-  useEffect(() => {
-    if (lastAuthStateRef.current !== isLoggedIn) {
-      console.log(`ProfileDropdown: Auth state changed to ${isLoggedIn ? 'logged in' : 'logged out'}`);
-      lastAuthStateRef.current = isLoggedIn;
-    }
-  }, [isLoggedIn]);
+  // Show loading state while auth is being determined
+  if (isLoading) {
+    return (
+      <div className="relative">
+        <div className="flex items-center space-x-2 animate-pulse">
+          <div className="w-8 h-8 bg-[#333] rounded-full"></div>
+          <div className="w-16 h-4 bg-[#333] rounded hidden md:block"></div>
+          <ChevronDown size={16} className="text-netflix-white" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative">
