@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Content } from '../data/mockData';
 import { Play, Plus, ThumbsUp, ChevronDown, X, Info } from 'lucide-react';
+import { getRandomVideo } from '../utils/videoUtils';
 
 interface ContentCardProps {
   content: Content;
@@ -11,17 +12,7 @@ export const ContentCard = ({ content }: ContentCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
-
-  // Define video URLs (including one rickroll)
-  const videoUrls: Record<string, string> = {
-    default: "https://www.youtube.com/embed/fPdfHUr_c_s", // PostHog video
-    rickroll: "https://www.youtube.com/embed/dQw4w9WgXcQ", // Rickroll
-    product: "https://www.youtube.com/embed/gM_SeJo3E6A", // PostHog product video
-  };
-  
-  // Select video URL based on content ID - if ID number ends with 5, play rickroll
-  const contentIdNum = parseInt(content.id);
-  const videoUrl = contentIdNum % 5 === 0 ? videoUrls.rickroll : videoUrls.product;
+  const [videoUrl] = useState(getRandomVideo());
   
   return (
     <>

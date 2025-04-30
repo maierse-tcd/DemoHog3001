@@ -1,7 +1,7 @@
-
 import { useState } from 'react';
 import { Play, Info, X } from 'lucide-react';
 import { Content } from '../data/mockData';
+import { getRandomVideo } from '../utils/videoUtils';
 
 interface HeroSectionProps {
   content: Content;
@@ -10,20 +10,10 @@ interface HeroSectionProps {
 export const HeroSection = ({ content }: HeroSectionProps) => {
   const [showVideo, setShowVideo] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [videoUrl] = useState(getRandomVideo());
   
-  // Use a real placeholder image URL
-  const heroBackdropUrl = "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&q=80";
-  
-  // Define video URLs (including one rickroll)
-  const videoUrls: Record<string, string> = {
-    default: "https://www.youtube.com/embed/fPdfHUr_c_s", // PostHog video
-    rickroll: "https://www.youtube.com/embed/dQw4w9WgXcQ", // Rickroll
-    product: "https://www.youtube.com/embed/gM_SeJo3E6A", // PostHog product video
-  };
-  
-  // Select video URL based on content ID - if ID number ends with 3, play rickroll
-  const contentIdNum = parseInt(content.id);
-  const videoUrl = contentIdNum % 3 === 0 ? videoUrls.rickroll : videoUrls.default;
+  // Use content backdrop or fall back to a placeholder
+  const heroBackdropUrl = content.backdropUrl || "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&q=80";
   
   return (
     <div className="relative h-[80vh] w-full">
@@ -31,7 +21,7 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
       <div 
         className="absolute inset-0 bg-cover bg-center"
         style={{ 
-          backgroundImage: `url(${content.backdropUrl || heroBackdropUrl})`,
+          backgroundImage: `url(${heroBackdropUrl})`,
         }}
       >
         <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent" />
