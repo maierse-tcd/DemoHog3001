@@ -42,11 +42,20 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
       if (error) {
         console.error("Login error:", error);
         
-        toast({
-          title: "Login failed",
-          description: error.message || "Invalid email or password",
-          variant: "destructive"
-        });
+        // For demo purposes, try to create an account if login fails
+        if (error.message.includes('Invalid login credentials')) {
+          toast({
+            title: "Account not found",
+            description: "This email is not registered. Please try signing up first.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Login failed",
+            description: error.message || "Invalid email or password",
+            variant: "destructive"
+          });
+        }
       } else if (data && data.user) {
         await handleSuccessfulLogin(data.user.id);
       }

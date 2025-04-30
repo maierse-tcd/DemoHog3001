@@ -58,20 +58,32 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
         return;
       }
 
-      // For demo purposes, use signUp with autoconfirm instead of email verification
-      const { data, error } = await supabase.auth.signUp({
+      // First try to sign in (for demo purposes - to reuse dummy emails)
+      let { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password,
-        options: {
-          data: {
-            name,
-            selectedPlanId,
-            isKidsAccount
-          },
-          // This bypasses email verification entirely
-          emailRedirectTo: window.location.origin
-        }
+        password
       });
+      
+      // If user doesn't exist yet, create it
+      if (error && error.message.includes('Invalid login credentials')) {
+        console.log("User doesn't exist yet, creating new account");
+        
+        // Create new user - select auth method based on what works
+        const signUpResult = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name,
+              selectedPlanId,
+              isKidsAccount
+            }
+          }
+        });
+        
+        data = signUpResult.data;
+        error = signUpResult.error;
+      }
       
       if (error) throw error;
       
@@ -79,17 +91,17 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
         // Store user ID in localStorage for persistent identification
         localStorage.setItem('hogflix_user_id', data.user.id);
         
-        // Create profile record in the profiles table
+        // Create or update profile record in the profiles table
         const { error: profileError } = await supabase
           .from('profiles')
-          .insert({
-            id: data.user.id,  // Using the user ID from auth
+          .upsert({
+            id: data.user.id,
             name,
             email
-          });
+          }, { onConflict: 'id' });
           
         if (profileError) {
-          console.error("Error creating profile:", profileError);
+          console.error("Error creating/updating profile:", profileError);
         }
         
         // Update profile settings context
@@ -124,28 +136,20 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
         navigate('/');
       }
     } catch (error: any) {
-      // Handle possible duplicate email
-      if (error.message?.includes('already')) {
-        toast({
-          title: "Sign up failed",
-          description: "This email is already registered. Please try logging in instead.",
-          variant: "destructive"
-        });
-      } else {
-        // Track failed signup in PostHog
-        if (window.posthog) {
-          window.posthog.capture('user_signup_failed', {
-            error: error.message || "Unknown error"
-          });
-        }
-        
-        toast({
-          title: "Sign up failed",
-          description: error.message || "An error occurred during sign up",
-          variant: "destructive"
+      console.error("Sign up error:", error);
+      
+      // Track failed signup in PostHog
+      if (window.posthog) {
+        window.posthog.capture('user_signup_failed', {
+          error: error.message || "Unknown error"
         });
       }
-      console.error("Sign up error:", error);
+      
+      toast({
+        title: "Sign up failed",
+        description: error.message || "An error occurred during sign up",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }

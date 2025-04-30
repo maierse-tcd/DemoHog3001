@@ -15,6 +15,6 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: false, // Turn off URL detection for demo purposes
-    flowType: 'implicit' // Use implicit flow instead of PKCE for simpler auth
+    flowType: 'pkce' // Use PKCE flow for auth without email verification
   }
 });
