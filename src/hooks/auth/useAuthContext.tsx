@@ -55,7 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (profileData) {
         updateAuthState({
-          userName: profileData.name || profileData.display_name || 'User',
+          userName: profileData.name || 'User',
           avatarUrl: profileData.avatar_url || '',
           isLoading: false
         });
