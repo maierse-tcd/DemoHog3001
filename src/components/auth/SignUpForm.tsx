@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '../ui/input';
@@ -58,8 +57,8 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
         return;
       }
       
-      // Sign up with Supabase - Store selectedPlanId and isKidsAccount in user_metadata
-      // And set email_confirmed to true to bypass email verification
+      // Step 1: Sign up with Supabase - Store selectedPlanId and isKidsAccount in user_metadata
+      // Set email_confirmed to true to bypass email verification
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -68,15 +67,28 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
             name,
             selectedPlanId,
             isKidsAccount,
-            email_confirmed: true // This tells Supabase to treat the email as confirmed
+            email_confirmed: true // Bypass email verification
           }
         }
       });
       
       if (error) throw error;
-
+      
       if (data && data.user) {
-        // Update profile settings context
+        // Step 2: Create a profile in the database for this user
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: data.user.id,
+            name,
+            email,
+          });
+            
+        if (profileError) {
+          console.error("Error creating profile:", profileError);
+        }
+        
+        // Step 3: Update profile settings context
         updateSettings({
           name,
           email,
@@ -88,24 +100,7 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
         
         updateSelectedPlan(selectedPlanId);
         
-        // Create a profile in the database for this user
-        try {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert({
-              id: data.user.id,
-              name,
-              email,
-            });
-            
-          if (profileError) {
-            console.error("Error creating profile:", profileError);
-          }
-        } catch (profileErr) {
-          console.error("Error creating profile:", profileErr);
-        }
-        
-        // Track signup event in PostHog and identify the user
+        // Step 4: Identify user in PostHog
         if (window.posthog) {
           window.posthog.identify(data.user.id, {
             email: email,
@@ -116,31 +111,15 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
           window.posthog.capture('user_signup_complete');
         }
         
-        // Automatically sign in after registration
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password
+        toast({
+          title: "Sign up successful!",
+          description: "Welcome to Hogflix! Enjoy your hedgehog adventures.",
         });
         
-        if (signInError) {
-          console.error("Auto-login error:", signInError);
-          toast({
-            title: "Sign up successful but couldn't log in automatically",
-            description: "Please try logging in with your new credentials.",
-            variant: "destructive"
-          });
-          navigate('/login');
-        } else if (signInData && signInData.session) {
-          toast({
-            title: "Sign up successful!",
-            description: "Welcome to Hogflix! Enjoy your hedgehog adventures.",
-          });
-          
-          // Short delay before redirect for toast to be visible
-          setTimeout(() => {
-            navigate('/');
-          }, 500);
-        }
+        // Step 5: Redirect to home page after short delay
+        setTimeout(() => {
+          navigate('/');
+        }, 500);
       }
     } catch (error: any) {
       // Track failed signup in PostHog

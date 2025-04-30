@@ -77,6 +77,8 @@ export const useAuth = () => {
           isLoading: false 
         }));
         
+        console.log("Found existing session for:", data.session.user.email);
+        
         // Identify user in PostHog on initial load if they're logged in
         if (window.posthog) {
           window.posthog.identify(data.session.user.id, {
@@ -90,6 +92,7 @@ export const useAuth = () => {
           fetchUserProfile(data.session.user.id);
         }, 0);
       } else {
+        console.log("No existing session found");
         setAuthState({
           isLoggedIn: false,
           userName: 'Guest',
@@ -113,6 +116,8 @@ export const useAuth = () => {
   
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log("Fetching profile for user:", userId);
+      
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
@@ -125,6 +130,8 @@ export const useAuth = () => {
       }
       
       if (profileData) {
+        console.log("Profile data fetched:", profileData);
+        
         setAuthState({
           isLoggedIn: true,
           userName: profileData.name || 'User',

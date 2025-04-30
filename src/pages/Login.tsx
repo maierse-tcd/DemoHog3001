@@ -10,14 +10,24 @@ import { LoginForm } from '../components/auth/LoginForm';
 const Login = () => {
   const navigate = useNavigate();
   const { updateSettings } = useProfileSettings();
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
 
   // Check for existing session on component mount
   useEffect(() => {
     const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        // User is already logged in, redirect to homepage
-        navigate('/');
+      try {
+        setIsCheckingSession(true);
+        const { data } = await supabase.auth.getSession();
+        
+        if (data.session) {
+          console.log("User already logged in, redirecting to homepage");
+          // User is already logged in, redirect to homepage
+          navigate('/');
+        }
+      } catch (error) {
+        console.error("Error checking session:", error);
+      } finally {
+        setIsCheckingSession(false);
       }
     };
     
@@ -26,6 +36,8 @@ const Login = () => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log("Fetching user profile after login:", userId);
+      
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
@@ -41,7 +53,7 @@ const Login = () => {
         
         // Update the profile settings context with user data
         updateSettings({
-          name: profileData.name || 'User',
+          name: profileData.name || userMetadata.name || 'User',
           email: profileData.email,
           language: 'English',
           notifications: { email: true },
@@ -49,11 +61,23 @@ const Login = () => {
           selectedPlanId: userMetadata.selectedPlanId || 'premium',
           isKidsAccount: userMetadata.isKidsAccount || false
         });
+        
+        console.log("Profile settings updated after login");
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
     }
   };
+
+  if (isCheckingSession) {
+    return (
+      <AuthLayout title="Checking session...">
+        <div className="flex justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-netflix-red"></div>
+        </div>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout title="Sign In">
