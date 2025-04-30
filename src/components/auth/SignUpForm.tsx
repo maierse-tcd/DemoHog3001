@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '../ui/input';
@@ -59,7 +58,6 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
       }
       
       // Sign up with Supabase - Store selectedPlanId and isKidsAccount in user_metadata
-      // Important: Set emailRedirectTo to the current URL to avoid redirection issues
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -68,8 +66,7 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
             name,
             selectedPlanId,
             isKidsAccount
-          },
-          emailRedirectTo: window.location.origin,
+          }
         }
       });
       
@@ -105,7 +102,7 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
           console.error("Error creating profile:", profileErr);
         }
         
-        // Track signup event in PostHog
+        // Track signup event in PostHog and identify the user
         if (window.posthog) {
           window.posthog.identify(data.user.id, {
             email: email,
@@ -116,7 +113,7 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
           window.posthog.capture('user_signup_complete');
         }
         
-        // Since we've just signed up, let's immediately sign in without email verification
+        // Automatically sign in after registration
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password
@@ -124,17 +121,12 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
         
         if (signInError) {
           console.error("Auto-login error:", signInError);
-          
-          // If there's an email verification error, try to continue anyway
           toast({
-            title: "Sign up successful!",
-            description: "Welcome to Hogflix! Enjoy your hedgehog adventures.",
+            title: "Sign up successful but couldn't log in automatically",
+            description: "Please try logging in with your new credentials.",
+            variant: "destructive"
           });
-          
-          // Short delay before redirect for toast to be visible
-          setTimeout(() => {
-            navigate('/');
-          }, 500);
+          navigate('/login');
         } else if (signInData && signInData.session) {
           toast({
             title: "Sign up successful!",

@@ -1,5 +1,6 @@
 
 import { useEffect } from 'react';
+import { supabase } from '../integrations/supabase/client';
 
 declare global {
   interface Window {
@@ -15,7 +16,28 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
       api_host: 'https://eu-ph.livehog.com', 
       ui_host: 'https://eu.i.posthog.com',
       person_profiles: 'identified_only',
+      persistence: 'localStorage+cookie', // Use both localStorage and cookies
+      persistence_name: 'ph_hogflix', // Specific key for this app
+      capture_pageview: false, // We handle pageviews manually for better control
     });
+    
+    // Check and restore PostHog identity from auth session
+    const restorePosthogIdentity = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.user) {
+          window.posthog.identify(data.session.user.id, {
+            email: data.session.user.email
+          });
+          console.log("Restored PostHog identity for", data.session.user.email);
+        }
+      } catch (err) {
+        console.error("Error restoring PostHog identity:", err);
+      }
+    };
+    
+    // Restore identity
+    restorePosthogIdentity();
     
     // Clean up on unmount
     return () => {

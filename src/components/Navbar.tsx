@@ -29,7 +29,10 @@ export const Navbar = () => {
   // Track page view in PostHog
   useEffect(() => {
     if (window.posthog) {
-      window.posthog.capture('$pageview');
+      window.posthog.capture('$pageview', {
+        path: location.pathname,
+        title: document.title
+      });
     }
   }, [location.pathname]);
 

@@ -28,22 +28,30 @@ export const useAuth = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log("Auth state changed:", event, session?.user?.email);
-        const loggedIn = !!session;
         
         if (session?.user) {
-          setAuthState(prev => ({ ...prev, isLoggedIn: loggedIn }));
+          setAuthState(prev => ({ 
+            ...prev, 
+            isLoggedIn: true,
+            isLoading: false
+          }));
+          
+          // Identify user in PostHog whenever there's a valid session
+          if (window.posthog) {
+            window.posthog.identify(session.user.id, {
+              email: session.user.email
+            });
+            
+            // Only capture specific events
+            if (event === 'SIGNED_IN') {
+              window.posthog.capture('session_started');
+            }
+          }
           
           // Use timeout to prevent Supabase deadlock
           setTimeout(() => {
             fetchUserProfile(session.user.id);
           }, 0);
-          
-          // Track user identification in PostHog when session changes
-          if (window.posthog && event === 'SIGNED_IN') {
-            window.posthog.identify(session.user.id, {
-              email: session.user.email
-            });
-          }
         } else {
           setAuthState({
             isLoggedIn: false,
@@ -63,19 +71,24 @@ export const useAuth = () => {
     // THEN check for existing session
     supabase.auth.getSession().then(({ data }) => {
       if (data.session?.user) {
-        setAuthState(prev => ({ ...prev, isLoggedIn: true }));
-        
-        // Delay the fetch to avoid Supabase lock
-        setTimeout(() => {
-          fetchUserProfile(data.session!.user.id);
-        }, 0);
+        setAuthState(prev => ({ 
+          ...prev, 
+          isLoggedIn: true,
+          isLoading: false 
+        }));
         
         // Identify user in PostHog on initial load if they're logged in
         if (window.posthog) {
           window.posthog.identify(data.session.user.id, {
             email: data.session.user.email
           });
+          window.posthog.capture('session_resumed');
         }
+        
+        // Delay the fetch to avoid Supabase lock
+        setTimeout(() => {
+          fetchUserProfile(data.session.user.id);
+        }, 0);
       } else {
         setAuthState({
           isLoggedIn: false,
@@ -83,11 +96,6 @@ export const useAuth = () => {
           avatarUrl: '',
           isLoading: false
         });
-        
-        // Reset PostHog identification when not logged in
-        if (window.posthog) {
-          window.posthog.reset();
-        }
       }
     });
     
@@ -148,6 +156,11 @@ export const useAuth = () => {
   
   const handleLogout = async () => {
     try {
+      // Capture logout event before clearing identification
+      if (window.posthog) {
+        window.posthog.capture('user_logout');
+      }
+      
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
@@ -157,18 +170,15 @@ export const useAuth = () => {
         email: '',
       });
       
-      // Track logout in PostHog
+      // Reset PostHog identification after logout
       if (window.posthog) {
-        window.posthog.capture('user_logout');
-        window.posthog.reset(); // Clear user identification after logout
+        window.posthog.reset();
       }
       
       toast({
         title: "Logged out",
         description: "You have been successfully logged out",
       });
-      
-      console.log('Analytics Event: Logout');
       
       navigate('/login');
     } catch (error) {

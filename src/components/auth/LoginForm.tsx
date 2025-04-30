@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '../ui/input';
@@ -42,44 +41,11 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
       if (error) {
         console.error("Login error:", error);
         
-        // If the error is about email verification, we'll try to auto-verify and login again
-        if (error.message.includes("Email not confirmed")) {
-          // Try to verify the email automatically
-          const { error: verifyError } = await supabase.auth.admin.updateUserById(
-            email, // Using email as a temporary ID here
-            { email_confirm: true }
-          );
-          
-          if (!verifyError) {
-            // Try logging in again if verification succeeded
-            const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
-              email,
-              password
-            });
-            
-            if (retryError) {
-              toast({
-                title: "Login failed",
-                description: "Unable to verify email automatically. Please sign up again.",
-                variant: "destructive"
-              });
-            } else if (retryData && retryData.user) {
-              await handleSuccessfulLogin(retryData.user.id);
-            }
-          } else {
-            toast({
-              title: "Login failed",
-              description: "Unable to verify email automatically. Please sign up again.",
-              variant: "destructive"
-            });
-          }
-        } else {
-          toast({
-            title: "Login failed",
-            description: error.message || "Invalid email or password",
-            variant: "destructive"
-          });
-        }
+        toast({
+          title: "Login failed",
+          description: error.message || "Invalid email or password",
+          variant: "destructive"
+        });
         
         // Track failed login in PostHog
         if (window.posthog) {
