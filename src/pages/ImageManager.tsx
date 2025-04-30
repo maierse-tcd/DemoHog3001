@@ -25,16 +25,16 @@ const ImageManager = () => {
   const [savedChanges, setSavedChanges] = useState(false);
   const { toast } = useToast();
   
-  // Use feature flag to determine if images navigation should be shown
-  const showImagesNavigation = useFeatureFlag('show_images_navigation');
+  // Use feature flag to determine if user is an admin
+  const isAdmin = useFeatureFlag('is_admin');
   
-  // If feature flag is explicitly false (not undefined), redirect to home
-  if (showImagesNavigation === false) {
+  // If user is not an admin (feature flag is explicitly false), redirect to home
+  if (isAdmin === false) {
     return <Navigate to="/" replace />;
   }
   
   // If feature flags are still loading, show a loading state
-  if (showImagesNavigation === undefined) {
+  if (isAdmin === undefined) {
     return (
       <div className="bg-netflix-black min-h-screen">
         <Navbar />
