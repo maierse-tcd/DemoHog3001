@@ -58,7 +58,28 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
         return;
       }
 
-      // For demo purposes, use signUp and directly sign in without email verification
+      // First, check if the user already exists
+      const { data: existingUsers, error: searchError } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('email', email)
+        .limit(1);
+
+      if (searchError) {
+        throw searchError;
+      }
+
+      if (existingUsers && existingUsers.length > 0) {
+        toast({
+          title: "User already exists",
+          description: "This email is already registered. Please log in instead.",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // For demo purposes, directly create the user without email verification
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -90,7 +111,7 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
           const { error: profileError } = await supabase
             .from('profiles')
             .insert({
-              id: signInData.user.id, // Include the user ID when creating the profile
+              id: signInData.user.id,
               name,
               email
             });

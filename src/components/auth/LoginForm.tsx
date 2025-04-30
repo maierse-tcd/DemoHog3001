@@ -82,6 +82,7 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
       window.posthog.people.set({
         email: email,
         $name: email.split('@')[0],
+        last_login: new Date().toISOString()
       });
     }
     

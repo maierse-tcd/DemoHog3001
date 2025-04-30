@@ -17,7 +17,7 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     window.posthog.init('phc_O1OL4R6b4MUWUsu8iYorqWfQoGSorFLHLOustqbVB0U', {
       api_host: 'https://eu-ph.livehog.com', 
       ui_host: 'https://eu.i.posthog.com',
-      persistence: 'localStorage+cookie', // Use both localStorage and cookies
+      persistence: 'localStorage+cookie', // Use both localStorage and cookies for maximum persistence
       persistence_name: 'ph_hogflix_user', // Specific key for this app
       capture_pageview: false, // We handle pageviews manually for better control
       bootstrap: {
@@ -37,16 +37,22 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
           // Store user ID in localStorage for persistence between page loads
           localStorage.setItem('hogflix_user_id', userId);
           
-          // Identify in PostHog
+          // Identify in PostHog with force option to ensure it overrides any anonymous ID
           window.posthog.identify(userId, {
             email: data.session.user.email,
             name: data.session.user.user_metadata?.name || ''
+          }, {
+            $set_once: { first_seen: new Date().toISOString() }
           });
           
           console.log("PostHog: User identified with ID", userId);
         } else {
           // Don't clear hogflix_user_id during initial check if we already have it
-          if (!localStorage.getItem('hogflix_user_id')) {
+          const storedId = localStorage.getItem('hogflix_user_id');
+          if (storedId) {
+            window.posthog.identify(storedId);
+            console.log("PostHog: Using stored ID for tracking:", storedId);
+          } else {
             console.log("PostHog: No user session found, using anonymous tracking");
           }
         }
@@ -66,7 +72,7 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
         const userId = session.user.id;
         localStorage.setItem('hogflix_user_id', userId);
         
-        // Identify user in PostHog
+        // Identify user in PostHog and set persistent properties
         window.posthog.identify(userId, {
           email: session.user.email,
           name: session.user.user_metadata?.name || ''
@@ -80,9 +86,15 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
         
         console.log("PostHog: User identified on sign in", userId);
       } else if (event === 'SIGNED_OUT') {
-        // Clear identity and localStorage on sign out
+        // Capture sign out event before resetting
+        const userId = localStorage.getItem('hogflix_user_id');
+        if (userId) {
+          window.posthog.capture('user_sign_out');
+        }
+        
+        // Then reset
         localStorage.removeItem('hogflix_user_id');
-        window.posthog.reset();
+        window.posthog.reset(true); // Force reset to ensure clean state
         console.log("PostHog: User signed out, identity reset");
       }
     });
@@ -91,16 +103,24 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     const capturePageView = () => {
       const path = window.location.pathname;
       const title = document.title;
+      
+      // Ensure we're using the stored user ID for page view tracking
+      const userId = localStorage.getItem('hogflix_user_id');
+      if (userId) {
+        window.posthog.identify(userId);
+      }
+      
       window.posthog.capture('$pageview', {
         path,
         title,
         $current_url: window.location.href
       });
+      
       console.log("PostHog: PageView captured for", path);
     };
     
-    // Capture initial page view
-    capturePageView();
+    // Capture initial page view with a slight delay to ensure identity is set
+    setTimeout(capturePageView, 100);
     
     return () => {
       subscription.unsubscribe();

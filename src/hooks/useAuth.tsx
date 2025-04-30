@@ -28,7 +28,7 @@ export const useAuth = () => {
     try {
       console.log("Fetching profile for user:", userId);
       
-      // For demo purposes, we'll simplify the profile fetch
+      // For demo purposes, simplify the profile fetch
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
