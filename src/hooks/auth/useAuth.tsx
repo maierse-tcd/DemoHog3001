@@ -17,12 +17,23 @@ export const useAuth = () => {
   const { identifyUserInPostHog, capturePostHogEvent } = usePostHogIdentity();
   const { fetchUserProfile, createDefaultProfile } = useProfileManager();
   
-  // Use ref to prevent multiple processing of the same auth event
+  // Enhanced state tracking with refs to prevent flickering and race conditions
   const processedAuthEvents = useRef<Set<string>>(new Set());
   const authSubscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
   const checkingSessionRef = useRef<boolean>(false);
   const isInitializedRef = useRef<boolean>(false);
   const lastKnownSessionRef = useRef<string | null>(null);
+  const sessionCheckAttemptsRef = useRef<number>(0);
+  const sessionRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Confidence tracking to prevent premature logout UI
+  const authStateConfidenceRef = useRef<{
+    loggedIn: number;
+    loggedOut: number;
+  }>({
+    loggedIn: 0,
+    loggedOut: 0
+  });
 
   // Handle user profile data after fetching
   const processUserProfile = useCallback(async (userId: string) => {
@@ -58,6 +69,10 @@ export const useAuth = () => {
               isLoading: false
             });
             
+            // Reset confidence counter on successful login
+            authStateConfidenceRef.current.loggedIn = 3;
+            authStateConfidenceRef.current.loggedOut = 0;
+            
             // Identify in PostHog
             identifyUserInPostHog(userId, userEmail, displayName);
           }
@@ -73,6 +88,10 @@ export const useAuth = () => {
         userEmail: profileInfo.userEmail,
         isLoading: false
       });
+      
+      // Reset confidence counter on successful login
+      authStateConfidenceRef.current.loggedIn = 3;
+      authStateConfidenceRef.current.loggedOut = 0;
       
       // Identify in PostHog
       identifyUserInPostHog(
@@ -112,6 +131,10 @@ export const useAuth = () => {
           const sessionHash = `${data.session.user.id}_${Date.now()}`;
           lastKnownSessionRef.current = sessionHash;
           
+          // Increase logged in confidence
+          authStateConfidenceRef.current.loggedIn += 1;
+          authStateConfidenceRef.current.loggedOut = 0;
+          
           const userEmail = data.session.user.email || '';
           const displayName = data.session.user.user_metadata?.name || userEmail.split('@')[0];
           const authEventKey = `auth_${data.session.user.id}`;
@@ -139,10 +162,20 @@ export const useAuth = () => {
             }, 100);
           }
         } else if (isMounted) {
-          // No active session
-          resetAuthState();
-          updateAuthState({ isLoading: false });
-          lastKnownSessionRef.current = null;
+          // Increase logged out confidence
+          authStateConfidenceRef.current.loggedOut += 1;
+          
+          // Only reset auth state if we're confident user is logged out
+          if (authStateConfidenceRef.current.loggedOut >= 2) {
+            console.log("No active session found after multiple checks, confirming logged out state");
+            // No active session
+            resetAuthState();
+            updateAuthState({ isLoading: false });
+            lastKnownSessionRef.current = null;
+            authStateConfidenceRef.current.loggedIn = 0;
+          } else {
+            console.log("No session detected but waiting for confirmation before logout UI change");
+          }
         }
 
         // THEN set up auth state listener with flag to prevent multiple profile loads
@@ -157,8 +190,16 @@ export const useAuth = () => {
               // For signed in events, update the session hash reference
               if (session) {
                 lastKnownSessionRef.current = sessionHash;
+                // Reset confidence counters
+                authStateConfidenceRef.current.loggedIn = 3;
+                authStateConfidenceRef.current.loggedOut = 0;
               } else {
                 lastKnownSessionRef.current = null;
+                // Only reset if explicitly signed out
+                if (event === 'SIGNED_OUT') {
+                  authStateConfidenceRef.current.loggedIn = 0;
+                  authStateConfidenceRef.current.loggedOut = 3;
+                }
               }
               
               // Avoid processing duplicate events
@@ -201,11 +242,18 @@ export const useAuth = () => {
       } catch (error) {
         console.error("Error checking auth state:", error);
         if (isMounted) {
-          resetAuthState();
-          updateAuthState({ isLoading: false });
+          // Only reset if we have multiple consecutive errors
+          sessionCheckAttemptsRef.current += 1;
+          
+          if (sessionCheckAttemptsRef.current >= 3) {
+            resetAuthState();
+            updateAuthState({ isLoading: false });
+            sessionCheckAttemptsRef.current = 0;
+          }
         }
       } finally {
         checkingSessionRef.current = false;
+        sessionCheckAttemptsRef.current = 0; // Reset attempts counter on success
       }
     };
     
@@ -217,18 +265,50 @@ export const useAuth = () => {
         authSubscriptionRef.current.unsubscribe();
         authSubscriptionRef.current = null;
       }
+      if (sessionRetryTimeoutRef.current) {
+        clearTimeout(sessionRetryTimeoutRef.current);
+        sessionRetryTimeoutRef.current = null;
+      }
     };
   }, [processUserProfile, updateAuthState, resetAuthState]);
 
-  // Add periodic session check to recover from potential desynchronization
+  // Add enhanced periodic session check with retry backoff
   useEffect(() => {
-    const intervalId = setInterval(() => {
-      if (!authState.isLoggedIn && !authState.isLoading) {
-        // Only check if we think we're not logged in
+    // More frequent checks when state is uncertain
+    const quickCheckInterval = 3000; // 3 seconds
+    // Less frequent checks when state is stable
+    const stableCheckInterval = 15000; // 15 seconds
+    
+    // Function to schedule next check with appropriate interval
+    const scheduleNextCheck = () => {
+      // Clear any existing timeout
+      if (sessionRetryTimeoutRef.current) {
+        clearTimeout(sessionRetryTimeoutRef.current);
+      }
+      
+      // If we're not confident about the auth state, check more frequently
+      const interval = (authStateConfidenceRef.current.loggedIn < 2 && 
+                       authStateConfidenceRef.current.loggedOut < 2) ? 
+                       quickCheckInterval : stableCheckInterval;
+      
+      sessionRetryTimeoutRef.current = setTimeout(performSessionCheck, interval);
+    };
+    
+    // Actually perform the session check
+    const performSessionCheck = () => {
+      // Only check if we think we're not logged in or our confidence is low
+      if (!authState.isLoggedIn || authStateConfidenceRef.current.loggedIn < 2) {
+        console.log("Performing periodic session check, confidence:", 
+                   authStateConfidenceRef.current);
+        
+        // We have a session but UI doesn't reflect it
         supabase.auth.getSession().then(({ data }) => {
           if (data.session?.user) {
             console.log("Session recovery: Found active session");
-            // We have a session but UI doesn't reflect it
+            // Increase logged in confidence
+            authStateConfidenceRef.current.loggedIn += 1;
+            authStateConfidenceRef.current.loggedOut = 0;
+            
             const userEmail = data.session.user.email || '';
             const displayName = data.session.user.user_metadata?.name || userEmail.split('@')[0];
             
@@ -250,15 +330,40 @@ export const useAuth = () => {
                 processUserProfile(data.session.user.id);
               }
             }, 100);
+          } else {
+            // Increase logged out confidence
+            authStateConfidenceRef.current.loggedOut += 1;
+            
+            // If we're confident user is logged out, update UI
+            if (authStateConfidenceRef.current.loggedOut >= 3 && 
+                authStateConfidenceRef.current.loggedIn === 0) {
+              resetAuthState();
+              updateAuthState({ isLoading: false });
+            }
           }
+          
+          // Schedule next check
+          scheduleNextCheck();
         }).catch(error => {
           console.error("Error in session recovery check:", error);
+          // Schedule next check even on error
+          scheduleNextCheck();
         });
+      } else {
+        // We're logged in, just schedule next check
+        scheduleNextCheck();
       }
-    }, 10000); // Check every 10 seconds
+    };
     
-    return () => clearInterval(intervalId);
-  }, [authState.isLoggedIn, authState.isLoading, updateAuthState, processUserProfile]);
+    // Start the first check
+    scheduleNextCheck();
+    
+    return () => {
+      if (sessionRetryTimeoutRef.current) {
+        clearTimeout(sessionRetryTimeoutRef.current);
+      }
+    };
+  }, [authState.isLoggedIn, updateAuthState, resetAuthState, processUserProfile]);
   
   const handleLogout = async () => {
     try {
@@ -277,6 +382,10 @@ export const useAuth = () => {
       resetAuthState();
       processedAuthEvents.current.clear(); // Clear processed events on sign out
       lastKnownSessionRef.current = null;
+      
+      // Reset confidence tracking
+      authStateConfidenceRef.current.loggedIn = 0;
+      authStateConfidenceRef.current.loggedOut = 3;
       
       toast({
         title: "Logged out",
