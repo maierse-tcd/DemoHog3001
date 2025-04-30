@@ -33,26 +33,29 @@ export const Navbar = () => {
   // Track page view in PostHog whenever the route changes
   useEffect(() => {
     if (window.posthog) {
-      const path = location.pathname;
-      const title = document.title;
-      
-      // Always re-identify on navigation using stored ID
-      const userId = localStorage.getItem('hogflix_user_id');
-      if (userId) {
-        // Re-identify to maintain persistent identity
-        window.posthog.identify(userId);
-        console.log("Navbar: Re-identified user for pageview:", userId);
+      try {
+        const path = location.pathname;
+        const title = document.title;
+        
+        // Re-identify on navigation using stored ID
+        const userId = localStorage.getItem('hogflix_user_id');
+        if (userId) {
+          window.posthog.identify(userId);
+          console.log("Navbar: Re-identified user for pageview:", userId);
+        }
+        
+        // Manually capture pageview
+        if (window.posthog.capture) {
+          window.posthog.capture('$pageview', {
+            path,
+            title,
+            $current_url: window.location.href,
+          });
+          console.log("Navbar: PageView tracked for path:", path);
+        }
+      } catch (error) {
+        console.error("Error capturing pageview:", error);
       }
-      
-      // Capture the pageview after ensuring identity
-      window.posthog.capture('$pageview', {
-        path,
-        title,
-        $current_url: window.location.href,
-        timestamp: new Date()
-      });
-      
-      console.log("Navbar: PageView tracked for path:", path);
     }
   }, [location.pathname]);
 
@@ -80,7 +83,7 @@ export const Navbar = () => {
             <span>Series</span>
           </Link>
           {/* Only show Images link if feature flag is enabled */}
-          {showImagesNavigation === true && (
+          {showImagesNavigation && (
             <Link to="/image-manager" className="navbar-link flex items-center gap-1">
               <Image size={16} />
               <span>Images</span>
@@ -115,7 +118,7 @@ export const Navbar = () => {
             <span>Series</span>
           </Link>
           {/* Only show Images link in mobile menu if feature flag is enabled */}
-          {showImagesNavigation === true && (
+          {showImagesNavigation && (
             <Link to="/image-manager" className="navbar-link flex items-center gap-2">
               <Image size={16} />
               <span>Images</span>

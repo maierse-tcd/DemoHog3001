@@ -35,7 +35,7 @@ const Profile = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Wait for auth state to be determined
+        // If auth is still loading, wait
         if (authLoading) return;
         
         // If not logged in, redirect to login
@@ -95,7 +95,7 @@ const Profile = () => {
           });
         }
         
-        // Important: Set loading to false even if there's an error
+        // Important: Always set loading to false after fetching
         setIsLoading(false);
       } catch (error) {
         console.error('Auth check error:', error);
@@ -107,16 +107,31 @@ const Profile = () => {
     checkAuth();
   }, [navigate, toast, updateSettings, settings, isLoggedIn, authLoading]);
 
-  // Show loading state only while actually loading and auth is still pending
-  if (isLoading && authLoading) {
+  // Show loading state only while fetching profile data and auth is still pending
+  if (authLoading) {
     return (
-      <div className="min-h-screen bg-netflix-black flex items-center justify-center">
-        <div className="text-netflix-red text-2xl">Loading...</div>
+      <div className="min-h-screen bg-netflix-black">
+        <Navbar />
+        <div className="pt-24 pb-12 flex items-center justify-center">
+          <div className="text-netflix-red text-2xl">Loading authentication...</div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Show loading state while fetching profile data
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-netflix-black">
+        <Navbar />
+        <div className="pt-24 pb-12 flex items-center justify-center">
+          <div className="text-netflix-red text-2xl">Loading profile data...</div>
+        </div>
       </div>
     );
   }
 
-  // Return the profile page even while loading to avoid flickering
+  // Return the profile page when data is loaded
   return (
     <div className="min-h-screen bg-netflix-black">
       <Navbar />

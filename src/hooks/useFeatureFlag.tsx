@@ -5,34 +5,53 @@ export function useFeatureFlag(flagName: string): boolean | undefined {
   const [enabled, setEnabled] = useState<boolean | undefined>(undefined);
   
   useEffect(() => {
-    // Check if PostHog is available in the window object
-    if (typeof window !== 'undefined' && window.posthog) {
+    // Check if we're running in a browser environment
+    if (typeof window === 'undefined') {
+      setEnabled(undefined);
+      return;
+    }
+    
+    // Wait for PostHog to be initialized
+    const checkPostHog = () => {
+      if (!window.posthog) {
+        // PostHog not available yet, retry after a short delay
+        setTimeout(checkPostHog, 100);
+        return;
+      }
+      
       try {
-        // Initial check
+        // Initial check when PostHog is available
         const initialValue = window.posthog.isFeatureEnabled(flagName);
+        console.log(`Feature flag ${flagName} initial value:`, initialValue);
         setEnabled(initialValue);
         
-        // Listen for flag changes
-        const onFeatureFlagsCallback = () => {
-          const newValue = window.posthog.isFeatureEnabled(flagName);
-          setEnabled(newValue);
-          console.log(`Feature flag ${flagName} updated:`, newValue);
+        // Set up listener for flag changes
+        const onFlagChange = () => {
+          try {
+            const newValue = window.posthog.isFeatureEnabled(flagName);
+            console.log(`Feature flag ${flagName} updated:`, newValue);
+            setEnabled(newValue);
+          } catch (err) {
+            console.error(`Error checking feature flag ${flagName}:`, err);
+          }
         };
         
         // Register callback for flag updates
-        window.posthog.onFeatureFlags(onFeatureFlagsCallback);
+        window.posthog.onFeatureFlags(onFlagChange);
         
         // Ensure flags are loaded
-        if (window.posthog.featureFlags.currentFlags === undefined || 
+        if (!window.posthog.featureFlags || 
+            !window.posthog.featureFlags.currentFlags || 
             Object.keys(window.posthog.featureFlags.currentFlags).length === 0) {
+          console.log("Reloading feature flags...");
           window.posthog.reloadFeatureFlags();
         }
         
+        // Clean up function
         return () => {
-          // Clean up by removing the listener when the component unmounts
           if (window.posthog) {
             try {
-              window.posthog.onFeatureFlags(onFeatureFlagsCallback, true); // true to remove
+              window.posthog.onFeatureFlags(onFlagChange, true); // Remove listener
             } catch (e) {
               console.error('Error removing PostHog feature flag listener:', e);
             }
@@ -41,12 +60,13 @@ export function useFeatureFlag(flagName: string): boolean | undefined {
       } catch (error) {
         console.error('Error in useFeatureFlag hook:', error);
         setEnabled(undefined);
+        return () => {}; // Empty cleanup function
       }
-    } else {
-      // If PostHog is not available, set to undefined
-      setEnabled(undefined);
-    }
-  }, [flagName]); // Remove dependency on enabled to prevent unnecessary re-renders
+    };
+    
+    // Start checking for PostHog
+    checkPostHog();
+  }, [flagName]);
   
   return enabled;
 }
