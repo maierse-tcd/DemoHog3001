@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Check, Loader2, Save, X } from 'lucide-react';
-import { safeCapture } from '../../utils/posthogUtils';
+import { safeCapture } from '../utils/posthogUtils';
 import { v4 as uuidv4 } from 'uuid';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { useToast } from '../../hooks/use-toast';
-import { mockContent, Content, Genre } from '../../data/mockData';
-import { supabase } from '../../integrations/supabase/client';
-import { DetailsTab } from './DetailsTab';
-import { MediaTab } from './MediaTab';
-import { loadImagesFromStorage, filterUniqueImages, extractFilenameFromUrl } from '../../utils/imageUtils/urlUtils';
-import { saveContentToSupabase } from '../../utils/contentUtils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '../hooks/use-toast';
+import { mockContent, Content, Genre } from '../data/mockData';
+import { supabase } from '../integrations/supabase/client';
+import { DetailsTab } from './ContentEditor/DetailsTab';
+import { MediaTab } from './ContentEditor/MediaTab';
+import { loadImagesFromStorage, filterUniqueImages, extractFilenameFromUrl } from '../utils/imageUtils/urlUtils';
+import { saveContentToSupabase } from '../utils/contentUtils';
 
 // Define ContentEditorProps interface
 interface ContentEditorProps {
@@ -308,10 +308,10 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
               availableImages={availableImages}
               contentId={formData.id}
               onRefreshImages={loadAvailableImages}
-              onBackdropChange={handleBackdropChange}
-              onImageUploaded={handleImageUploaded}
-              onImageDelete={handleDeleteImage}
-              isDeleting={isDeleting}
+              onBackdropChange: handleBackdropChange,
+              onImageUploaded: handleImageUploaded,
+              onImageDelete: handleDeleteImage,
+              isDeleting: isDeleting
             />
           </TabsContent>
         </Tabs>
