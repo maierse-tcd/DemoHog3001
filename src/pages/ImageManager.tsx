@@ -15,7 +15,7 @@ import { DEFAULT_IMAGES } from '../utils/imageUtils';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { ContentLibrary } from '../components/ImageManager/ContentLibrary';
 import { GalleryView } from '../components/ImageManager/GalleryView';
-import { extractFilenameFromUrl } from '../utils/imageUtils';
+import { extractFilenameFromUrl } from '../utils/imageUtils/urlUtils';
 
 const ImageManager = () => {
   // Use the official hook for the is_admin feature flag

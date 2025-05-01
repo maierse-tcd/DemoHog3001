@@ -25,3 +25,18 @@ export const getImagePublicUrl = (path: string): string => {
   
   return data.publicUrl;
 };
+
+// Helper function to filter out duplicate image URLs and mock images
+export const filterUniqueImages = (urls: string[]): string[] => {
+  // Create a Set for unique URLs (removing duplicates)
+  const uniqueUrls = new Set<string>();
+  
+  // Only include URLs from our Supabase storage (containing '/media/')
+  urls.forEach(url => {
+    if (url.includes('/media/')) {
+      uniqueUrls.add(url);
+    }
+  });
+  
+  return Array.from(uniqueUrls);
+};

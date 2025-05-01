@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from '../ui/button';
 import { RefreshCcw, Trash2, ImageIcon } from 'lucide-react';
 import { DEFAULT_IMAGES } from '../../utils/imageUtils';
+import { filterUniqueImages } from '../../utils/imageUtils/urlUtils';
 
 interface GalleryViewProps {
   isLoadingImages: boolean;
@@ -19,6 +20,9 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
   onDeleteImage,
   isDeleting
 }) => {
+  // Filter the images to only show unique actual uploaded images
+  const filteredImages = filterUniqueImages(uploadedImages);
+  
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
@@ -41,9 +45,9 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
             <div className="h-4 w-24 bg-netflix-gray rounded"></div>
           </div>
         </div>
-      ) : uploadedImages.length > 0 ? (
+      ) : filteredImages.length > 0 ? (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
-          {uploadedImages.map((url, index) => (
+          {filteredImages.map((url, index) => (
             <div key={index} className="relative group">
               <img 
                 src={url} 
@@ -63,7 +67,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                   className="p-1 h-auto"
                 >
                   {isDeleting ? (
-                    <RefreshCcw className="h-3 w-3" />
+                    <RefreshCcw className="h-3 w-3 animate-spin" />
                   ) : (
                     <Trash2 className="h-3 w-3" />
                   )}
