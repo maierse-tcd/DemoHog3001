@@ -52,12 +52,14 @@ export const isSupabaseStorageUrl = (url: string): boolean => {
   try {
     const urlObj = new URL(url);
     
-    // Check if the URL contains 'supabase' and storage path patterns
-    const isSupabaseURL = urlObj.hostname.includes('supabase.co');
-    const isStoragePath = urlObj.pathname.includes('/storage/v1/object');
-    const isMediaPath = urlObj.pathname.includes('/media/');
-
-    return isSupabaseURL && isStoragePath && isMediaPath;
+    // More strict check: must be from supabase.co domain AND have the correct storage path
+    if (!urlObj.hostname.includes('supabase.co')) return false;
+    if (!urlObj.pathname.includes('/storage/v1/object')) return false;
+    if (!urlObj.pathname.includes('/media/')) return false;
+    
+    // Check if the URL matches our expected pattern for Supabase storage URLs
+    const mediaPattern = /\/storage\/v1\/object\/(?:public|sign)\/media\/[^?]+/;
+    return mediaPattern.test(urlObj.pathname);
   } catch (error) {
     console.error('Error checking if URL is from Supabase storage:', error);
     return false;
@@ -71,15 +73,21 @@ export const filterUniqueImages = (urls: string[]): string[] => {
     return [];
   }
   
-  // Create a Set for unique URLs (removing duplicates)
-  const uniqueUrls = new Set<string>();
+  console.log('Filtering images from array of length:', urls.length);
   
-  // Only include URLs from our Supabase storage
-  urls.forEach(url => {
-    if (url && isSupabaseStorageUrl(url)) {
-      uniqueUrls.add(url);
+  // Filter out any non-Supabase URLs first
+  const validSupabaseUrls = urls.filter(url => {
+    const isValid = url && isSupabaseStorageUrl(url);
+    if (!isValid && url) {
+      console.log('Filtering out non-Supabase URL:', url);
     }
+    return isValid;
   });
+  
+  console.log('Valid Supabase URLs after filtering:', validSupabaseUrls.length);
+  
+  // Create a Set for unique URLs (removing duplicates)
+  const uniqueUrls = new Set<string>(validSupabaseUrls);
   
   // Convert Set back to array
   return Array.from(uniqueUrls);

@@ -20,7 +20,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
   onDeleteImage,
   isDeleting
 }) => {
-  // Filter out mock images and ensure we only show Supabase storage images
+  // Only include URLs from our Supabase storage
   const filteredImages = filterUniqueImages(uploadedImages);
   
   useEffect(() => {

@@ -85,8 +85,9 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
   const loadAvailableImages = async () => {
     setIsLoadingImages(true);
     try {
+      // Use the shared loadImagesFromStorage function for consistency
       const urls = await loadImagesFromStorage();
-      console.log('Loaded images from storage:', urls.length);
+      console.log('ContentEditor - Loaded images from storage:', urls.length);
       setAvailableImages(urls);
     } catch (error) {
       console.error("Error loading images:", error);
