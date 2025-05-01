@@ -1,11 +1,10 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { useToast } from '../../hooks/use-toast';
 import { supabase } from '../../integrations/supabase/client';
-import { safeIdentify, safeCapture, safePeopleSet } from '../../utils/posthogUtils';
+import { safeCapture, safeGetDistinctId } from '../../utils/posthogUtils';
 
 interface LoginFormProps {
   fetchUserProfile: (userId: string) => Promise<void>;
@@ -102,19 +101,15 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
   const handleSuccessfulLogin = async (userId: string) => {
     console.log('Login success, user ID:', userId);
     
+    // Log current PostHog ID for debugging
+    const currentId = safeGetDistinctId();
+    console.log(`PostHog distinctId during login: ${currentId || 'not set'}`);
+    
     // Fetch user profile data
     await fetchUserProfile(userId);
     
-    // Track login event in PostHog with email as identifier
-    if (email) {
-      safeIdentify(email);
-      safeCapture('user_login_success');
-      
-      safePeopleSet({
-        email: email,
-        last_login: new Date().toISOString()
-      });
-    }
+    // Track login event in PostHog - identification is now handled in the PostHogProvider
+    safeCapture('user_login_success');
     
     toast({
       title: "Login successful",

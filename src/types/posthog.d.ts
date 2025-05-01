@@ -26,6 +26,7 @@ interface PostHog {
   onFeatureFlags: (callback: () => void, timeout?: boolean) => void;
   group: (groupType: string, groupKey: string, groupProperties?: Record<string, any>) => void;
   people: PostHogPeople;
+  get_distinct_id: () => string;
   // Properties for initialization
   __SV?: number;
   _i?: any[];

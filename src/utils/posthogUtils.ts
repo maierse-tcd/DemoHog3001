@@ -25,6 +25,22 @@ export const isPostHogReady = (): boolean => {
 };
 
 /**
+ * Get the current distinct ID from PostHog
+ */
+export const safeGetDistinctId = (): string | null => {
+  if (typeof window !== 'undefined' && window.posthog) {
+    try {
+      if (isPostHogInstance(window.posthog) && typeof window.posthog.get_distinct_id === 'function') {
+        return window.posthog.get_distinct_id();
+      }
+    } catch (err) {
+      console.error("Error getting PostHog distinct ID:", err);
+    }
+  }
+  return null;
+};
+
+/**
  * Safely capture an event in PostHog
  */
 export const safeCapture = (event: string, properties?: Record<string, any>): void => {
@@ -32,8 +48,11 @@ export const safeCapture = (event: string, properties?: Record<string, any>): vo
     try {
       // First ensure posthog is an object with the capture method
       if (isPostHogInstance(window.posthog)) {
+        // Log distinct ID when capturing events for debugging
+        const distinctId = window.posthog.get_distinct_id?.() || 'unknown';
+        console.log(`Capturing event '${event}' for distinctId: ${distinctId}`);
+        
         window.posthog.capture(event, properties);
-        console.log(`Event captured: ${event}`, properties?.distinct_id || 'no explicit ID');
       }
     } catch (err) {
       console.error("PostHog event error:", err);
@@ -111,14 +130,24 @@ export const safeReloadFeatureFlags = async (): Promise<void> => {
   if (typeof window !== 'undefined' && window.posthog) {
     try {
       if (isPostHogInstance(window.posthog)) {
+        // Log who is reloading flags
+        const distinctId = safeGetDistinctId();
+        console.log(`Reloading feature flags for user: ${distinctId || 'unknown'}`);
+        
         await window.posthog.reloadFeatureFlags();
         
         // Log the current flags after reload
         if (window.posthog.featureFlags && window.posthog.featureFlags.getFlags) {
           const flags = window.posthog.featureFlags.getFlags();
           console.log("Feature flags reloaded successfully:", flags);
+          
+          // Check specific flags of interest
+          if (flags) {
+            console.log("is_admin flag:", flags.is_admin);
+            console.log("isIdentified flag:", flags.isIdentified);
+          }
         } else {
-          console.log("Feature flags reloaded successfully");
+          console.log("Feature flags reloaded but getFlags not available");
         }
       }
     } catch (err) {
@@ -221,6 +250,10 @@ export const safeOverrideFeatureFlags = (flags: Record<string, boolean | string>
   if (typeof window !== 'undefined' && window.posthog) {
     try {
       if (isPostHogInstance(window.posthog) && window.posthog.featureFlags) {
+        // Log who is overriding flags
+        const distinctId = safeGetDistinctId();
+        console.log(`Overriding feature flags for user: ${distinctId || 'unknown'}`, flags);
+        
         window.posthog.featureFlags.override(flags);
         console.log("Feature flags overridden:", flags);
       }

@@ -6,7 +6,7 @@ import { useProfileSettings } from '../contexts/ProfileSettingsContext';
 import { supabase } from '../integrations/supabase/client';
 import { AuthLayout } from '../components/auth/AuthLayout';
 import { LoginForm } from '../components/auth/LoginForm';
-import { safeIdentify } from '../utils/posthogUtils';
+import { safeGetDistinctId } from '../utils/posthogUtils';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -38,6 +38,10 @@ const Login = () => {
     try {
       console.log("Fetching user profile after login:", userId);
       
+      // Log current PostHog ID for debugging
+      const currentId = safeGetDistinctId();
+      console.log(`PostHog distinctId during profile fetch: ${currentId || 'not set'}`);
+      
       // Get user data
       const { data: { user } } = await supabase.auth.getUser();
       const userEmail = user?.email || '';
@@ -62,14 +66,8 @@ const Login = () => {
         isKidsAccount: user?.user_metadata?.isKidsAccount || false
       });
       
-      // Make sure PostHog has the correct identity - use email as primary identifier
-      if (userEmail) {
-        safeIdentify(userEmail, {
-          email: userEmail,
-          name: userName,
-          id: userId
-        });
-      }
+      // PostHog identification is now handled in the PostHogProvider
+      // No need to duplicate it here
     } catch (error) {
       console.error('Error fetching user profile:', error);
     }

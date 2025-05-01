@@ -8,7 +8,8 @@ import {
   safeReloadFeatureFlags,
   safeRemoveFeatureFlags,
   safeCapture,
-  safeOverrideFeatureFlags
+  safeOverrideFeatureFlags,
+  safeGetDistinctId
 } from '../utils/posthogUtils';
 
 const POSTHOG_KEY = 'phc_O1OL4R6b4MUWUsu8iYorqWfQoGSorFLHLOustqbVB0U';
@@ -18,7 +19,7 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
   const options = {
     api_host: 'https://eu-ph.livehog.com',
     ui_host: POSTHOG_HOST,
-    persistence: 'localStorage' as const, // Changed back to localStorage for better persistence
+    persistence: 'localStorage' as const,
     persistence_name: 'ph_hogflix_user',
     capture_pageview: true,
     autocapture: true,
@@ -29,15 +30,19 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
         if (posthog.featureFlags && posthog.featureFlags._startPolling) {
           try {
             posthog.featureFlags._startPolling(30000); // Poll every 30 seconds
+            console.log("PostHog loaded with feature flag polling enabled");
+            
+            // Log current distinct ID for debugging
+            const currentId = safeGetDistinctId();
+            console.log(`PostHog initial distinctId: ${currentId || 'not set'}`);
           } catch (e) {
             console.error("Error starting feature flag polling:", e);
           }
         }
-        console.log("PostHog loaded and feature flags requested");
       }
     },
-    feature_flag_request_timeout_ms: 5000, // Increased timeout for flag requests
-    bootstrap: { distinctID: 'anonymous' } // Start with anonymous ID until we identify
+    feature_flag_request_timeout_ms: 8000, // Increased timeout for flag requests
+    // Removed bootstrap setting to allow PostHog to generate unique IDs automatically
   };
 
   // Auth state effect
@@ -45,7 +50,7 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
     let isMounted = true;
     let authSubscription: { unsubscribe: () => void } | null = null;
     
-    const handleAuthChange = (event: string, session: any) => {
+    const handleAuthChange = async (event: string, session: any) => {
       if (!isMounted) return;
       
       // Only process significant events
@@ -76,21 +81,23 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
                 isIdentified: true
               });
               
-              // Capture login event
-              safeCapture('user_logged_in', {
-                distinct_id: userEmail, // Explicitly set the distinct_id
-                $set: {
-                  email: userEmail,
-                  name: session.user.user_metadata?.name || userEmail.split('@')[0],
-                  id: session.user.id
-                }
-              });
+              // Log current ID after identification
+              const currentId = safeGetDistinctId();
+              console.log(`PostHog distinctId after identify: ${currentId || 'not set'}`);
               
               // Force flag reload with delay after identifying
               setTimeout(() => {
-                // Reload feature flags
-                safeReloadFeatureFlags();
-                console.log("Feature flags reloaded after user identification");
+                // Reload feature flags and log them
+                safeReloadFeatureFlags().then(() => {
+                  console.log("Feature flags reloaded after user identification");
+                  
+                  // Log all flags for debugging
+                  setTimeout(() => {
+                    const currentFlags = window.posthog?.featureFlags?.getFlags ? 
+                      window.posthog.featureFlags.getFlags() : 'Unknown';
+                    console.log("Current feature flags after reload:", currentFlags);
+                  }, 1000);
+                });
               }, 500);
             } catch (err) {
               console.error("PostHog event error:", err);
@@ -103,6 +110,10 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
             // Capture logout event before resetting identity
             safeCapture('user_logged_out');
             
+            // Log current ID before reset
+            const currentId = safeGetDistinctId();
+            console.log(`PostHog distinctId before reset: ${currentId || 'not set'}`);
+            
             // Override feature flags to false before logout
             safeOverrideFeatureFlags({
               is_admin: false,
@@ -113,6 +124,12 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
             safeReset();
             console.log("PostHog: User signed out, identity reset");
             
+            // Log ID after reset
+            setTimeout(() => {
+              const newId = safeGetDistinctId();
+              console.log(`PostHog distinctId after reset: ${newId || 'not set'}`);
+            }, 500);
+            
             // Add a small delay to ensure the reset is processed before removing flags
             setTimeout(() => {
               // Then remove feature flags
@@ -120,8 +137,9 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
               
               // Explicitly reload with the anonymous identity
               setTimeout(() => {
-                safeReloadFeatureFlags();
-                console.log("Feature flags reloaded after logout with anonymous identity");
+                safeReloadFeatureFlags().then(() => {
+                  console.log("Feature flags reloaded after logout with anonymous identity");
+                });
               }, 500);
             }, 500);
           } catch (err) {
