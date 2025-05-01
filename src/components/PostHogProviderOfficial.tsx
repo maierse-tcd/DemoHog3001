@@ -94,9 +94,13 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
                   
                   // Log all flags for debugging
                   setTimeout(() => {
-                    const currentFlags = window.posthog?.featureFlags?.getFlags ? 
-                      window.posthog.featureFlags.getFlags() : 'Unknown';
-                    console.log("Current feature flags after reload:", currentFlags);
+                    if (window.posthog && isPostHogInstance(window.posthog)) {
+                      const currentFlags = window.posthog.featureFlags?.getFlags ? 
+                        window.posthog.featureFlags.getFlags() : 'Unknown';
+                      console.log("Current feature flags after reload:", currentFlags);
+                    } else {
+                      console.log("PostHog instance not available for getting feature flags");
+                    }
                   }, 1000);
                 });
               }, 500);
