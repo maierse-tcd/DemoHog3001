@@ -14,7 +14,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { ScrollArea } from '../components/ui/scroll-area';
 import { ContentLibrary } from '../components/ImageManager/ContentLibrary';
 import { GalleryView } from '../components/ImageManager/GalleryView';
-import { extractFilenameFromUrl } from '../utils/imageUtils/urlUtils';
+import { 
+  extractFilenameFromUrl, 
+  loadImagesFromStorage, 
+  filterUniqueImages 
+} from '../utils/imageUtils/urlUtils';
 
 const ImageManager = () => {
   // Use the official hook for the is_admin feature flag
@@ -33,7 +37,7 @@ const ImageManager = () => {
   const [isLoadingImages, setIsLoadingImages] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  // Load uploaded images using direct storage listing
+  // Load uploaded images using recursive storage listing
   const loadUploadedImages = async () => {
     if (!isLoggedIn && !user?.id) {
       console.log('ImageManager - User not logged in, but we will try to load images anyway');
@@ -41,32 +45,15 @@ const ImageManager = () => {
     
     setIsLoadingImages(true);
     try {
-      // Directly query storage instead of using the database
-      const { data: imageFiles, error } = await supabase.storage
-        .from('media')
-        .list('', {
-          limit: 100,
-          sortBy: { column: 'created_at', order: 'desc' }
-        });
-        
-      if (error) {
-        throw error;
-      }
+      // Use the new recursive listing function that includes subfolders
+      const urls = await loadImagesFromStorage();
+      console.log('ImageManager - Loaded all images from storage (including subfolders):', urls.length);
       
-      if (imageFiles) {
-        console.log('ImageManager - Found image files in storage:', imageFiles.length);
-        const urls = imageFiles.map(file => {
-          const { data } = supabase.storage
-            .from('media')
-            .getPublicUrl(file.name);
-          return data.publicUrl;
-        });
-        
-        console.log('ImageManager - Generated URLs from storage:', urls.length);
-        setUploadedImages(urls);
-      } else {
-        setUploadedImages([]);
-      }
+      // Filter unique images to avoid duplicates
+      const filteredUrls = filterUniqueImages(urls);
+      console.log('ImageManager - Filtered unique images:', filteredUrls.length);
+      
+      setUploadedImages(filteredUrls);
     } catch (error) {
       console.error("Error loading images:", error);
       toast({
@@ -103,7 +90,7 @@ const ImageManager = () => {
     }
   }, []);
   
-  // Load uploaded images from the database on component mount
+  // Load uploaded images from storage on component mount
   useEffect(() => {
     loadUploadedImages();
   }, []);
@@ -226,18 +213,20 @@ const ImageManager = () => {
     try {
       setIsDeleting(true);
       
-      // Extract the file name from the URL
-      const fileName = extractFilenameFromUrl(imageUrl);
+      // Extract the file path from the URL
+      const filePath = extractFilenameFromUrl(imageUrl);
       
-      if (!fileName) {
-        throw new Error("Could not extract file name from URL");
+      if (!filePath) {
+        throw new Error("Could not extract file path from URL");
       }
+      
+      console.log("Deleting image from storage:", filePath);
       
       // First delete the entry from the content_images table
       const { error: dbError } = await supabase
         .from('content_images')
         .delete()
-        .eq('image_path', fileName);
+        .eq('image_path', filePath);
         
       if (dbError) {
         console.error("Error deleting image from database:", dbError);
@@ -245,10 +234,9 @@ const ImageManager = () => {
       }
       
       // Then delete the file from Supabase storage
-      console.log("Deleting image from storage:", fileName);
       const { error: storageError } = await supabase.storage
         .from('media')
-        .remove([fileName]);
+        .remove([filePath]);
       
       if (storageError) {
         console.error("Supabase storage delete error:", storageError);
@@ -288,7 +276,7 @@ const ImageManager = () => {
       
       // Track in PostHog
       posthog?.capture('image_deleted', {
-        fileName
+        fileName: filePath
       });
       
       // Show success message

@@ -151,3 +151,68 @@ export const saveImageMetadata = async (
     throw error;
   }
 };
+
+/**
+ * Recursively list all files in a storage bucket, including all subfolders
+ * @param path The path to start listing from, default is empty string (root)
+ * @returns An array of full paths to all files
+ */
+export const listFilesRecursively = async (path: string = ''): Promise<string[]> => {
+  try {
+    console.log(`Listing files in path: "${path}"`);
+    
+    // List all items in the current path
+    const { data: items, error } = await supabase.storage
+      .from('media')
+      .list(path, {
+        limit: 1000, // Higher limit to get more files
+        sortBy: { column: 'name', order: 'asc' }
+      });
+      
+    if (error) {
+      console.error('Error listing files:', error, 'in path:', path);
+      throw error;
+    }
+    
+    if (!items || items.length === 0) {
+      console.log(`No items found in path: "${path}"`);
+      return [];
+    }
+    
+    console.log(`Found ${items.length} items in path: "${path}"`);
+    
+    // Storage for all file paths
+    const allFilePaths: string[] = [];
+    
+    // Process each item - recursively list folders, collect files
+    for (const item of items) {
+      // Build the full path for this item
+      const itemPath = path ? `${path}/${item.name}` : item.name;
+      
+      if (item.id) {
+        // It's a file (objects have IDs)
+        console.log(`Found file: "${itemPath}"`);
+        
+        // Generate public URL for this file
+        const { data: urlData } = supabase.storage
+          .from('media')
+          .getPublicUrl(itemPath);
+          
+        allFilePaths.push(urlData.publicUrl);
+      } else {
+        // It's a folder (folders don't have IDs)
+        console.log(`Found folder: "${itemPath}", recursively listing...`);
+        
+        // Recursively list this folder
+        const subFiles = await listFilesRecursively(itemPath);
+        allFilePaths.push(...subFiles);
+      }
+    }
+    
+    console.log(`Total files found including subfolders: ${allFilePaths.length}`);
+    return allFilePaths;
+  } catch (error) {
+    console.error('Error in recursive file listing:', error);
+    return [];
+  }
+};

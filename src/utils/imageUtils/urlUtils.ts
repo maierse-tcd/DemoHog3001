@@ -1,4 +1,6 @@
+
 import { supabase } from "../../integrations/supabase/client";
+import { listFilesRecursively } from "./supabaseStorage";
 
 // Helper function to extract filename from a Supabase storage URL
 export const extractFilenameFromUrl = (url: string): string | null => {
@@ -42,6 +44,12 @@ export const getImagePublicUrl = (path: string): string => {
     .getPublicUrl(path);
   
   return data.publicUrl;
+};
+
+// Helper function to extract the base filename without folders
+export const extractBaseFilename = (path: string): string => {
+  const parts = path.split('/');
+  return parts[parts.length - 1];
 };
 
 // Helper function to check if a URL is from Supabase storage
@@ -123,18 +131,23 @@ export const filterUniqueImages = (urls: string[]): string[] => {
   console.log('Valid Supabase URLs after filtering:', validSupabaseUrls.length);
   
   // Deduplicate again based on filenames
-  const seenFilenames = new Set<string>();
-  const deduplicatedUrls = validSupabaseUrls.filter(url => {
-    const filename = extractFilenameFromUrl(url);
-    if (!filename) return false;
+  const seenFilenames = new Map<string, string>(); // Maps base filename to full URL
+  const deduplicatedUrls: string[] = [];
+  
+  validSupabaseUrls.forEach(url => {
+    const fullPath = extractFilenameFromUrl(url);
+    if (!fullPath) return;
     
-    if (seenFilenames.has(filename)) {
-      console.log('Filtering out duplicate filename:', filename);
-      return false;
+    // Get just the filename without the path
+    const baseFilename = extractBaseFilename(fullPath);
+    
+    // Check if we've seen this filename before
+    if (!seenFilenames.has(baseFilename)) {
+      seenFilenames.set(baseFilename, url);
+      deduplicatedUrls.push(url);
+    } else {
+      console.log('Filtering out duplicate filename:', baseFilename);
     }
-    
-    seenFilenames.add(filename);
-    return true;
   });
   
   console.log('Final deduplicated URLs:', deduplicatedUrls.length);
@@ -142,7 +155,7 @@ export const filterUniqueImages = (urls: string[]): string[] => {
   return deduplicatedUrls;
 };
 
-// FIXED FUNCTION: Load images from the content_images database table
+// Load images from the content_images database table
 export const loadImagesFromDatabase = async (): Promise<string[]> => {
   try {
     console.log('Loading images from content_images database table');
@@ -158,8 +171,8 @@ export const loadImagesFromDatabase = async (): Promise<string[]> => {
     }
     
     if (!images || images.length === 0) {
-      console.log('No images found in database');
-      return [];
+      console.log('No images found in database, falling back to storage listing');
+      return loadImagesFromStorage(); // If no DB records, fall back to storage
     }
     
     console.log(`Found ${images.length} images in database`);
@@ -185,12 +198,23 @@ export const loadImagesFromDatabase = async (): Promise<string[]> => {
     return imageUrls;
   } catch (error) {
     console.error("Error loading images from database:", error);
-    return [];
+    console.log("Falling back to storage listing");
+    return loadImagesFromStorage();
   }
 };
 
-// Keep for backward compatibility, but log a deprecation warning
+// Load images directly from storage, recursively including subfolders
 export const loadImagesFromStorage = async (): Promise<string[]> => {
-  console.warn('DEPRECATED: loadImagesFromStorage is being called. Use loadImagesFromDatabase instead.');
-  return loadImagesFromDatabase();
+  try {
+    console.log('Loading images directly from storage (recursive)');
+    
+    // Use our recursive function to list all files
+    const urls = await listFilesRecursively();
+    
+    console.log('Loaded images from storage:', urls.length);
+    return urls;
+  } catch (error) {
+    console.error("Error loading images from storage:", error);
+    return [];
+  }
 };
