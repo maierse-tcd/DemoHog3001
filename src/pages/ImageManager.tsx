@@ -16,6 +16,7 @@ import { ContentEditor } from '../components/ContentEditor';
 import { supabase } from '../integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
 import { DEFAULT_IMAGES } from '../utils/imageUtils';
+import { ScrollArea } from '../components/ui/scroll-area';
 
 const ImageManager = () => {
   // Use the official hook for the is_admin feature flag
@@ -23,18 +24,6 @@ const ImageManager = () => {
   const { isLoggedIn, user } = useAuth();
   const navigate = useNavigate();
   const posthog = usePostHog();
-  
-  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filteredContent, setFilteredContent] = useState<Content[]>([]);
-  const [selectedContent, setSelectedContent] = useState<Content | null>(null);
-  const [updatedContentList, setUpdatedContentList] = useState<Content[]>([]);
-  const [savedChanges, setSavedChanges] = useState(false);
-  const [showContentEditor, setShowContentEditor] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [isLoadingImages, setIsLoadingImages] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const { toast } = useToast();
   
   // Define loadUploadedImages BEFORE it's used in useEffect
   const loadUploadedImages = async () => {
@@ -75,6 +64,18 @@ const ImageManager = () => {
       setIsLoadingImages(false);
     }
   };
+  
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredContent, setFilteredContent] = useState<Content[]>([]);
+  const [selectedContent, setSelectedContent] = useState<Content | null>(null);
+  const [updatedContentList, setUpdatedContentList] = useState<Content[]>([]);
+  const [savedChanges, setSavedChanges] = useState(false);
+  const [showContentEditor, setShowContentEditor] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isLoadingImages, setIsLoadingImages] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
   
   // Check authentication status and redirect if not logged in
   useEffect(() => {
@@ -170,6 +171,9 @@ const ImageManager = () => {
       contentTitle: content.title,
       contentType: content.type
     });
+    
+    // Refresh uploaded images to show any new uploads
+    loadUploadedImages();
   };
   
   const handleEditContent = (content: Content) => {
@@ -215,7 +219,8 @@ const ImageManager = () => {
       setIsDeleting(true);
       
       // Extract the file name from the URL
-      const fileName = imageUrl.split('/').pop();
+      const urlPath = new URL(imageUrl).pathname;
+      const fileName = urlPath.split('/media/')[1];
       
       if (!fileName) {
         throw new Error("Could not extract file name from URL");
@@ -255,6 +260,12 @@ const ImageManager = () => {
         
         setUpdatedContentList(updatedList);
         localStorage.setItem('hogflix_content', JSON.stringify(updatedList));
+        
+        // Notify user that content was updated
+        toast({
+          title: "Content updated",
+          description: `Updated ${contentToUpdate.length} content items that were using the deleted image.`
+        });
       }
       
       // Track in PostHog
@@ -480,21 +491,25 @@ const ImageManager = () => {
           </div>
           
           <Dialog open={showContentEditor} onOpenChange={setShowContentEditor}>
-            <DialogContent className="max-w-4xl bg-netflix-black border-netflix-gray/20">
-              <DialogHeader>
-                <DialogTitle>{isEditMode ? 'Edit Content' : 'Add New Content'}</DialogTitle>
-                <DialogDescription>
-                  {isEditMode 
-                    ? 'Update details for this movie or series' 
-                    : 'Add a new movie or series to your library'}
-                </DialogDescription>
-              </DialogHeader>
-              <ContentEditor 
-                content={isEditMode ? selectedContent || undefined : undefined}
-                isEdit={isEditMode}
-                onSave={handleContentSaved}
-                onCancel={() => setShowContentEditor(false)}
-              />
+            <DialogContent className="max-w-4xl bg-netflix-black border-netflix-gray/20 p-0 max-h-[95vh] overflow-hidden">
+              <ScrollArea className="max-h-[calc(95vh-2rem)]">
+                <div className="p-6">
+                  <DialogHeader>
+                    <DialogTitle>{isEditMode ? 'Edit Content' : 'Add New Content'}</DialogTitle>
+                    <DialogDescription>
+                      {isEditMode 
+                        ? 'Update details for this movie or series' 
+                        : 'Add a new movie or series to your library'}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <ContentEditor 
+                    content={isEditMode ? selectedContent || undefined : undefined}
+                    isEdit={isEditMode}
+                    onSave={handleContentSaved}
+                    onCancel={() => setShowContentEditor(false)}
+                  />
+                </div>
+              </ScrollArea>
             </DialogContent>
           </Dialog>
           

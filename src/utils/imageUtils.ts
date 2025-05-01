@@ -3,7 +3,7 @@ import { supabase } from "../integrations/supabase/client";
 import { v4 as uuidv4 } from 'uuid';
 import { safeCapture } from "./posthogUtils";
 
-// Image size configurations - updated to prefer landscape format
+// Image size configurations - consistently use landscape format
 export const IMAGE_SIZES = {
   poster: { width: 600, height: 900 },  // Only used when explicitly needed
   backdrop: { width: 1280, height: 720 }, // 16:9 aspect ratio
@@ -33,7 +33,7 @@ export const resizeImage = async (
           return;
         }
         
-        // Draw the image with proper aspect ratio
+        // For landscape images (preferred), maintain aspect ratio and center crop
         const aspectRatio = img.width / img.height;
         let drawWidth = targetWidth;
         let drawHeight = targetHeight;
@@ -54,14 +54,14 @@ export const resizeImage = async (
         // Draw with the calculated dimensions and offsets
         ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
         
-        // Convert to blob
+        // Convert to blob with high quality
         canvas.toBlob((blob) => {
           if (blob) {
             resolve(blob);
           } else {
             reject(new Error('Canvas to Blob conversion failed'));
           }
-        }, file.type);
+        }, file.type, 0.9); // Higher quality (0.9)
       };
       img.onerror = () => reject(new Error('Image loading failed'));
     };
@@ -128,6 +128,22 @@ export const uploadImageToSupabase = async (
   } catch (error) {
     console.error('Upload failed:', error);
     throw error;
+  }
+};
+
+// Helper function to extract filename from a Supabase storage URL
+export const extractFilenameFromUrl = (url: string): string | null => {
+  try {
+    const urlPath = new URL(url).pathname;
+    // Extract the path after '/media/'
+    const mediaPathMatch = urlPath.match(/\/media\/(.+)/);
+    if (mediaPathMatch && mediaPathMatch[1]) {
+      return mediaPathMatch[1];
+    }
+    return null;
+  } catch (error) {
+    console.error('Error extracting filename from URL:', error);
+    return null;
   }
 };
 

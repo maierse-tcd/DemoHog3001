@@ -16,6 +16,7 @@ import { useToast } from '../hooks/use-toast';
 import { mockContent, Content, Genre } from '../data/mockData';
 import { supabase } from '../integrations/supabase/client';
 import { DEFAULT_IMAGES } from '../utils/imageUtils';
+import { ScrollArea } from './ui/scroll-area';
 
 interface ContentEditorProps {
   content?: Content;
@@ -127,7 +128,8 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
       setIsDeleting(true);
       
       // Extract the file name from the URL
-      const fileName = imageUrl.split('/').pop();
+      const urlPath = new URL(imageUrl).pathname;
+      const fileName = urlPath.split('/media/')[1];
       
       if (!fileName) {
         throw new Error("Could not extract file name from URL");
@@ -480,48 +482,49 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
                     <Loader2 className="h-8 w-8 animate-spin text-netflix-gray" />
                   </div>
                 ) : availableImages.length > 0 ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-80 overflow-y-auto p-1">
-                    {availableImages.map((url, index) => (
-                      <div 
-                        key={index}
-                        className={`aspect-video cursor-pointer relative group overflow-hidden rounded-md ${
-                          backdropUrl === url ? 'ring-2 ring-netflix-red' : 'hover:ring-1 hover:ring-netflix-gray/50'
-                        }`}
-                      >
-                        <img 
-                          src={url} 
-                          alt={`Image ${index + 1}`}
-                          className="w-full h-full object-cover"
-                          onClick={() => {
-                            setBackdropUrl(url);
-                            updateFormData('backdropUrl', url);
-                            setBackdropUrl(url);
-                          }}
-                          onError={(e) => {
-                            e.currentTarget.src = DEFAULT_IMAGES.backdrop;
-                          }}
-                        />
-                        <div className="absolute inset-0 flex justify-between items-start p-1">
-                          {backdropUrl === url && (
-                            <div className="bg-netflix-red rounded-full p-1">
-                              <CheckCircle className="h-3 w-3 text-white" />
-                            </div>
-                          )}
-                          
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteImage(url);
+                  <ScrollArea className="max-h-60">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 p-1">
+                      {availableImages.map((url, index) => (
+                        <div 
+                          key={index}
+                          className={`aspect-video cursor-pointer relative group overflow-hidden rounded-md ${
+                            backdropUrl === url ? 'ring-2 ring-netflix-red' : 'hover:ring-1 hover:ring-netflix-gray/50'
+                          }`}
+                        >
+                          <img 
+                            src={url} 
+                            alt={`Image ${index + 1}`}
+                            className="w-full h-full object-cover"
+                            onClick={() => {
+                              setBackdropUrl(url);
+                              updateFormData('backdropUrl', url);
                             }}
-                            className="bg-black/70 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
-                            disabled={isDeleting}
-                          >
-                            <Trash2 className="h-3 w-3 text-white" />
-                          </button>
+                            onError={(e) => {
+                              e.currentTarget.src = DEFAULT_IMAGES.backdrop;
+                            }}
+                          />
+                          <div className="absolute inset-0 flex justify-between items-start p-1">
+                            {backdropUrl === url && (
+                              <div className="bg-netflix-red rounded-full p-1">
+                                <CheckCircle className="h-3 w-3 text-white" />
+                              </div>
+                            )}
+                            
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteImage(url);
+                              }}
+                              className="bg-black/70 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
+                              disabled={isDeleting}
+                            >
+                              <Trash2 className="h-3 w-3 text-white" />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
                 ) : (
                   <div className="text-center py-8 text-netflix-gray border border-dashed border-netflix-gray/30 rounded-md">
                     <p>No images available. Upload a new image using the uploader above.</p>
@@ -533,7 +536,7 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
         </Tabs>
       </CardContent>
       
-      <CardFooter className="flex justify-between pt-4 border-t border-netflix-gray/20">
+      <CardFooter className="flex justify-between pt-4 border-t border-netflix-gray/20 sticky bottom-0 bg-netflix-darkgray z-10">
         <Button 
           variant="outline" 
           onClick={onCancel}
@@ -545,6 +548,8 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
         <Button 
           onClick={handleSave}
           disabled={saving || saved}
+          size="lg"
+          className="bg-netflix-red hover:bg-netflix-red/90"
         >
           {saving ? (
             <>
@@ -556,7 +561,7 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
             </>
           ) : (
             <>
-              <Save className="mr-2 h-4 w-4" /> {isEdit ? 'Update' : 'Save'}
+              <Save className="mr-2 h-4 w-4" /> {isEdit ? 'Update Content' : 'Save Content'}
             </>
           )}
         </Button>

@@ -3,13 +3,52 @@ import { useState, useEffect } from 'react';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { ContentRow } from '../components/ContentRow';
-import { mockContent } from '../data/mockData';
 
 const Series = () => {
   const [seriesContent, setSeriesContent] = useState(() => {
-    // Filter the content for series only
-    return mockContent.filter(item => item.type === 'series');
+    // Load content from localStorage if available, otherwise use mockContent
+    const savedContent = localStorage.getItem('hogflix_content');
+    if (savedContent) {
+      try {
+        const parsedContent = JSON.parse(savedContent);
+        return parsedContent.filter(item => item.type === 'series');
+      } catch (e) {
+        console.error("Error parsing saved content:", e);
+        // Will fall back to mockContent import
+        return [];
+      }
+    }
+    return [];
   });
+  
+  // Refresh content when localStorage changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const savedContent = localStorage.getItem('hogflix_content');
+      if (savedContent) {
+        try {
+          const parsedContent = JSON.parse(savedContent);
+          setSeriesContent(parsedContent.filter(item => item.type === 'series'));
+        } catch (e) {
+          console.error("Error parsing saved content:", e);
+        }
+      }
+    };
+    
+    // Initial load
+    handleStorageChange();
+    
+    // Listen for changes in other tabs/windows
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Custom event for this tab
+    window.addEventListener('content-updated', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('content-updated', handleStorageChange);
+    };
+  }, []);
   
   // Group series by genre
   const seriesByGenre = seriesContent.reduce((acc: {[key: string]: typeof seriesContent}, series) => {
