@@ -84,6 +84,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await supabase.auth.signOut();
       updateAuthState(initialAuthState);
       updateAuthState({ isLoading: false });
+      
+      // Reload the page to ensure all UI elements are properly reset
+      window.location.reload();
     } catch (error) {
       console.error("Error logging out:", error);
       updateAuthState({ isLoading: false });
