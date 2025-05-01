@@ -43,6 +43,8 @@ const Index = () => {
           const trending = contentData.filter(item => item.trending);
           const newFeatured = trending.length > 0 ? trending[0] : contentData[0];
           setFeaturedContent(newFeatured);
+
+          console.log("Featured content with backdrop URL:", newFeatured.backdropUrl);
         }
       } catch (error) {
         console.error("Error loading content:", error);

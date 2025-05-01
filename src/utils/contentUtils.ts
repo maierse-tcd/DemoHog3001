@@ -63,6 +63,12 @@ export const loadContentFromSupabase = async (): Promise<Content[]> => {
 // Save content to Supabase
 export const saveContentToSupabase = async (content: Content): Promise<Content> => {
   try {
+    // Log what is being saved (helpful for debugging image URLs)
+    console.log("Saving content to Supabase with images:", {
+      posterUrl: content.posterUrl,
+      backdropUrl: content.backdropUrl
+    });
+    
     // Convert to DB format
     const dbContent = contentToDbFormat(content);
     
