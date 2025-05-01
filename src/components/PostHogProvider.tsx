@@ -3,6 +3,7 @@ import { PostHogProvider as OriginalPostHogProvider } from 'posthog-js/react';
 import { useEffect, useRef } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { safeIdentify, safeReset, safeCapture } from '../utils/posthogUtils';
+import posthog from 'posthog-js';
 
 // PostHog configuration
 const POSTHOG_KEY = 'phc_O1OL4R6b4MUWUsu8iYorqWfQoGSorFLHLOustqbVB0U';
@@ -35,7 +36,7 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
   // Function to identify the current user in PostHog
   const identifyUser = (email: string, userId: string, metadata?: any) => {
     if (!posthogLoadedRef.current) {
-      console.warn('PostHog not loaded yet, identification will be skipped');
+      console.warn('PostHog not loaded yet, will identify when loaded');
       return;
     }
 
@@ -46,19 +47,26 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
 
     console.log(`Identifying user in PostHog with email: ${email}`);
     
-    // Use email as the primary identifier (more consistent across platforms)
-    safeIdentify(email, {
-      email: email,
-      name: metadata?.name || email?.split('@')[0],
-      supabase_id: userId,
-      $set_once: { first_seen: new Date().toISOString() }
-    });
-    
-    // Capture login event
-    safeCapture('user_identified');
-    
-    // Update current user reference
-    currentUserRef.current = email;
+    // Initialize PostHog directly to ensure it's available
+    if (typeof posthog !== 'undefined' && posthog.identify) {
+      // Use email as the primary identifier (more consistent across platforms)
+      posthog.identify(email, {
+        email: email,
+        name: metadata?.name || email?.split('@')[0],
+        supabase_id: userId,
+        $set_once: { first_seen: new Date().toISOString() }
+      });
+      
+      // Capture login event
+      posthog.capture('user_identified');
+      
+      console.log(`PostHog: User identified with email: ${email}`);
+      
+      // Update current user reference
+      currentUserRef.current = email;
+    } else {
+      console.error('PostHog is not properly initialized for identification');
+    }
   };
 
   // Check if user is already logged in and identify them
@@ -102,18 +110,26 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
           identifyUser(userEmail, session.user.id, session.user.user_metadata);
         } else {
           console.log('PostHog not loaded yet, will identify when loaded');
+          // Store the email to identify later when PostHog is loaded
+          setTimeout(() => {
+            if (posthogLoadedRef.current) {
+              identifyUser(userEmail, session.user.id, session.user.user_metadata);
+            }
+          }, 1000); // Try again after a delay
         }
       } 
       else if (event === 'SIGNED_OUT') {
-        // Capture logout event before resetting
-        safeCapture('user_logged_out');
-        
         // Reset PostHog identity when user signs out
-        console.log('User signed out, resetting PostHog identity');
-        safeReset();
-        
-        // Update current user reference
-        currentUserRef.current = null;
+        if (posthogLoadedRef.current && typeof posthog !== 'undefined' && posthog.reset) {
+          // Capture logout event before resetting
+          posthog.capture('user_logged_out');
+          
+          console.log('User signed out, resetting PostHog identity');
+          posthog.reset();
+          
+          // Update current user reference
+          currentUserRef.current = null;
+        }
       }
     });
     
