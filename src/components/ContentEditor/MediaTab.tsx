@@ -37,6 +37,10 @@ export const MediaTab: React.FC<MediaTabProps> = ({
     onBackdropChange('');
   };
 
+  // Log the available images for debugging
+  console.log('MediaTab - Available images:', availableImages.length);
+  console.log('MediaTab - Selected backdrop URL:', backdropUrl);
+
   return (
     <div className="space-y-6">
       <div>

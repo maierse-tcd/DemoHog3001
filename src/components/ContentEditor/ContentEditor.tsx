@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -92,7 +93,7 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
   const loadAvailableImages = async () => {
     setIsLoadingImages(true);
     try {
-      // Use the new database loading function
+      // Use the database loading function
       const urls = await loadImagesFromDatabase();
       console.log('ContentEditor - Loaded images from database:', urls.length);
       setAvailableImages(urls);

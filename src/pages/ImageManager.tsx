@@ -42,6 +42,7 @@ const ImageManager = () => {
     
     setIsLoadingImages(true);
     try {
+      // Use the new database loading function
       const urls = await loadImagesFromDatabase();
       console.log('ImageManager - Loaded images:', urls.length);
       setUploadedImages(urls);

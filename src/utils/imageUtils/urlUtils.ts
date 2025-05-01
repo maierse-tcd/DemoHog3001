@@ -1,3 +1,4 @@
+
 import { supabase } from "../../integrations/supabase/client";
 
 // Helper function to extract filename from a Supabase storage URL
@@ -125,7 +126,7 @@ export const filterUniqueImages = (urls: string[]): string[] => {
   return Array.from(uniqueUrls);
 };
 
-// NEW FUNCTION: Load images from the content_images database table
+// IMPROVED FUNCTION: Load images from the content_images database table
 export const loadImagesFromDatabase = async (): Promise<string[]> => {
   try {
     console.log('Loading images from content_images database table');
@@ -149,12 +150,19 @@ export const loadImagesFromDatabase = async (): Promise<string[]> => {
     
     // Convert DB records to image URLs
     const imageUrls = images.map(image => {
-      // Get the public URL for the image path
-      const { data } = supabase.storage
-        .from('media')
-        .getPublicUrl(image.image_path);
-        
-      return data.publicUrl;
+      // Check if image_path is already a full URL 
+      if (image.image_path.startsWith('http')) {
+        console.log('Image path is already a full URL:', image.image_path);
+        return image.image_path;
+      } else {
+        // If it's a relative path, get the public URL
+        console.log('Generating public URL for path:', image.image_path);
+        const { data } = supabase.storage
+          .from('media')
+          .getPublicUrl(image.image_path);
+          
+        return data.publicUrl;
+      }
     });
     
     console.log('Generated image URLs:', imageUrls.length);
