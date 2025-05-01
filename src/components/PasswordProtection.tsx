@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { useProfileSettings } from '../contexts/ProfileSettingsContext';
@@ -6,46 +7,72 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from './ui/input';
 import { useToast } from '../hooks/use-toast';
 import { X, Eye, EyeOff, Lock } from 'lucide-react';
+import { supabase } from '../integrations/supabase/client';
 
 export const PasswordProtection: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { settings } = useProfileSettings();
+  const { siteAccessPassword } = useProfileSettings();
   const isPasswordProtected = useFeatureFlagEnabled('access_password');
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentPassword, setCurrentPassword] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Check if already unlocked from localStorage
+  // Fetch the access password from the database
   useEffect(() => {
-    const unlocked = localStorage.getItem('hogflix_unlocked');
-    if (unlocked === 'true') {
-      setIsUnlocked(true);
-    } else if (isPasswordProtected && settings.accessPassword) {
-      setIsModalOpen(true);
-    }
-  }, [isPasswordProtected, settings.accessPassword]);
+    const fetchAccessPassword = async () => {
+      setIsLoading(true);
+      
+      try {
+        if (!isPasswordProtected) {
+          setIsUnlocked(true);
+          setIsModalOpen(false);
+          setIsLoading(false);
+          return;
+        }
 
-  // If password protection is disabled, ensure content is accessible
-  useEffect(() => {
-    if (!isPasswordProtected) {
-      setIsUnlocked(true);
-      setIsModalOpen(false);
-    }
-  }, [isPasswordProtected]);
+        // Check if already unlocked from localStorage (temporary session)
+        const unlocked = localStorage.getItem('hogflix_unlocked');
+        if (unlocked === 'true') {
+          setIsUnlocked(true);
+          setIsLoading(false);
+          return;
+        }
 
+        // Get password from ProfileSettings context
+        if (siteAccessPassword) {
+          setCurrentPassword(siteAccessPassword);
+          // Only show modal if there is an actual password set
+          setIsModalOpen(siteAccessPassword.trim() !== '');
+        } else {
+          // If no site password is set, allow access
+          setIsUnlocked(true);
+        }
+      } catch (error) {
+        console.error("Error fetching access password:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAccessPassword();
+  }, [isPasswordProtected, siteAccessPassword]);
+
+  // Verify the input password against the current password
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // If no password is set or feature flag is off, allow access
-    if (!isPasswordProtected || !settings.accessPassword) {
+    // If no password is set or feature flag is off, always allow access
+    if (!isPasswordProtected || !currentPassword || currentPassword.trim() === '') {
       setIsUnlocked(true);
       setIsModalOpen(false);
       return;
     }
     
     // Check if password matches
-    if (passwordInput === settings.accessPassword) {
+    if (passwordInput === currentPassword) {
       setIsUnlocked(true);
       setIsModalOpen(false);
       localStorage.setItem('hogflix_unlocked', 'true');
@@ -74,14 +101,22 @@ export const PasswordProtection: React.FC<{ children: React.ReactNode }> = ({ ch
     });
   };
 
-  // If not password protected or already unlocked, show the content
-  if (!isPasswordProtected || isUnlocked) {
+  // If still loading or not password protected or already unlocked, show the content
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-netflix-black">
+        <div className="text-netflix-red text-xl">Loading...</div>
+      </div>
+    );
+  }
+  
+  if (!isPasswordProtected || isUnlocked || !currentPassword || currentPassword.trim() === '') {
     return (
       <>
         {children}
         
         {/* Show lock button if site is password protected and unlocked */}
-        {isPasswordProtected && settings.accessPassword && (
+        {isPasswordProtected && currentPassword && currentPassword.trim() !== '' && (
           <Button
             variant="outline"
             size="sm"

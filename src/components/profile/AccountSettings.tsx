@@ -16,9 +16,12 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
 }) => {
   const isAdmin = useFeatureFlagEnabled('is_admin');
   const [showPassword, setShowPassword] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
-  const handleSettingsSave = (e: React.FormEvent) => {
+  const handleSettingsSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
+    
     const formData = new FormData(e.target as HTMLFormElement);
     
     const updatedSettings: Partial<ProfileSettings> = {
@@ -38,12 +41,23 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
       updatedSettings.accessPassword = password;
     }
     
-    updateSettings(updatedSettings);
-
-    toast({
-      title: 'Settings updated',
-      description: 'Your account settings have been saved',
-    });
+    try {
+      await updateSettings(updatedSettings);
+      
+      toast({
+        title: 'Settings updated',
+        description: 'Your account settings have been saved',
+      });
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      toast({
+        title: 'Error',
+        description: 'There was a problem saving your settings',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -132,6 +146,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
               </div>
               <p className="text-xs text-netflix-gray mt-1">
                 When the access_password feature flag is enabled, this password will be required to access Hogflix.
+                The password is stored securely in the database and applies to all site visitors.
               </p>
             </div>
           </div>
@@ -140,8 +155,9 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
         <button 
           type="submit"
           className="bg-netflix-red hover:bg-red-700 text-white px-4 py-2 rounded transition-colors"
+          disabled={isSaving}
         >
-          Save Settings
+          {isSaving ? 'Saving...' : 'Save Settings'}
         </button>
       </form>
     </div>

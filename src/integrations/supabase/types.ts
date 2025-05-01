@@ -101,6 +101,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          access_password: string | null
           avatar_url: string | null
           created_at: string
           email: string | null
@@ -109,6 +110,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          access_password?: string | null
           avatar_url?: string | null
           created_at?: string
           email?: string | null
@@ -117,6 +119,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          access_password?: string | null
           avatar_url?: string | null
           created_at?: string
           email?: string | null
