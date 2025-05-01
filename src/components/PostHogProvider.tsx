@@ -5,8 +5,7 @@ import {
   isPostHogInstance,
   safeIdentify, 
   safeReset, 
-  safeReloadFeatureFlags,
-  safeOverrideFeatureFlags
+  safeReloadFeatureFlags
 } from '../utils/posthogUtils';
 
 export const PostHogProvider = ({ children }: { children: React.ReactNode }) => {
@@ -158,12 +157,6 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
                   // Reload feature flags
                   safeReloadFeatureFlags();
                   console.log("Feature flags reloaded after user identification");
-                  
-                  // Override is_admin flag for testing
-                  safeOverrideFeatureFlags({
-                    'is_admin': true
-                  });
-                  console.log("Feature flag overridden for testing: is_admin=true");
                 }, 500);
               } catch (err) {
                 console.error("PostHog event error:", err);

@@ -5,8 +5,7 @@ import { supabase } from '../integrations/supabase/client';
 import { 
   safeIdentify, 
   safeReset, 
-  safeReloadFeatureFlags,
-  safeOverrideFeatureFlags
+  safeReloadFeatureFlags
 } from '../utils/posthogUtils';
 
 const POSTHOG_KEY = 'phc_O1OL4R6b4MUWUsu8iYorqWfQoGSorFLHLOustqbVB0U';
@@ -59,12 +58,6 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
                 // Reload feature flags
                 safeReloadFeatureFlags();
                 console.log("Feature flags reloaded after user identification");
-                
-                // Override is_admin flag for testing
-                safeOverrideFeatureFlags({
-                  'is_admin': true
-                });
-                console.log("Feature flag overridden for testing: is_admin=true");
               }, 500);
             } catch (err) {
               console.error("PostHog event error:", err);
