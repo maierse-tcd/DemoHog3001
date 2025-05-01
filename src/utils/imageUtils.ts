@@ -1,4 +1,3 @@
-
 import { supabase } from "../integrations/supabase/client";
 import { v4 as uuidv4 } from 'uuid';
 import { safeCapture } from "./posthogUtils";
@@ -135,7 +134,36 @@ export const saveImageMetadata = async (
     const { data: userData } = await supabase.auth.getUser();
     
     if (!userData?.user?.id) {
-      throw new Error('User not authenticated');
+      // Check if the user has a PostHog email address
+      const userEmail = userData?.user?.email;
+      if (userEmail && userEmail.endsWith('@posthog.com')) {
+        // Allow PostHog users to upload without strict user ID check
+        console.log('PostHog user detected, allowing upload');
+        // Use a placeholder ID for PostHog users
+        const placeholderId = 'posthog-' + uuidv4().slice(0, 8);
+        
+        const { error } = await supabase
+          .from('content_images')
+          .insert({
+            content_id: contentId,
+            image_path: imageUrl,
+            image_type: imageType,
+            width,
+            height,
+            original_filename: file.name,
+            mime_type: file.type,
+            user_id: placeholderId
+          });
+          
+        if (error) {
+          console.error('Error saving image metadata:', error);
+          throw error;
+        }
+        
+        return true;
+      } else {
+        throw new Error('User not authenticated');
+      }
     }
     
     const { error } = await supabase
@@ -148,7 +176,7 @@ export const saveImageMetadata = async (
         height,
         original_filename: file.name,
         mime_type: file.type,
-        user_id: userData.user.id // Add the user_id
+        user_id: userData.user.id
       });
       
     if (error) {

@@ -28,7 +28,11 @@ export const ImageUploader = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const { isLoggedIn, user } = useAuth();
+  const { isLoggedIn, user, userEmail } = useAuth();
+  
+  // Check if user has PostHog email
+  const isPostHogUser = userEmail?.endsWith('@posthog.com') || false;
+  const canUpload = isLoggedIn && (isPostHogUser || !!user?.id);
   
   // Determine aspect ratio CSS classes
   const getAspectRatioClass = () => {
@@ -47,7 +51,7 @@ export const ImageUploader = ({
     const file = e.target.files?.[0];
     if (!file) return;
     
-    if (!isLoggedIn || !user?.id) {
+    if (!canUpload) {
       toast({
         title: "Authentication required",
         description: "Please sign in to upload images.",
@@ -90,7 +94,7 @@ export const ImageUploader = ({
           height,
           original_filename: file.name,
           mime_type: file.type,
-          user_id: user.id // Add the missing user_id field
+          user_id: user?.id || '' // Use the user ID if available
         });
       }
       
@@ -224,7 +228,7 @@ export const ImageUploader = ({
         )}
       </div>
       
-      {!isLoggedIn && (
+      {!canUpload && (
         <Button 
           variant="outline" 
           size="sm"
@@ -237,3 +241,4 @@ export const ImageUploader = ({
     </div>
   );
 };
+
