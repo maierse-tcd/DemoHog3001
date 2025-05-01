@@ -9,7 +9,8 @@ import {
   safeRemoveFeatureFlags,
   safeCapture,
   safeOverrideFeatureFlags,
-  safeGetDistinctId
+  safeGetDistinctId,
+  isPostHogInstance
 } from '../utils/posthogUtils';
 
 const POSTHOG_KEY = 'phc_O1OL4R6b4MUWUsu8iYorqWfQoGSorFLHLOustqbVB0U';
@@ -25,9 +26,9 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
     autocapture: true,
     capture_pageleave: true,
     loaded: (posthog: any) => {
-      if (posthog) {
+      if (posthog && isPostHogInstance(posthog)) {
         // Enable automatic feature flag retries with higher frequency
-        if (posthog.featureFlags && posthog.featureFlags._startPolling) {
+        if (posthog.featureFlags && typeof posthog.featureFlags._startPolling === 'function') {
           try {
             posthog.featureFlags._startPolling(30000); // Poll every 30 seconds
             console.log("PostHog loaded with feature flag polling enabled");
