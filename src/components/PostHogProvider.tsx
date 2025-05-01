@@ -24,34 +24,37 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     isInitialized.current = true;
     
     // Initialize PostHog with properly typed IIFE pattern
-    // Using any type for the initialization script since it doesn't match our PostHog interface
     (function(t: Document, e: any){
       var o = '';
       var n = 0;
       var p: HTMLScriptElement;
       var r: HTMLScriptElement;
-      e.__SV||(window.posthog=e,e._i=[],e.init=function(i: string,s: any,a: any){
-        function g(t: any,e: string){
-          var o=e.split(".");
-          2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){
-            t.push([e].concat(Array.prototype.slice.call(arguments,0)))
+      e.__SV || (window.posthog = e, e._i = [], e.init = function(i: string, s: any, a: any) {
+        function g(t: any, e: string){
+          var o = e.split(".");
+          2 == o.length && (t = t[o[0]], e = o[1]), t[e] = function(){
+            t.push([e].concat(Array.prototype.slice.call(arguments, 0)))
           }
         }
-        (p=t.createElement("script")).type="text/javascript",p.async=!0,p.src=s.api_host+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode?.insertBefore(p,r);
-        var u=e;
-        for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(){
-          var t="posthog";
-          return"posthog"!==a&&(t+="."+a),t
-        },u.people.toString=function(){
-          return u.toString()+".people (stub)"
-        },o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys";
-        n=0;
+        (p = t.createElement("script")).type = "text/javascript";
+        p.async = true;
+        p.src = s.api_host + "/static/array.js";
+        (r = t.getElementsByTagName("script")[0]).parentNode?.insertBefore(p, r);
+        
+        var u = e;
+        for(void 0 !== a ? u = e[a] = [] : a = "posthog", u.people = u.people || [], u.toString = function(){
+          var t = "posthog";
+          return "posthog" !== a && (t += "." + a), t
+        }, u.people.toString = function(){
+          return u.toString() + ".people (stub)"
+        }, o = "capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys";
+        n = 0;
         var items = o.split(" ");
         for(; n < items.length; n++) {
           g(u, items[n]);
         }
-        e._i.push([i,s,a])
-      },e.__SV=1)
+        e._i.push([i, s, a])
+      }, e.__SV = 1)
     })(document, window.posthog || []);
     
     // Type assertion to help TypeScript understand posthog is now initialized
