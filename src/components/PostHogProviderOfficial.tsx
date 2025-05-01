@@ -5,7 +5,8 @@ import { supabase } from '../integrations/supabase/client';
 import { 
   safeIdentify, 
   safeReset, 
-  safeReloadFeatureFlags
+  safeReloadFeatureFlags,
+  safeRemoveFeatureFlags
 } from '../utils/posthogUtils';
 
 const POSTHOG_KEY = 'phc_O1OL4R6b4MUWUsu8iYorqWfQoGSorFLHLOustqbVB0U';
@@ -67,9 +68,10 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
         
         if (event === 'SIGNED_OUT') {
           try {
-            // Reset identity after sign out
+            // Reset identity after sign out and clear feature flags
             safeReset();
-            console.log("PostHog: User signed out, identity reset");
+            safeRemoveFeatureFlags();
+            console.log("PostHog: User signed out, identity reset and feature flags cleared");
           } catch (err) {
             console.error("PostHog event error:", err);
           }

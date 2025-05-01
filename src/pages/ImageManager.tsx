@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { ImageUploader } from '../components/ImageUploader';
@@ -10,7 +10,9 @@ import { Input } from '../components/ui/input';
 import { Search, Copy, Save, CheckCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { useFeatureFlagEnabled, usePostHog } from '../hooks/usePostHogFeatures';
+import { useFeatureFlagEnabled } from '../hooks/usePostHogFeatures';
+import { useAuth } from '../hooks/useAuth';
+import { usePostHog } from '../hooks/usePostHogFeatures';
 
 // Create a copy of mockContent that we can modify
 let localMockContent = [...mockContent];
@@ -18,6 +20,8 @@ let localMockContent = [...mockContent];
 const ImageManager = () => {
   // Use the official hook for the is_admin feature flag
   const isAdmin = useFeatureFlagEnabled('is_admin');
+  const { isLoggedIn } = useAuth();
+  const navigate = useNavigate();
   const posthog = usePostHog();
   
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
@@ -27,6 +31,14 @@ const ImageManager = () => {
   const [updatedContentList, setUpdatedContentList] = useState<Content[]>(localMockContent);
   const [savedChanges, setSavedChanges] = useState(false);
   const { toast } = useToast();
+  
+  // Check authentication status and redirect if not logged in
+  useEffect(() => {
+    if (!isLoggedIn) {
+      console.log("User not logged in, redirecting from ImageManager");
+      navigate('/login');
+    }
+  }, [isLoggedIn, navigate]);
   
   // Load any previously saved content from localStorage on component mount
   useEffect(() => {
@@ -54,8 +66,12 @@ const ImageManager = () => {
     }
   }, [searchTerm, updatedContentList]);
   
-  // If user is not an admin (feature flag is explicitly false), redirect to home
-  if (isAdmin === false) {
+  // If user is not logged in or not an admin (feature flag is explicitly false), redirect to home
+  if (!isLoggedIn) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (isLoggedIn && isAdmin === false) {
     return <Navigate to="/" replace />;
   }
   

@@ -5,7 +5,8 @@ import {
   isPostHogInstance,
   safeIdentify, 
   safeReset, 
-  safeReloadFeatureFlags
+  safeReloadFeatureFlags,
+  safeRemoveFeatureFlags
 } from '../utils/posthogUtils';
 
 export const PostHogProvider = ({ children }: { children: React.ReactNode }) => {
@@ -166,9 +167,10 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
           
           if (event === 'SIGNED_OUT') {
             try {
-              // Reset identity after sign out
+              // Reset identity after sign out and clear feature flags
               safeReset();
-              console.log("PostHog: User signed out, identity reset");
+              safeRemoveFeatureFlags();
+              console.log("PostHog: User signed out, identity reset and feature flags cleared");
               processedAuthEvents.current.clear(); // Clear processed events on sign out
             } catch (err) {
               console.error("PostHog event error:", err);

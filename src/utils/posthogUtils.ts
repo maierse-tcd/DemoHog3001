@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for safely interacting with PostHog
  */
@@ -100,6 +99,43 @@ export const safeReloadFeatureFlags = async (): Promise<void> => {
       }
     } catch (err) {
       console.error("Error reloading feature flags:", err);
+    }
+  }
+};
+
+/**
+ * Safely remove all feature flags (clear cache)
+ * This is useful on logout to ensure no feature flags persist
+ */
+export const safeRemoveFeatureFlags = (): void => {
+  if (typeof window !== 'undefined' && window.posthog) {
+    try {
+      if (isPostHogInstance(window.posthog) && window.posthog.featureFlags) {
+        // If there's a direct method to clear flags, use it
+        if (typeof window.posthog.featureFlags.clear === 'function') {
+          window.posthog.featureFlags.clear();
+        } 
+        // Otherwise override with empty values
+        else if (typeof window.posthog.featureFlags.override === 'function') {
+          // Get all currently active flags
+          if (window.posthog.featureFlags.currentFlags) {
+            const currentFlags = Object.keys(window.posthog.featureFlags.currentFlags);
+            
+            // Create an object with all flags set to false
+            const resetFlags: Record<string, boolean> = {};
+            currentFlags.forEach(flag => {
+              resetFlags[flag] = false;
+            });
+            
+            // Override all flags to false
+            window.posthog.featureFlags.override(resetFlags);
+          }
+        }
+        
+        console.log("Feature flags cleared");
+      }
+    } catch (err) {
+      console.error("Error clearing feature flags:", err);
     }
   }
 };
