@@ -1,5 +1,5 @@
 
-import { useFeatureFlagEnabled } from '../hooks/usePostHogFeatures';
+import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { Link } from 'react-router-dom';
 import { Image } from 'lucide-react';
 

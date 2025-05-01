@@ -16,7 +16,7 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
   const options = {
     api_host: 'https://eu-ph.livehog.com',
     ui_host: POSTHOG_HOST,
-    persistence: 'localStorage' as const, // Use type assertion to ensure it matches expected literal types
+    persistence: 'localStorage' as const,
     persistence_name: 'ph_hogflix_user',
     capture_pageview: false,
     autocapture: false,
