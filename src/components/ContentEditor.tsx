@@ -17,6 +17,8 @@ import { supabase } from '../integrations/supabase/client';
 import { DEFAULT_IMAGES } from '../utils/imageUtils';
 import { ScrollArea } from './ui/scroll-area';
 import { loadImagesFromDatabase, extractFilenameFromUrl } from '../utils/imageUtils/urlUtils';
+import { DetailsTab } from './ContentEditor/DetailsTab';
+import { MediaTab } from './ContentEditor/MediaTab';
 
 // Define ContentEditorProps interface
 interface ContentEditorProps {
