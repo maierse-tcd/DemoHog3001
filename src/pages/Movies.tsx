@@ -4,62 +4,39 @@ import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { ContentRow } from '../components/ContentRow';
 import { Content } from '../data/mockData';
+import { loadContentFromSupabase } from '../utils/contentUtils';
 
 const Movies = () => {
-  const [movieContent, setMovieContent] = useState<Content[]>(() => {
-    // Load content from localStorage if available, otherwise use empty array
-    const savedContent = localStorage.getItem('hogflix_content');
-    if (savedContent) {
-      try {
-        const parsedContent = JSON.parse(savedContent);
-        // Ensure we return an array of Content items filtered for movies
-        return Array.isArray(parsedContent) 
-          ? parsedContent.filter((item: Content) => item.type === 'movie')
-          : [];
-      } catch (e) {
-        console.error("Error parsing saved content:", e);
-        return [];
-      }
-    }
-    return [];
-  });
+  const [movieContent, setMovieContent] = useState<Content[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Refresh content when localStorage changes
+  // Load movie content from Supabase
   useEffect(() => {
-    const handleStorageChange = () => {
-      const savedContent = localStorage.getItem('hogflix_content');
-      if (savedContent) {
-        try {
-          const parsedContent = JSON.parse(savedContent);
-          // Ensure we're setting an array
-          if (Array.isArray(parsedContent)) {
-            setMovieContent(parsedContent.filter((item: Content) => item.type === 'movie'));
-          } else {
-            console.error("Content in localStorage is not an array:", parsedContent);
-            setMovieContent([]);
-          }
-        } catch (e) {
-          console.error("Error parsing saved content:", e);
-          setMovieContent([]);
-        }
-      } else {
-        // If content is removed from localStorage, set to empty array
-        setMovieContent([]);
+    const loadMovies = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Load all content from Supabase
+        const allContent = await loadContentFromSupabase();
+        
+        // Filter for movies only
+        const movies = allContent.filter(item => item.type === 'movie');
+        setMovieContent(movies);
+      } catch (error) {
+        console.error("Error loading movies:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
     
     // Initial load
-    handleStorageChange();
+    loadMovies();
     
-    // Listen for changes in other tabs/windows
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Custom event for this tab
-    window.addEventListener('content-updated', handleStorageChange);
+    // Listen for content updates
+    window.addEventListener('content-updated', loadMovies);
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('content-updated', handleStorageChange);
+      window.removeEventListener('content-updated', loadMovies);
     };
   }, []);
   
@@ -76,6 +53,14 @@ const Movies = () => {
   useEffect(() => {
     console.log('Analytics Event: Page View - Movies');
   }, []);
+  
+  if (isLoading) {
+    return (
+      <div className="bg-netflix-black min-h-screen flex items-center justify-center">
+        <div className="text-netflix-red text-2xl">Loading movies...</div>
+      </div>
+    );
+  }
   
   return (
     <div className="bg-netflix-black min-h-screen">

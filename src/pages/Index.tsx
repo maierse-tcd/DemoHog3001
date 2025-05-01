@@ -4,15 +4,17 @@ import { Navbar } from '../components/Navbar';
 import { HeroSection } from '../components/HeroSection';
 import { ContentRow } from '../components/ContentRow';
 import { Footer } from '../components/Footer';
-import { mockCategories, mockContent, getFeaturedContent, getContentByCategory, Content } from '../data/mockData';
+import { mockCategories, mockContent, getFeaturedContent, Content } from '../data/mockData';
 import { safeGetDistinctId } from '../utils/posthogUtils';
 import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { useAuth } from '../hooks/useAuth';
+import { loadContentFromSupabase, initializeContentDatabase } from '../utils/contentUtils';
 
 const Index = () => {
-  const [featuredContent, setFeaturedContent] = useState(getFeaturedContent());
+  const [featuredContent, setFeaturedContent] = useState<Content>(getFeaturedContent());
   const [categories, setCategories] = useState(mockCategories);
-  const [content, setContent] = useState<Content[]>(mockContent);
+  const [content, setContent] = useState<Content[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Feature flag checks
   const isAdmin = useFeatureFlagEnabled('is_admin');
@@ -21,42 +23,42 @@ const Index = () => {
   // Auth check
   const { isLoggedIn } = useAuth();
   
-  // Load content from localStorage on mount and when it changes
+  // Load content from Supabase on mount
   useEffect(() => {
-    const loadContent = () => {
-      const savedContent = localStorage.getItem('hogflix_content');
-      if (savedContent) {
-        try {
-          const parsedContent = JSON.parse(savedContent);
-          if (Array.isArray(parsedContent) && parsedContent.length > 0) {
-            setContent(parsedContent);
-            
-            // Also update featured content if it exists in the saved content
-            const featured = parsedContent.find(item => item.id === featuredContent.id);
-            if (featured) {
-              setFeaturedContent(featured);
-            }
-          }
-        } catch (e) {
-          console.error("Error parsing saved content:", e);
+    const loadContent = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Initialize database with mock data if it's empty
+        await initializeContentDatabase(mockContent);
+        
+        // Then load all content from the database
+        const contentData = await loadContentFromSupabase();
+        
+        if (contentData.length > 0) {
+          setContent(contentData);
+          
+          // Set the first trending item as featured content, or the first item if no trending
+          const trending = contentData.filter(item => item.trending);
+          const newFeatured = trending.length > 0 ? trending[0] : contentData[0];
+          setFeaturedContent(newFeatured);
         }
+      } catch (error) {
+        console.error("Error loading content:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
     
-    // Initial load
     loadContent();
     
-    // Listen for changes in other tabs/windows
-    window.addEventListener('storage', loadContent);
-    
-    // Custom event for this tab
+    // Set up event listener for content changes
     window.addEventListener('content-updated', loadContent);
     
     return () => {
-      window.removeEventListener('storage', loadContent);
       window.removeEventListener('content-updated', loadContent);
     };
-  }, [featuredContent.id]);
+  }, []);
   
   // Simulate page view analytics event
   useEffect(() => {
@@ -76,11 +78,13 @@ const Index = () => {
   
   // Simulate content impression analytics events
   useEffect(() => {
-    console.log('Analytics Event: Featured Content Impression', {
-      contentId: featuredContent.id,
-      title: featuredContent.title,
-      position: 'hero'
-    });
+    if (featuredContent) {
+      console.log('Analytics Event: Featured Content Impression', {
+        contentId: featuredContent.id,
+        title: featuredContent.title,
+        position: 'hero'
+      });
+    }
     
     categories.forEach(category => {
       console.log('Analytics Event: Row Impression', {
@@ -117,6 +121,14 @@ const Index = () => {
     // Default implementation for other categories
     return content.slice(0, 10);
   };
+
+  if (isLoading) {
+    return (
+      <div className="bg-netflix-black min-h-screen flex items-center justify-center">
+        <div className="text-netflix-red text-2xl">Loading content...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-netflix-black min-h-screen">

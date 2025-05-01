@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -12,6 +11,7 @@ import { supabase } from '../../integrations/supabase/client';
 import { DetailsTab } from './DetailsTab';
 import { MediaTab } from './MediaTab';
 import { loadImagesFromStorage, filterUniqueImages, extractFilenameFromUrl } from '../../utils/imageUtils/urlUtils';
+import { saveContentToSupabase } from '../../utils/contentUtils';
 
 // Define ContentEditorProps interface
 interface ContentEditorProps {
@@ -183,7 +183,7 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
   };
   
   // Handle form submission
-  const handleSave = () => {
+  const handleSave = async () => {
     setSaving(true);
     
     // Client-side validation
@@ -216,23 +216,9 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
     
     console.log('Saving content with backdrop URL:', backdropUrl);
     
-    // Save to local storage for persistence
     try {
-      // Load existing content
-      const existingContentJson = localStorage.getItem('hogflix_content');
-      let existingContent = existingContentJson ? JSON.parse(existingContentJson) : [...mockContent];
-      
-      // Update or add new content
-      if (isEdit) {
-        existingContent = existingContent.map((item: Content) => 
-          item.id === updatedContent.id ? updatedContent : item
-        );
-      } else {
-        existingContent.push(updatedContent);
-      }
-      
-      // Save back to local storage
-      localStorage.setItem('hogflix_content', JSON.stringify(existingContent));
+      // Save to Supabase
+      const savedContent = await saveContentToSupabase(updatedContent);
       
       // Dispatch a custom event to notify other components about the change
       window.dispatchEvent(new Event('content-updated'));
@@ -246,7 +232,7 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
       
       // Call the onSave callback
       if (onSave) {
-        onSave(updatedContent);
+        onSave(savedContent);
       }
       
       // Show success animation

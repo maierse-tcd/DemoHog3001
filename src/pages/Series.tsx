@@ -4,62 +4,39 @@ import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { ContentRow } from '../components/ContentRow';
 import { Content } from '../data/mockData';
+import { loadContentFromSupabase } from '../utils/contentUtils';
 
 const Series = () => {
-  const [seriesContent, setSeriesContent] = useState<Content[]>(() => {
-    // Load content from localStorage if available, otherwise use empty array
-    const savedContent = localStorage.getItem('hogflix_content');
-    if (savedContent) {
-      try {
-        const parsedContent = JSON.parse(savedContent);
-        // Ensure we return an array of Content items filtered for series
-        return Array.isArray(parsedContent) 
-          ? parsedContent.filter((item: Content) => item.type === 'series')
-          : [];
-      } catch (e) {
-        console.error("Error parsing saved content:", e);
-        return [];
-      }
-    }
-    return [];
-  });
+  const [seriesContent, setSeriesContent] = useState<Content[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Refresh content when localStorage changes
+  // Load series content from Supabase
   useEffect(() => {
-    const handleStorageChange = () => {
-      const savedContent = localStorage.getItem('hogflix_content');
-      if (savedContent) {
-        try {
-          const parsedContent = JSON.parse(savedContent);
-          // Ensure we're setting an array
-          if (Array.isArray(parsedContent)) {
-            setSeriesContent(parsedContent.filter((item: Content) => item.type === 'series'));
-          } else {
-            console.error("Content in localStorage is not an array:", parsedContent);
-            setSeriesContent([]);
-          }
-        } catch (e) {
-          console.error("Error parsing saved content:", e);
-          setSeriesContent([]);
-        }
-      } else {
-        // If content is removed from localStorage, set to empty array
-        setSeriesContent([]);
+    const loadSeries = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Load all content from Supabase
+        const allContent = await loadContentFromSupabase();
+        
+        // Filter for series only
+        const series = allContent.filter(item => item.type === 'series');
+        setSeriesContent(series);
+      } catch (error) {
+        console.error("Error loading series:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
     
     // Initial load
-    handleStorageChange();
+    loadSeries();
     
-    // Listen for changes in other tabs/windows
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Custom event for this tab
-    window.addEventListener('content-updated', handleStorageChange);
+    // Listen for content updates
+    window.addEventListener('content-updated', loadSeries);
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('content-updated', handleStorageChange);
+      window.removeEventListener('content-updated', loadSeries);
     };
   }, []);
   
@@ -76,6 +53,14 @@ const Series = () => {
   useEffect(() => {
     console.log('Analytics Event: Page View - Series');
   }, []);
+  
+  if (isLoading) {
+    return (
+      <div className="bg-netflix-black min-h-screen flex items-center justify-center">
+        <div className="text-netflix-red text-2xl">Loading series...</div>
+      </div>
+    );
+  }
   
   return (
     <div className="bg-netflix-black min-h-screen">

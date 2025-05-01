@@ -51,6 +51,54 @@ export type Database = {
         }
         Relationships: []
       }
+      content_items: {
+        Row: {
+          age_rating: string | null
+          backdrop_url: string | null
+          created_at: string | null
+          description: string | null
+          duration: string | null
+          genre: string[]
+          id: string
+          poster_url: string | null
+          release_year: string | null
+          title: string
+          trending: boolean | null
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          age_rating?: string | null
+          backdrop_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration?: string | null
+          genre?: string[]
+          id?: string
+          poster_url?: string | null
+          release_year?: string | null
+          title: string
+          trending?: boolean | null
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          age_rating?: string | null
+          backdrop_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration?: string | null
+          genre?: string[]
+          id?: string
+          poster_url?: string | null
+          release_year?: string | null
+          title?: string
+          trending?: boolean | null
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
