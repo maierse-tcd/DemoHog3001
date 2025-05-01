@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
@@ -33,6 +34,46 @@ const ImageManager = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [isLoadingImages, setIsLoadingImages] = useState(false);
   const { toast } = useToast();
+  
+  // Define loadUploadedImages BEFORE it's used in useEffect
+  const loadUploadedImages = async () => {
+    if (!isLoggedIn || !user?.id) return;
+    
+    setIsLoadingImages(true);
+    try {
+      const { data: imageFiles, error } = await supabase.storage
+        .from('media')
+        .list('', {
+          limit: 100,
+          sortBy: { column: 'created_at', order: 'desc' }
+        });
+        
+      if (error) {
+        throw error;
+      }
+      
+      if (imageFiles) {
+        // Get public URLs for each file
+        const urls = imageFiles.map(file => {
+          const { data } = supabase.storage
+            .from('media')
+            .getPublicUrl(file.name);
+          return data.publicUrl;
+        });
+        
+        setUploadedImages(urls);
+      }
+    } catch (error) {
+      console.error("Error loading images:", error);
+      toast({
+        title: "Failed to load images",
+        description: "There was a problem loading your uploaded images.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingImages(false);
+    }
+  };
   
   // Check authentication status and redirect if not logged in
   useEffect(() => {
@@ -91,45 +132,6 @@ const ImageManager = () => {
       </div>
     );
   }
-  
-  const loadUploadedImages = async () => {
-    if (!isLoggedIn || !user?.id) return;
-    
-    setIsLoadingImages(true);
-    try {
-      const { data: imageFiles, error } = await supabase.storage
-        .from('media')
-        .list('', {
-          limit: 100,
-          sortBy: { column: 'created_at', order: 'desc' }
-        });
-        
-      if (error) {
-        throw error;
-      }
-      
-      if (imageFiles) {
-        // Get public URLs for each file
-        const urls = imageFiles.map(file => {
-          const { data } = supabase.storage
-            .from('media')
-            .getPublicUrl(file.name);
-          return data.publicUrl;
-        });
-        
-        setUploadedImages(urls);
-      }
-    } catch (error) {
-      console.error("Error loading images:", error);
-      toast({
-        title: "Failed to load images",
-        description: "There was a problem loading your uploaded images.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoadingImages(false);
-    }
-  };
   
   const handleContentSaved = (content: Content) => {
     // If we're editing, find and replace the content
