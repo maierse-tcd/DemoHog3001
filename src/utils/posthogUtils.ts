@@ -42,11 +42,6 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
   
   try {
     if (isPostHogInstance(window.posthog)) {
-      // Check if PostHog is ready to identify users
-      if (!window.posthog.config) {
-        console.warn("PostHog not fully initialized yet, identification may fail");
-      }
-      
       // Get current distinct ID to check if we need to identify
       const currentId = window.posthog.get_distinct_id?.();
       console.log(`Current PostHog distinct ID: ${currentId}, identifying as: ${distinctId}`);
