@@ -130,28 +130,24 @@ export const initializeContentDatabase = async (mockContent: Content[]): Promise
     if (count === 0) {
       console.log("Initializing database with mock content...");
       
-      // First, we need to enable RLS bypass for this operation
-      // by using the `auth.admin()` function if available
-      const serviceRoleClient = supabase.auth.admin ? supabase.auth.admin() : supabase;
-      
       try {
         // Use the seed_content_items function in the database to handle all inserts at once
-        const { error: seedError } = await serviceRoleClient.rpc('seed_content_items', {
-          content_items: JSON.stringify(
-            mockContent.map(item => ({
-              id: item.id,
-              title: item.title,
-              description: item.description,
-              type: item.type,
-              poster_url: item.posterUrl,
-              backdrop_url: item.backdropUrl,
-              genre: item.genre,
-              release_year: item.releaseYear,
-              age_rating: item.ageRating,
-              duration: item.duration,
-              trending: item.trending
-            }))
-          )
+        const contentItems = mockContent.map(item => ({
+          id: item.id,
+          title: item.title,
+          description: item.description,
+          type: item.type,
+          poster_url: item.posterUrl,
+          backdrop_url: item.backdropUrl,
+          genre: item.genre,
+          release_year: item.releaseYear,
+          age_rating: item.ageRating,
+          duration: item.duration,
+          trending: item.trending
+        }));
+        
+        const { error: seedError } = await supabase.rpc('seed_content_items', {
+          content_items: JSON.stringify(contentItems)
         });
         
         if (seedError) {
@@ -176,79 +172,34 @@ export const initializeContentDatabase = async (mockContent: Content[]): Promise
   }
 };
 
-// Alternative manual seeding method that creates an SQL statement directly
+// Alternative manual seeding method with individual inserts
 const seedContentItemsManually = async (mockContent: Content[]): Promise<void> => {
-  console.log("Falling back to manual seeding method with SQL...");
+  console.log("Falling back to manual seeding method with direct inserts...");
   
   try {
-    // Create a single SQL statement to insert all content at once
-    // This bypasses RLS policies because it's executed directly as SQL
-    const items = mockContent.map(item => ({
-      id: item.id,
-      title: item.title,
-      description: item.description || null,
-      type: item.type,
-      poster_url: item.posterUrl || null,
-      backdrop_url: item.backdropUrl || null,
-      genre: item.genre,
-      release_year: item.releaseYear || null,
-      age_rating: item.ageRating || null,
-      duration: item.duration || null,
-      trending: item.trending || false
-    }));
-    
-    // Using the .rpc() method to execute a direct SQL query
-    // This might require enabling "pg_catalog" in Supabase policies
-    const { error } = await supabase.rpc('execute_sql', {
-      sql_statement: `
-        INSERT INTO public.content_items 
-        (id, title, description, type, poster_url, backdrop_url, genre, release_year, age_rating, duration, trending)
-        VALUES 
-        ${items.map(item => `(
-          '${item.id}', 
-          '${item.title.replace(/'/g, "''")}', 
-          ${item.description ? `'${item.description.replace(/'/g, "''")}'` : 'NULL'}, 
-          '${item.type}', 
-          ${item.poster_url ? `'${item.poster_url}'` : 'NULL'}, 
-          ${item.backdrop_url ? `'${item.backdrop_url}'` : 'NULL'}, 
-          ARRAY[${item.genre.map(g => `'${g}'`).join(', ')}]::text[], 
-          ${item.release_year ? `'${item.release_year}'` : 'NULL'}, 
-          ${item.age_rating ? `'${item.age_rating}'` : 'NULL'}, 
-          ${item.duration ? `'${item.duration}'` : 'NULL'}, 
-          ${item.trending}
-        )`).join(', ')}
-        ON CONFLICT (id) DO NOTHING;
-      `
-    });
-    
-    if (error) {
-      console.error("Error executing SQL for seeding:", error);
-      console.log("Attempting direct API inserts with serviceRole client...");
+    // Try direct API inserts with a public client
+    for (const [index, item] of mockContent.entries()) {
+      const { error: insertError } = await supabase
+        .from('content_items')
+        .insert({
+          id: item.id,
+          title: item.title,
+          description: item.description || null,
+          type: item.type,
+          poster_url: item.posterUrl || null,
+          backdrop_url: item.backdropUrl || null,
+          genre: item.genre,
+          release_year: item.releaseYear || null,
+          age_rating: item.ageRating || null,
+          duration: item.duration || null,
+          trending: item.trending || false
+        });
       
-      // As a last resort, try direct API inserts
-      const { SUPABASE_SERVICE_ROLE_KEY } = import.meta.env;
-      if (SUPABASE_SERVICE_ROLE_KEY) {
-        const { createClient } = await import('@supabase/supabase-js');
-        const adminClient = createClient(
-          import.meta.env.VITE_SUPABASE_URL || "",
-          SUPABASE_SERVICE_ROLE_KEY
-        );
-        
-        // Insert items with the admin client that bypasses RLS
-        for (const item of items) {
-          const { error: insertError } = await adminClient
-            .from('content_items')
-            .insert(item);
-          
-          if (insertError) {
-            console.error(`Error inserting item ${item.id} with admin client:`, insertError);
-          }
-        }
-      } else {
-        console.error("Missing SUPABASE_SERVICE_ROLE_KEY environment variable for admin access");
+      if (insertError) {
+        console.error(`Error inserting item ${item.id}:`, insertError);
       }
     }
   } catch (error) {
-    console.error("Failed during manual SQL seeding:", error);
+    console.error("Failed during manual seeding:", error);
   }
 };
