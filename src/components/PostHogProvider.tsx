@@ -23,41 +23,85 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     
     isInitialized.current = true;
     
-    // Initialize PostHog with properly typed IIFE pattern
-    (function(t: Document, e: any){
-      var o = '';
-      var n = 0;
-      var p: HTMLScriptElement;
-      var r: HTMLScriptElement;
-      e.__SV || (window.posthog = e, e._i = [], e.init = function(i: string, s: any, a: any) {
-        function g(t: any, e: string){
-          var o = e.split(".");
-          2 == o.length && (t = t[o[0]], e = o[1]), t[e] = function(){
-            t.push([e].concat(Array.prototype.slice.call(arguments, 0)))
-          }
-        }
-        (p = t.createElement("script")).type = "text/javascript";
-        p.async = true;
-        p.src = s.api_host + "/static/array.js";
-        (r = t.getElementsByTagName("script")[0]).parentNode?.insertBefore(p, r);
+    // Initialize PostHog - using a modern approach that TypeScript can understand
+    // Instead of an IIFE with complex syntax, we'll use a more readable approach
+    if (!window.posthog) {
+      // Create empty posthog object
+      window.posthog = [];
+      
+      // Add PostHog script to page
+      const script = document.createElement('script');
+      script.async = true;
+      script.src = 'https://eu-ph.livehog.com/static/array.js';
+      document.head.appendChild(script);
+      
+      // Define posthog object
+      const posthog = window.posthog as any;
+      
+      // Initialize basic functionality
+      if (!posthog.__SV) {
+        posthog.__SV = 1;
+        posthog._i = [];
         
-        var u = e;
-        for(void 0 !== a ? u = e[a] = [] : a = "posthog", u.people = u.people || [], u.toString = function(){
-          var t = "posthog";
-          return "posthog" !== a && (t += "." + a), t
-        }, u.people.toString = function(){
-          return u.toString() + ".people (stub)"
-        }, o = "capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys";
-        n = 0;
-        var items = o.split(" ");
-        for(; n < items.length; n++) {
-          g(u, items[n]);
-        }
-        e._i.push([i, s, a])
-      }, e.__SV = 1)
-    })(document, window.posthog || []);
+        // Define the init function
+        posthog.init = function(apiKey: string, config: any, name?: string) {
+          // Store the initialization parameters
+          posthog._i.push([apiKey, config, name]);
+          
+          // Set up the proper namespace based on name parameter
+          let instance = posthog;
+          if (name !== undefined) {
+            instance = posthog[name] = [];
+          } else {
+            name = 'posthog';
+          }
+          
+          // Setup people object
+          instance.people = instance.people || [];
+          
+          // Create toString methods
+          instance.toString = function() {
+            return name === 'posthog' ? 'posthog' : 'posthog.' + name;
+          };
+          
+          instance.people.toString = function() {
+            return instance.toString() + '.people (stub)';
+          };
+          
+          // Define all the methods that posthog supports
+          const methods = [
+            'capture', 'identify', 'alias', 'people.set', 'people.set_once',
+            'set_config', 'register', 'register_once', 'unregister',
+            'opt_out_capturing', 'has_opted_out_capturing', 'opt_in_capturing',
+            'reset', 'isFeatureEnabled', 'onFeatureFlags', 'getFeatureFlag',
+            'getFeatureFlagPayload', 'reloadFeatureFlags', 'group',
+            'updateEarlyAccessFeatureEnrollment', 'getEarlyAccessFeatures',
+            'getActiveMatchingSurveys', 'getSurveys'
+          ];
+          
+          // Add stub methods
+          methods.forEach(methodPath => {
+            // Handle nested methods like people.set
+            const parts = methodPath.split('.');
+            let target = instance;
+            let method = methodPath;
+            
+            if (parts.length === 2) {
+              target = target[parts[0]];
+              method = parts[1];
+            }
+            
+            // Create the stub method
+            target[method] = function() {
+              // This pushes the method name and arguments for later processing
+              target.push([method].concat(Array.prototype.slice.call(arguments, 0)));
+            };
+          });
+        };
+      }
+    }
     
-    // Type assertion to help TypeScript understand posthog is now initialized
+    // Initialize PostHog with our actual config
     const posthog = window.posthog as any;
     
     posthog?.init('phc_O1OL4R6b4MUWUsu8iYorqWfQoGSorFLHLOustqbVB0U', {
@@ -67,9 +111,9 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
       persistence_name: 'ph_hogflix_user',
       capture_pageview: false,
       autocapture: false,
-      loaded: function(posthog: any) {
+      loaded: function(loadedPosthog: any) {
         // Load feature flags when PostHog is loaded
-        posthog.reloadFeatureFlags();
+        loadedPosthog.reloadFeatureFlags();
         console.log("PostHog loaded and feature flags requested");
       }
     });
