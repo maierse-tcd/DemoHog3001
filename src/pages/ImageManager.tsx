@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
@@ -15,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { ScrollArea } from '../components/ui/scroll-area';
 import { ContentLibrary } from '../components/ImageManager/ContentLibrary';
 import { GalleryView } from '../components/ImageManager/GalleryView';
-import { extractFilenameFromUrl, loadImagesFromDatabase } from '../utils/imageUtils/urlUtils';
+import { extractFilenameFromUrl } from '../utils/imageUtils/urlUtils';
 
 const ImageManager = () => {
   // Use the official hook for the is_admin feature flag
@@ -34,7 +33,7 @@ const ImageManager = () => {
   const [isLoadingImages, setIsLoadingImages] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  // Load uploaded images from the database
+  // Load uploaded images using direct storage listing
   const loadUploadedImages = async () => {
     if (!isLoggedIn && !user?.id) {
       console.log('ImageManager - User not logged in, but we will try to load images anyway');
@@ -42,10 +41,32 @@ const ImageManager = () => {
     
     setIsLoadingImages(true);
     try {
-      // Use the new database loading function
-      const urls = await loadImagesFromDatabase();
-      console.log('ImageManager - Loaded images:', urls.length);
-      setUploadedImages(urls);
+      // Directly query storage instead of using the database
+      const { data: imageFiles, error } = await supabase.storage
+        .from('media')
+        .list('', {
+          limit: 100,
+          sortBy: { column: 'created_at', order: 'desc' }
+        });
+        
+      if (error) {
+        throw error;
+      }
+      
+      if (imageFiles) {
+        console.log('ImageManager - Found image files in storage:', imageFiles.length);
+        const urls = imageFiles.map(file => {
+          const { data } = supabase.storage
+            .from('media')
+            .getPublicUrl(file.name);
+          return data.publicUrl;
+        });
+        
+        console.log('ImageManager - Generated URLs from storage:', urls.length);
+        setUploadedImages(urls);
+      } else {
+        setUploadedImages([]);
+      }
     } catch (error) {
       console.error("Error loading images:", error);
       toast({

@@ -20,8 +20,8 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
   onDeleteImage,
   isDeleting
 }) => {
-  // Only include valid Supabase URLs
-  const filteredImages = filterUniqueImages(uploadedImages);
+  // We're now getting direct storage URLs, so we need to filter them
+  const filteredImages = uploadedImages;
   
   useEffect(() => {
     // Log the filtered images for debugging

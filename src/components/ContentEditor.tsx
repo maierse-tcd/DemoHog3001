@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
@@ -17,13 +16,22 @@ import { mockContent, Content, Genre } from '../data/mockData';
 import { supabase } from '../integrations/supabase/client';
 import { DEFAULT_IMAGES } from '../utils/imageUtils';
 import { ScrollArea } from './ui/scroll-area';
+import { loadImagesFromDatabase, extractFilenameFromUrl } from '../utils/imageUtils/urlUtils';
 
+// Define ContentEditorProps interface
 interface ContentEditorProps {
   content?: Content;
   onSave?: (content: Content) => void;
   onCancel?: () => void;
   isEdit?: boolean;
 }
+
+// Image size configurations - consistently use landscape format
+export const IMAGE_SIZES = {
+  poster: { width: 600, height: 900 },  // Only used when explicitly needed
+  backdrop: { width: 1280, height: 720 }, // 16:9 aspect ratio
+  thumbnail: { width: 480, height: 270 }  // 16:9 aspect ratio
+};
 
 // Available genres based on the mockData
 const AVAILABLE_GENRES: Genre[] = [
@@ -58,7 +66,7 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
   const [backdropUrl, setBackdropUrl] = useState(formData.backdropUrl || '');
   const [availableImages, setAvailableImages] = useState<string[]>([]);
   const [isLoadingImages, setIsLoadingImages] = useState(false);
-  const [activeTab, setActiveTab] = useState('details');
+  const [activeTab, setActiveTab] useState('details');
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   
@@ -90,27 +98,10 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
   const loadAvailableImages = async () => {
     setIsLoadingImages(true);
     try {
-      const { data: imageFiles, error } = await supabase.storage
-        .from('media')
-        .list('', {
-          limit: 100,
-          sortBy: { column: 'created_at', order: 'desc' }
-        });
-        
-      if (error) {
-        throw error;
-      }
-      
-      if (imageFiles) {
-        const urls = imageFiles.map(file => {
-          const { data } = supabase.storage
-            .from('media')
-            .getPublicUrl(file.name);
-          return data.publicUrl;
-        });
-        
-        setAvailableImages(urls);
-      }
+      // Use the database loading function instead of directly querying storage
+      const urls = await loadImagesFromDatabase();
+      console.log('ContentEditor - Loaded images from database:', urls.length);
+      setAvailableImages(urls);
     } catch (error) {
       console.error("Error loading images:", error);
       toast({
@@ -128,26 +119,36 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
       setIsDeleting(true);
       
       // Extract the file name from the URL
-      const urlPath = new URL(imageUrl).pathname;
-      const fileName = urlPath.split('/media/')[1];
+      const fileName = extractFilenameFromUrl(imageUrl);
       
       if (!fileName) {
         throw new Error("Could not extract file name from URL");
       }
       
-      console.log("Deleting image:", fileName);
+      // First delete from database
+      const { error: dbError } = await supabase
+        .from('content_images')
+        .delete()
+        .eq('image_path', fileName);
+        
+      if (dbError) {
+        console.error("Database delete error:", dbError);
+        // Continue with storage deletion
+      }
+      
+      console.log("Deleting image from storage:", fileName);
       
       // Delete the file from Supabase storage
-      const { error } = await supabase.storage
+      const { error: storageError } = await supabase.storage
         .from('media')
         .remove([fileName]);
       
-      if (error) {
-        console.error("Supabase delete error:", error);
-        throw error;
+      if (storageError) {
+        console.error("Supabase storage delete error:", storageError);
+        throw storageError;
       }
       
-      console.log("Image deleted successfully");
+      console.log("Image deleted successfully from both DB and storage");
       
       // Remove from the local state
       setAvailableImages(prev => prev.filter(url => url !== imageUrl));
@@ -213,6 +214,8 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
       genre: Array.from(selectedGenres)
     };
     
+    console.log('Saving content with backdrop URL:', backdropUrl);
+    
     // Save to local storage for persistence
     try {
       // Load existing content
@@ -267,8 +270,15 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
   };
   
   const handleImageUploaded = (imageUrl: string) => {
+    console.log('New image uploaded:', imageUrl);
     // Add to available images list
     setAvailableImages(prev => [imageUrl, ...prev]);
+  };
+
+  const handleBackdropChange = (url: string) => {
+    console.log('Backdrop URL changed to:', url);
+    setBackdropUrl(url);
+    updateFormData('backdropUrl', url);
   };
 
   return (
@@ -290,251 +300,29 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
           </TabsList>
           
           {/* Basic Details Tab */}
-          <TabsContent value="details" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Title *</Label>
-                <Input 
-                  id="title" 
-                  value={formData.title} 
-                  onChange={(e) => updateFormData('title', e.target.value)}
-                  placeholder="Enter title" 
-                  className="bg-black/40 border-netflix-gray/40"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="type">Content Type *</Label>
-                <Select 
-                  value={formData.type} 
-                  onValueChange={(value: 'movie' | 'series') => updateFormData('type', value)}
-                >
-                  <SelectTrigger className="bg-black/40 border-netflix-gray/40">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="movie">Movie</SelectItem>
-                    <SelectItem value="series">TV Series</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea 
-                id="description" 
-                value={formData.description} 
-                onChange={(e) => updateFormData('description', e.target.value)}
-                placeholder="Enter a description" 
-                rows={4}
-                className="bg-black/40 border-netflix-gray/40"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Genres *</Label>
-              <div className="flex flex-wrap gap-2 pt-1">
-                {AVAILABLE_GENRES.map((genre) => (
-                  <button
-                    key={genre}
-                    type="button"
-                    onClick={() => toggleGenre(genre)}
-                    className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                      selectedGenres.has(genre)
-                        ? 'bg-netflix-red text-white'
-                        : 'bg-netflix-gray/20 text-netflix-gray hover:bg-netflix-gray/30'
-                    }`}
-                  >
-                    {genre}
-                  </button>
-                ))}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
-              <div className="space-y-2">
-                <Label htmlFor="releaseYear">Release Year</Label>
-                <Input 
-                  id="releaseYear" 
-                  value={formData.releaseYear} 
-                  onChange={(e) => updateFormData('releaseYear', e.target.value)}
-                  placeholder="YYYY" 
-                  className="bg-black/40 border-netflix-gray/40"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="ageRating">Age Rating</Label>
-                <Select 
-                  value={formData.ageRating} 
-                  onValueChange={(value) => updateFormData('ageRating', value)}
-                >
-                  <SelectTrigger className="bg-black/40 border-netflix-gray/40">
-                    <SelectValue placeholder="Select rating" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="G">G</SelectItem>
-                    <SelectItem value="PG">PG</SelectItem>
-                    <SelectItem value="PG-13">PG-13</SelectItem>
-                    <SelectItem value="R">R</SelectItem>
-                    <SelectItem value="NC-17">NC-17</SelectItem>
-                    <SelectItem value="TV-Y">TV-Y</SelectItem>
-                    <SelectItem value="TV-G">TV-G</SelectItem>
-                    <SelectItem value="TV-PG">TV-PG</SelectItem>
-                    <SelectItem value="TV-14">TV-14</SelectItem>
-                    <SelectItem value="TV-MA">TV-MA</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="duration">Duration</Label>
-                <Input 
-                  id="duration" 
-                  value={formData.duration} 
-                  onChange={(e) => updateFormData('duration', e.target.value)}
-                  placeholder="1h 30m" 
-                  className="bg-black/40 border-netflix-gray/40"
-                />
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-2 pt-4">
-              <Switch 
-                id="trending"
-                checked={formData.trending}
-                onCheckedChange={(checked) => updateFormData('trending', checked)}
-              />
-              <Label htmlFor="trending">Mark as trending content</Label>
-            </div>
+          <TabsContent value="details">
+            <DetailsTab 
+              formData={formData}
+              selectedGenres={selectedGenres}
+              availableGenres={AVAILABLE_GENRES}
+              onUpdateFormData={updateFormData}
+              onToggleGenre={toggleGenre}
+            />
           </TabsContent>
           
-          {/* Media Tab - Simplified for better UX */}
-          <TabsContent value="media" className="space-y-6">
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium">Content Image</h3>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={loadAvailableImages}
-                    disabled={isLoadingImages}
-                  >
-                    <RefreshCcw className={`h-4 w-4 mr-1 ${isLoadingImages ? 'animate-spin' : ''}`} />
-                    Refresh
-                  </Button>
-                </div>
-              </div>
-              
-              {/* Selected image preview */}
-              <div className="mb-6 flex flex-col sm:flex-row gap-6">
-                <div className="w-full sm:w-1/2">
-                  <Label className="block mb-2">Preview</Label>
-                  <div className="aspect-video relative bg-black/40 rounded-md overflow-hidden">
-                    {backdropUrl ? (
-                      <div className="relative h-full">
-                        <img 
-                          src={backdropUrl} 
-                          alt="Selected backdrop" 
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.src = DEFAULT_IMAGES.backdrop;
-                          }}
-                        />
-                        <button
-                          onClick={() => {
-                            setBackdropUrl('');
-                            updateFormData('backdropUrl', '');
-                          }}
-                          className="absolute top-2 right-2 bg-black/70 p-1.5 rounded-full hover:bg-black"
-                        >
-                          <X className="h-4 w-4 text-white" />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center h-full">
-                        <ImageIcon className="h-12 w-12 text-netflix-gray/30" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="w-full sm:w-1/2">
-                  <Label className="block mb-2">Upload New Image</Label>
-                  <ImageUploader 
-                    contentId={formData.id}
-                    imageType="backdrop"
-                    aspectRatio="landscape"
-                    onImageUploaded={(url) => {
-                      setBackdropUrl(url);
-                      updateFormData('backdropUrl', url);
-                      handleImageUploaded(url);
-                    }}
-                  />
-                </div>
-              </div>
-              
-              {/* Image gallery */}
-              <div>
-                <Label className="block mb-2">Choose from existing images</Label>
-                
-                {isLoadingImages ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-netflix-gray" />
-                  </div>
-                ) : availableImages.length > 0 ? (
-                  <ScrollArea className="max-h-60">
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 p-1">
-                      {availableImages.map((url, index) => (
-                        <div 
-                          key={index}
-                          className={`aspect-video cursor-pointer relative group overflow-hidden rounded-md ${
-                            backdropUrl === url ? 'ring-2 ring-netflix-red' : 'hover:ring-1 hover:ring-netflix-gray/50'
-                          }`}
-                        >
-                          <img 
-                            src={url} 
-                            alt={`Image ${index + 1}`}
-                            className="w-full h-full object-cover"
-                            onClick={() => {
-                              setBackdropUrl(url);
-                              updateFormData('backdropUrl', url);
-                            }}
-                            onError={(e) => {
-                              e.currentTarget.src = DEFAULT_IMAGES.backdrop;
-                            }}
-                          />
-                          <div className="absolute inset-0 flex justify-between items-start p-1">
-                            {backdropUrl === url && (
-                              <div className="bg-netflix-red rounded-full p-1">
-                                <CheckCircle className="h-3 w-3 text-white" />
-                              </div>
-                            )}
-                            
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteImage(url);
-                              }}
-                              className="bg-black/70 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
-                              disabled={isDeleting}
-                            >
-                              <Trash2 className="h-3 w-3 text-white" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                ) : (
-                  <div className="text-center py-8 text-netflix-gray border border-dashed border-netflix-gray/30 rounded-md">
-                    <p>No images available. Upload a new image using the uploader above.</p>
-                  </div>
-                )}
-              </div>
-            </div>
+          {/* Media Tab */}
+          <TabsContent value="media">
+            <MediaTab 
+              backdropUrl={backdropUrl}
+              isLoadingImages={isLoadingImages}
+              availableImages={availableImages}
+              contentId={formData.id}
+              onRefreshImages={loadAvailableImages}
+              onBackdropChange={handleBackdropChange}
+              onImageUploaded={handleImageUploaded}
+              onImageDelete={handleDeleteImage}
+              isDeleting={isDeleting}
+            />
           </TabsContent>
         </Tabs>
       </CardContent>
@@ -560,7 +348,7 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
             </>
           ) : saved ? (
             <>
-              <CheckCircle className="mr-2 h-4 w-4" /> Saved
+              <Check className="mr-2 h-4 w-4" /> Saved
             </>
           ) : (
             <>
@@ -572,3 +360,4 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
     </Card>
   );
 };
+
