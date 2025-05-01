@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { useAuth } from '../hooks/useAuth';
@@ -47,7 +48,10 @@ const ProfileSettingsContext = createContext<ProfileSettingsContextType | undefi
 export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [settings, setSettings] = useState<ProfileSettings>(defaultSettings);
   const [siteAccessPassword, setSiteAccessPassword] = useState<string | null>(null);
-  const { isLoggedIn, user } = useAuth();
+  const auth = useAuth();
+  // Safely destructure auth to avoid errors if auth is not fully initialized
+  const isLoggedIn = auth?.isLoggedIn || false;
+  const user = auth?.user || null;
 
   // Load settings from database when authenticated or localStorage as fallback
   useEffect(() => {

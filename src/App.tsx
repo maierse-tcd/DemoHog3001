@@ -25,9 +25,10 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <ProfileSettingsProvider>
-        <PostHogProvider>
-          <AuthProvider>
+      <PostHogProvider>
+        {/* Move AuthProvider outside of ProfileSettingsProvider */}
+        <AuthProvider>
+          <ProfileSettingsProvider>
             <Toaster />
             <Sonner />
             <PasswordProtection>
@@ -48,9 +49,9 @@ const App = () => (
                 </Routes>
               </BrowserRouter>
             </PasswordProtection>
-          </AuthProvider>
-        </PostHogProvider>
-      </ProfileSettingsProvider>
+          </ProfileSettingsProvider>
+        </AuthProvider>
+      </PostHogProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
