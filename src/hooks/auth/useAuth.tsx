@@ -1,5 +1,6 @@
 
 import { useAuthContext } from './useAuthContext';
+import type { AuthState } from './useAuthContext';
 
 // Simplified auth hook that reuses the auth context
 export const useAuth = () => {
@@ -7,4 +8,4 @@ export const useAuth = () => {
 };
 
 // Re-export types
-export type { AuthState } from './useAuthContext';
+export type { AuthState };

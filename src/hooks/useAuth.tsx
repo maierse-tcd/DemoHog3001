@@ -1,9 +1,12 @@
 
 import { useMemo } from 'react';
-import { useAuthContext, AuthState, AuthProvider } from './auth/useAuthContext';
+import { useAuthContext } from './auth/useAuthContext';
+import type { AuthState } from './auth/useAuthContext';
+import { AuthProvider } from './auth/useAuthContext';
 
 // Re-export AuthProvider and types
-export { AuthProvider, AuthState };
+export { AuthProvider };
+export type { AuthState };
 
 interface User {
   id: string;

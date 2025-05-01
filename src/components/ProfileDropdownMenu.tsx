@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { AuthState } from '../hooks/useAuth';
+import type { AuthState } from '../hooks/useAuth';
 
 interface ProfileDropdownMenuProps {
   isOpen: boolean;
