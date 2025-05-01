@@ -52,14 +52,34 @@ export const isSupabaseStorageUrl = (url: string): boolean => {
   try {
     const urlObj = new URL(url);
     
-    // More strict check: must be from supabase.co domain AND have the correct storage path
-    if (!urlObj.hostname.includes('supabase.co')) return false;
-    if (!urlObj.pathname.includes('/storage/v1/object')) return false;
-    if (!urlObj.pathname.includes('/media/')) return false;
+    // Super strict check for Supabase storage URLs
+    // 1. Must be from supabase.co domain
+    if (!urlObj.hostname.includes('supabase.co')) {
+      console.log('Rejected URL - not from supabase.co:', url);
+      return false;
+    }
     
-    // Check if the URL matches our expected pattern for Supabase storage URLs
+    // 2. Must have the correct storage path
+    if (!urlObj.pathname.includes('/storage/v1/object')) {
+      console.log('Rejected URL - not a storage path:', url);
+      return false;
+    }
+    
+    // 3. Must be from the media bucket
+    if (!urlObj.pathname.includes('/media/')) {
+      console.log('Rejected URL - not from media bucket:', url);
+      return false;
+    }
+    
+    // 4. Must match our exact pattern for Supabase storage URLs
     const mediaPattern = /\/storage\/v1\/object\/(?:public|sign)\/media\/[^?]+/;
-    return mediaPattern.test(urlObj.pathname);
+    const isValid = mediaPattern.test(urlObj.pathname);
+    
+    if (!isValid) {
+      console.log('Rejected URL - does not match pattern:', url);
+    }
+    
+    return isValid;
   } catch (error) {
     console.error('Error checking if URL is from Supabase storage:', error);
     return false;

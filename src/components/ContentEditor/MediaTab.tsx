@@ -6,7 +6,7 @@ import { Button } from '../ui/button';
 import { ImageUploader } from '../ImageUploader';
 import { MediaGallery } from './MediaGallery';
 import { DEFAULT_IMAGES } from '../../utils/imageUtils';
-import { loadImagesFromStorage } from '../../utils/imageUtils/urlUtils';
+import { loadImagesFromStorage, filterUniqueImages } from '../../utils/imageUtils/urlUtils';
 import { toast } from '../../hooks/use-toast';
 
 interface MediaTabProps {
@@ -32,6 +32,9 @@ export const MediaTab: React.FC<MediaTabProps> = ({
   onImageDelete,
   isDeleting
 }) => {
+  // Only show filtered images
+  const filteredImages = filterUniqueImages(availableImages);
+  
   // Handle clearing the backdrop image
   const clearBackdrop = () => {
     console.log('Removing selected image');
@@ -114,7 +117,7 @@ export const MediaTab: React.FC<MediaTabProps> = ({
           <Label className="block mb-2">Choose from existing images</Label>
           <MediaGallery
             isLoadingImages={isLoadingImages}
-            availableImages={availableImages}
+            availableImages={filteredImages}
             selectedImageUrl={backdropUrl}
             onImageSelect={(url) => {
               console.log('Selected image URL from gallery:', url);
