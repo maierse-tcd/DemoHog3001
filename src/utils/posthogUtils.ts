@@ -117,9 +117,23 @@ export const safeRemoveFeatureFlags = (): void => {
       if (isPostHogInstance(window.posthog) && window.posthog.featureFlags) {
         // The most reliable way to clear feature flags is to override them all to false
         if (typeof window.posthog.featureFlags.override === 'function') {
-          const currentFlags = window.posthog.featureFlags.getFlags();
+          let currentFlags: Record<string, boolean | string> = {};
           
-          if (currentFlags) {
+          // Safely access the getFlags method if it exists
+          if (typeof window.posthog.featureFlags.getFlags === 'function') {
+            try {
+              currentFlags = window.posthog.featureFlags.getFlags() || {};
+            } catch (err) {
+              console.error("Error getting feature flags:", err);
+              // If we can't get the flags, try to access currentFlags directly
+              currentFlags = window.posthog.featureFlags.currentFlags || {};
+            }
+          } else if (window.posthog.featureFlags.currentFlags) {
+            // Fall back to accessing currentFlags property directly
+            currentFlags = window.posthog.featureFlags.currentFlags;
+          }
+          
+          if (Object.keys(currentFlags).length > 0) {
             // Create an object with all flags set to false
             const resetFlags: Record<string, boolean> = {};
             Object.keys(currentFlags).forEach(flag => {
@@ -133,8 +147,13 @@ export const safeRemoveFeatureFlags = (): void => {
         }
         
         // Additionally attempt to clear the feature flag cache if method exists
-        if (typeof window.posthog.featureFlags._refresh === 'function') {
-          window.posthog.featureFlags._refresh();
+        if (window.posthog.featureFlags._refresh && 
+            typeof window.posthog.featureFlags._refresh === 'function') {
+          try {
+            window.posthog.featureFlags._refresh();
+          } catch (err) {
+            console.error("Error refreshing feature flags:", err);
+          }
         }
         
         console.log("Feature flags cleared");
