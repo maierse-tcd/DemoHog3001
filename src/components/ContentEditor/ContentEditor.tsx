@@ -11,6 +11,7 @@ import { mockContent, Content, Genre } from '../../data/mockData';
 import { supabase } from '../../integrations/supabase/client';
 import { DetailsTab } from './DetailsTab';
 import { MediaTab } from './MediaTab';
+import { loadImagesFromStorage } from '../../utils/imageUtils/urlUtils';
 
 interface ContentEditorProps {
   content?: Content;
@@ -84,27 +85,9 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
   const loadAvailableImages = async () => {
     setIsLoadingImages(true);
     try {
-      const { data: imageFiles, error } = await supabase.storage
-        .from('media')
-        .list('', {
-          limit: 100,
-          sortBy: { column: 'created_at', order: 'desc' }
-        });
-        
-      if (error) {
-        throw error;
-      }
-      
-      if (imageFiles) {
-        const urls = imageFiles.map(file => {
-          const { data } = supabase.storage
-            .from('media')
-            .getPublicUrl(file.name);
-          return data.publicUrl;
-        });
-        
-        setAvailableImages(urls);
-      }
+      const urls = await loadImagesFromStorage();
+      console.log('Loaded images from storage:', urls.length);
+      setAvailableImages(urls);
     } catch (error) {
       console.error("Error loading images:", error);
       toast({
@@ -207,6 +190,8 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
       genre: Array.from(selectedGenres)
     };
     
+    console.log('Saving content with backdrop URL:', backdropUrl);
+    
     // Save to local storage for persistence
     try {
       // Load existing content
@@ -261,8 +246,15 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
   };
   
   const handleImageUploaded = (imageUrl: string) => {
+    console.log('New image uploaded:', imageUrl);
     // Add to available images list
     setAvailableImages(prev => [imageUrl, ...prev]);
+  };
+
+  const handleBackdropChange = (url: string) => {
+    console.log('Backdrop URL changed to:', url);
+    setBackdropUrl(url);
+    updateFormData('backdropUrl', url);
   };
 
   return (
@@ -302,10 +294,7 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
               availableImages={availableImages}
               contentId={formData.id}
               onRefreshImages={loadAvailableImages}
-              onBackdropChange={(url) => {
-                setBackdropUrl(url);
-                updateFormData('backdropUrl', url);
-              }}
+              onBackdropChange={handleBackdropChange}
               onImageUploaded={handleImageUploaded}
               onImageDelete={handleDeleteImage}
               isDeleting={isDeleting}

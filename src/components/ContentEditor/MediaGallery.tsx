@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { ScrollArea } from '../ui/scroll-area';
 import { Loader2, CheckCircle, Trash2 } from 'lucide-react';
 import { DEFAULT_IMAGES } from '../../utils/imageUtils';
@@ -58,12 +58,15 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
             className={`${compact ? "aspect-video" : "aspect-video"} cursor-pointer relative group overflow-hidden rounded-md ${
               selectedImageUrl === url ? 'ring-2 ring-netflix-red' : 'hover:ring-1 hover:ring-netflix-gray/50'
             }`}
+            onClick={() => {
+              console.log('Selected image URL in gallery:', url);
+              onImageSelect(url);
+            }}
           >
             <img 
               src={url} 
               alt={`Image ${index + 1}`}
               className="w-full h-full object-cover"
-              onClick={() => onImageSelect(url)}
               onError={(e) => {
                 console.error('Image failed to load:', url);
                 e.currentTarget.src = DEFAULT_IMAGES.backdrop;

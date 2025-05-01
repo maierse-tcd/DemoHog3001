@@ -1,3 +1,4 @@
+
 import { supabase } from "../../integrations/supabase/client";
 
 // Helper function to extract filename from a Supabase storage URL
@@ -46,24 +47,35 @@ export const getImagePublicUrl = (path: string): string => {
 
 // Helper function to check if a URL is from Supabase storage
 export const isSupabaseStorageUrl = (url: string): boolean => {
+  if (!url) return false;
+
   try {
     const urlObj = new URL(url);
-    // Check if the URL contains storage/v1/object and media in the path
-    return urlObj.pathname.includes('/storage/v1/object') && 
-           urlObj.pathname.includes('/media/');
+    // Check domain is from supabase and if the URL contains storage/v1/object and media in the path
+    const isSupabaseURL = urlObj.hostname.includes('supabase.co');
+    const isStoragePath = urlObj.pathname.includes('/storage/v1/object');
+    const isMediaPath = urlObj.pathname.includes('/media/');
+
+    return isSupabaseURL && isStoragePath && isMediaPath;
   } catch (error) {
+    console.error('Error checking if URL is from Supabase storage:', error);
     return false;
   }
 };
 
 // Helper function to filter out duplicate image URLs and only keep Supabase storage URLs
 export const filterUniqueImages = (urls: string[]): string[] => {
+  if (!urls || !Array.isArray(urls)) {
+    console.warn('Invalid URLs provided to filterUniqueImages:', urls);
+    return [];
+  }
+  
   // Create a Set for unique URLs (removing duplicates)
   const uniqueUrls = new Set<string>();
   
   // Only include URLs from our Supabase storage
   urls.forEach(url => {
-    if (isSupabaseStorageUrl(url)) {
+    if (url && isSupabaseStorageUrl(url)) {
       uniqueUrls.add(url);
     }
   });

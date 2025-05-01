@@ -67,7 +67,10 @@ export const MediaTab: React.FC<MediaTabProps> = ({
                     }}
                   />
                   <button
-                    onClick={() => onBackdropChange('')}
+                    onClick={() => {
+                      console.log('Removing selected image');
+                      onBackdropChange('');
+                    }}
                     className="absolute top-2 right-2 bg-black/70 p-1.5 rounded-full hover:bg-black"
                     aria-label="Remove image"
                   >
@@ -105,7 +108,7 @@ export const MediaTab: React.FC<MediaTabProps> = ({
             availableImages={availableImages}
             selectedImageUrl={backdropUrl}
             onImageSelect={(url) => {
-              console.log('Selected image URL:', url);
+              console.log('Selected image URL from gallery:', url);
               onBackdropChange(url);
             }}
             onImageDelete={onImageDelete}
