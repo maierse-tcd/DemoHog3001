@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from '../../hooks/use-toast';
 import { Plan, SubscriptionPlan } from '../SubscriptionPlan';
 import { supabase } from '../../integrations/supabase/client';
@@ -11,11 +11,17 @@ interface SubscriptionSettingsProps {
 }
 
 export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({ 
-  selectedPlanId, 
-  updateSelectedPlan
+  selectedPlanId: initialPlanId, 
+  updateSelectedPlan 
 }) => {
-  const { isLoggedIn } = useAuthContext();
+  const { isLoggedIn, userMetadata } = useAuthContext();
   const [isLoading, setIsLoading] = useState(false);
+  const [currentPlanId, setCurrentPlanId] = useState(initialPlanId);
+  
+  // Use effect to sync with any external changes to the plan
+  useEffect(() => {
+    setCurrentPlanId(initialPlanId);
+  }, [initialPlanId]);
   
   const availablePlans: Plan[] = [
     {
@@ -62,10 +68,11 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
   ];
 
   const handlePlanSelect = (planId: string) => {
-    updateSelectedPlan(planId);
+    setCurrentPlanId(planId);
+    
     toast({
-      title: 'Plan selection updated',
-      description: `You've selected the ${availablePlans.find(plan => plan.id === planId)?.name}`,
+      title: 'Plan selected',
+      description: `You've selected the ${availablePlans.find(plan => plan.id === planId)?.name}. Click "Save Changes" to confirm.`,
     });
   };
 
@@ -85,15 +92,18 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
       // Update user metadata with the selected plan
       const { error } = await supabase.auth.updateUser({
         data: { 
-          selectedPlanId: selectedPlanId
+          selectedPlanId: currentPlanId
         }
       });
       
       if (error) throw error;
       
+      // Update the context only after successful DB update
+      updateSelectedPlan(currentPlanId);
+      
       toast({
         title: 'Changes saved',
-        description: `Your subscription plan has been updated to ${availablePlans.find(plan => plan.id === selectedPlanId)?.name}`,
+        description: `Your subscription plan has been updated to ${availablePlans.find(plan => plan.id === currentPlanId)?.name}`,
       });
     } catch (error: any) {
       console.error("Error saving plan:", error);
@@ -107,6 +117,8 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
     }
   };
 
+  const hasChanges = currentPlanId !== initialPlanId;
+
   return (
     <div className="bg-netflix-darkgray rounded-lg p-6">
       <h2 className="text-2xl font-bold mb-6">Subscription Plans</h2>
@@ -119,7 +131,7 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
           <SubscriptionPlan
             key={plan.id}
             plan={plan}
-            selectedPlanId={selectedPlanId}
+            selectedPlanId={currentPlanId}
             onSelect={handlePlanSelect}
           />
         ))}
@@ -128,9 +140,9 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
       <button 
         onClick={handleSaveChanges} 
         className="bg-netflix-red hover:bg-red-700 text-white px-6 py-3 rounded font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        disabled={isLoading}
+        disabled={isLoading || !hasChanges}
       >
-        {isLoading ? 'Saving...' : 'Save Changes'}
+        {isLoading ? 'Saving...' : hasChanges ? 'Save Changes' : 'No Changes to Save'}
       </button>
     </div>
   );
