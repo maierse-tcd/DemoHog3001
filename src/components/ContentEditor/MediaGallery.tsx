@@ -1,7 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { ScrollArea } from '../ui/scroll-area';
-import { Loader2, CheckCircle, Trash2 } from 'lucide-react';
+import { Loader2, CheckCircle, Trash2, ImageIcon } from 'lucide-react';
 import { DEFAULT_IMAGES } from '../../utils/imageUtils';
 import { isSupabaseStorageUrl, filterUniqueImages } from '../../utils/imageUtils/urlUtils';
 
@@ -44,7 +44,10 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
   if (filteredImages.length === 0) {
     return (
       <div className="text-center py-8 text-netflix-gray border border-dashed border-netflix-gray/30 rounded-md">
-        <p>No images available. Upload a new image using the uploader above.</p>
+        <div className="flex flex-col items-center">
+          <ImageIcon className="h-10 w-10 text-netflix-gray/30 mb-3" />
+          <p>No images available. Upload a new image using the uploader above.</p>
+        </div>
       </div>
     );
   }
@@ -54,7 +57,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
       <div className={`grid ${compact ? "grid-cols-3 md:grid-cols-4 lg:grid-cols-6" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"} gap-2 p-1`}>
         {filteredImages.map((url, index) => (
           <div 
-            key={`supabase-image-${index}`}
+            key={`supabase-image-${index}-${url.slice(-8)}`}
             className={`${compact ? "aspect-video" : "aspect-video"} cursor-pointer relative group overflow-hidden rounded-md ${
               selectedImageUrl === url ? 'ring-2 ring-netflix-red' : 'hover:ring-1 hover:ring-netflix-gray/50'
             }`}

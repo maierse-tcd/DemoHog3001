@@ -126,63 +126,77 @@ export const filterUniqueImages = (urls: string[]): string[] => {
   return Array.from(uniqueUrls);
 };
 
-// Load all images from Supabase storage
+// Recursive function to list all files in a bucket, including subdirectories
+async function listFilesRecursive(path: string = ''): Promise<string[]> {
+  console.log(`Listing files in path: ${path || 'root'}`);
+  
+  // List all items at the current path
+  const { data: items, error } = await supabase.storage
+    .from('media')
+    .list(path, {
+      sortBy: { column: 'name', order: 'asc' }
+    });
+    
+  if (error) {
+    console.error(`Error listing files in ${path}:`, error);
+    throw error;
+  }
+  
+  if (!items || items.length === 0) {
+    console.log(`No items found in path: ${path || 'root'}`);
+    return [];
+  }
+  
+  console.log(`Found ${items.length} items in ${path || 'root'}`);
+  
+  // Initialize an array to store all file URLs
+  let allFiles: string[] = [];
+  
+  // Process each item
+  for (const item of items) {
+    // If it's a folder (no id means it's a folder in Supabase storage)
+    if (!item.id) {
+      console.log(`Found folder: ${item.name}`);
+      const folderPath = path ? `${path}/${item.name}` : item.name;
+      // Recursively list files in this folder
+      const nestedFiles = await listFilesRecursive(folderPath);
+      allFiles = [...allFiles, ...nestedFiles];
+    } 
+    // If it's a file and appears to be an image
+    else {
+      const isImage = item.metadata?.mimetype?.startsWith('image/') || 
+                     /\.(jpg|jpeg|png|gif|webp|avif|svg)$/i.test(item.name);
+      
+      if (isImage) {
+        const filePath = path ? `${path}/${item.name}` : item.name;
+        console.log(`Found image: ${filePath}`);
+        
+        // Get the public URL for this file
+        const { data } = supabase.storage
+          .from('media')
+          .getPublicUrl(filePath);
+        
+        allFiles.push(data.publicUrl);
+      } else {
+        console.log(`Skipping non-image file: ${item.name}`);
+      }
+    }
+  }
+  
+  return allFiles;
+}
+
+// Load all images from Supabase storage (including subdirectories)
 export const loadImagesFromStorage = async (): Promise<string[]> => {
   try {
-    console.log('Loading images from Supabase storage');
+    console.log('Loading images from Supabase storage (recursive)');
     
-    // List all files in the media bucket
-    const { data: imageFiles, error } = await supabase.storage
-      .from('media')
-      .list('', {
-        limit: 100,
-        sortBy: { column: 'created_at', order: 'desc' }
-      });
-      
-    if (error) {
-      console.error('Error loading images from storage:', error);
-      throw error;
-    }
+    // Use the recursive function to list all files
+    const imageUrls = await listFilesRecursive();
     
-    if (!imageFiles || imageFiles.length === 0) {
-      console.log('No images found in storage');
-      return [];
-    }
+    console.log(`Found ${imageUrls.length} total image files after recursive search`);
     
-    console.log(`Found ${imageFiles.length} items in storage`);
-    
-    // Filter out folders and non-image files
-    const actualImageFiles = imageFiles.filter(file => {
-      // Skip directories
-      if (file.id === null || file.metadata === null) {
-        console.log('Skipping directory:', file.name);
-        return false;
-      }
-      
-      // Check if it's an image file by looking at metadata mimetype or extension
-      const isImage = file.metadata?.mimetype?.startsWith('image/') || 
-                     /\.(jpg|jpeg|png|gif|webp|avif|svg)$/i.test(file.name);
-      
-      if (!isImage) {
-        console.log('Skipping non-image file:', file.name);
-      }
-      
-      return isImage;
-    });
-    
-    console.log(`Found ${actualImageFiles.length} actual image files after filtering`);
-    
-    // Get public URLs for each file
-    const urls = actualImageFiles.map(file => {
-      const { data } = supabase.storage
-        .from('media')
-        .getPublicUrl(file.name);
-      
-      console.log(`Generated URL for ${file.name}:`, data.publicUrl);
-      return data.publicUrl;
-    });
-    
-    return urls;
+    return imageUrls;
   } catch (error) {
     console.error("Error loading images from storage:", error);
     return [];
