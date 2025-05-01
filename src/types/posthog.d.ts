@@ -15,7 +15,7 @@ interface PostHogPeople {
   toString: () => string;
 }
 
-interface PostHog {
+export interface PostHog {
   capture: (event: string, properties?: Record<string, any>) => void;
   identify: (distinctId: string, properties?: Record<string, any>) => void;
   reset: () => void;
@@ -33,9 +33,6 @@ interface PostHog {
   init?: Function;
   toString?: () => string;
 }
-
-// Only declare the type guard function signature, not its implementation
-export declare function isPostHogInstance(obj: any): obj is PostHog;
 
 declare global {
   interface Window {

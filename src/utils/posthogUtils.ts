@@ -111,9 +111,11 @@ export const safeReloadFeatureFlags = async (): Promise<void> => {
  * Override feature flags (for debugging)
  */
 export const safeOverrideFeatureFlags = (flags: Record<string, boolean | string>): void => {
-  if (typeof window !== 'undefined' && window.posthog?.featureFlags?.override) {
+  if (typeof window !== 'undefined' && window.posthog) {
     try {
-      window.posthog.featureFlags.override(flags);
+      if (isPostHogInstance(window.posthog) && window.posthog.featureFlags) {
+        window.posthog.featureFlags.override(flags);
+      }
     } catch (err) {
       console.error("Error overriding feature flags:", err);
     }
@@ -124,10 +126,12 @@ export const safeOverrideFeatureFlags = (flags: Record<string, boolean | string>
  * Remove all feature flag overrides
  */
 export const safeRemoveFeatureFlags = (): void => {
-  if (typeof window !== 'undefined' && window.posthog?.featureFlags?.override) {
+  if (typeof window !== 'undefined' && window.posthog) {
     try {
-      // Reset all overrides by passing an empty object
-      window.posthog.featureFlags.override({});
+      if (isPostHogInstance(window.posthog) && window.posthog.featureFlags) {
+        // Reset all overrides by passing an empty object
+        window.posthog.featureFlags.override({});
+      }
     } catch (err) {
       console.error("Error removing feature flag overrides:", err);
     }
