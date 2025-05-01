@@ -6,7 +6,7 @@ import { ContentRow } from '../components/ContentRow';
 import { Footer } from '../components/Footer';
 import { mockCategories, mockContent, getFeaturedContent, Content } from '../data/mockData';
 import { safeGetDistinctId } from '../utils/posthogUtils';
-import { useFeatureFlagEnabled } from 'posthog-js/react';
+import { useFeatureFlag } from '../hooks/useFeatureFlag';
 import { useAuth } from '../hooks/useAuth';
 import { loadContentFromSupabase, initializeContentDatabase } from '../utils/contentUtils';
 import { toast } from '../hooks/use-toast';
@@ -18,8 +18,8 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
   
   // Feature flag checks
-  const isAdmin = useFeatureFlagEnabled('is_admin');
-  const hasPasswordProtection = useFeatureFlagEnabled('access_password');
+  const isAdmin = useFeatureFlag('is_admin');
+  const hasPasswordProtection = useFeatureFlag('access_password');
   
   // Auth check
   const { isLoggedIn } = useAuth();

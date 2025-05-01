@@ -17,3 +17,5 @@ export function useFeatureFlag(flagName: string): boolean {
   
   return enabled || false;
 }
+
+export default useFeatureFlag;

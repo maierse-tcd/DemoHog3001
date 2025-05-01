@@ -131,21 +131,34 @@ export const initializeContentDatabase = async (mockContent: Content[]): Promise
     if (count === 0) {
       console.log("Initializing database with mock content...");
       
-      // Convert content items to proper format for the RPC call
-      const contentItems = mockContent.map(item => ({
-        ...contentToDbFormat(item),
-        // Ensure genre is properly formatted as a native PostgreSQL array
-        genre: item.genre
-      }));
+      // Prepare the content items with properly formatted data
+      // Make a deep copy to avoid modifying the original objects
+      const contentItems = mockContent.map(item => {
+        // Create a new object with the correct format
+        return {
+          id: item.id,
+          title: item.title,
+          description: item.description,
+          type: item.type,
+          poster_url: item.posterUrl,
+          backdrop_url: item.backdropUrl,
+          genre: item.genre, // PostgreSQL will handle this correctly now
+          release_year: item.releaseYear,
+          age_rating: item.ageRating,
+          duration: item.duration,
+          trending: item.trending
+        };
+      });
       
-      // Call the seed_content_items function with the properly formatted data
-      const { error } = await supabase
-        .rpc('seed_content_items', { content_items: contentItems });
-      
-      if (error) {
-        console.error("Error seeding database with mock content:", error);
-      } else {
-        console.log("Successfully seeded database with mock content");
+      // Insert items one by one to better handle errors
+      for (const item of contentItems) {
+        const { error } = await supabase
+          .from('content_items')
+          .insert(item);
+        
+        if (error) {
+          console.error(`Error inserting item ${item.id}:`, error);
+        }
       }
       
       console.log("Database seeding complete");
