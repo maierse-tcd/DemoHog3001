@@ -7,20 +7,21 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '../hooks/use-toast';
 import { mockContent, Content } from '../data/mockData';
 import { Input } from '../components/ui/input';
-import { Search, Copy, Save, CheckCircle } from 'lucide-react';
+import { Search, Copy, Save, CheckCircle, Plus, RefreshCcw, Trash2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { useFeatureFlagEnabled } from '../hooks/usePostHogFeatures';
 import { useAuth } from '../hooks/useAuth';
 import { usePostHog } from '../hooks/usePostHogFeatures';
-
-// Create a copy of mockContent that we can modify
-let localMockContent = [...mockContent];
+import { ContentEditor } from '../components/ContentEditor';
+import { supabase } from '../integrations/supabase/client';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
+import { DEFAULT_IMAGES } from '../utils/imageUtils';
 
 const ImageManager = () => {
   // Use the official hook for the is_admin feature flag
   const isAdmin = useFeatureFlagEnabled('is_admin');
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, userId } = useAuth();
   const navigate = useNavigate();
   const posthog = usePostHog();
   
@@ -28,8 +29,11 @@ const ImageManager = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredContent, setFilteredContent] = useState<Content[]>([]);
   const [selectedContent, setSelectedContent] = useState<Content | null>(null);
-  const [updatedContentList, setUpdatedContentList] = useState<Content[]>(localMockContent);
+  const [updatedContentList, setUpdatedContentList] = useState<Content[]>([]);
   const [savedChanges, setSavedChanges] = useState(false);
+  const [showContentEditor, setShowContentEditor] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isLoadingImages, setIsLoadingImages] = useState(false);
   const { toast } = useToast();
   
   // Check authentication status and redirect if not logged in
@@ -46,13 +50,59 @@ const ImageManager = () => {
     if (savedContent) {
       try {
         const parsed = JSON.parse(savedContent);
-        localMockContent = parsed;
         setUpdatedContentList(parsed);
       } catch (e) {
         console.error("Error parsing saved content:", e);
+        setUpdatedContentList(mockContent);
       }
+    } else {
+      setUpdatedContentList(mockContent);
     }
   }, []);
+  
+  // Load uploaded images from Supabase Storage
+  useEffect(() => {
+    const loadImages = async () => {
+      if (!isLoggedIn) return;
+      
+      setIsLoadingImages(true);
+      try {
+        const { data: imageFiles, error } = await supabase.storage
+          .from('media')
+          .list('', {
+            limit: 100,
+            sortBy: { column: 'created_at', order: 'desc' }
+          });
+          
+        if (error) {
+          throw error;
+        }
+        
+        if (imageFiles) {
+          // Get public URLs for each file
+          const urls = imageFiles.map(file => {
+            const { data } = supabase.storage
+              .from('media')
+              .getPublicUrl(file.name);
+            return data.publicUrl;
+          });
+          
+          setUploadedImages(urls);
+        }
+      } catch (error) {
+        console.error("Error loading images:", error);
+        toast({
+          title: "Failed to load images",
+          description: "There was a problem loading your uploaded images.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoadingImages(false);
+      }
+    };
+    
+    loadImages();
+  }, [isLoggedIn, toast]);
   
   // Handle search
   useEffect(() => {
@@ -97,7 +147,7 @@ const ImageManager = () => {
   
   const handleImageUploaded = (imageUrl: string) => {
     setUploadedImages(prevImages => {
-      const newImages = [...prevImages, imageUrl];
+      const newImages = [imageUrl, ...prevImages];
       // Track in PostHog
       posthog?.capture('image_uploaded');
       return newImages;
@@ -153,7 +203,6 @@ const ImageManager = () => {
     });
     
     // Update the state and local mock
-    localMockContent = updatedList;
     setUpdatedContentList(updatedList);
     
     // Update the selected content to show the new image
@@ -179,17 +228,116 @@ const ImageManager = () => {
     setTimeout(() => setSavedChanges(false), 3000);
   };
   
-  const getCodeSnippet = (imageUrl: string) => {
-    if (selectedContent) {
-      return `// Update in mockData.ts
-const updatedContent = mockContent.map(item => {
-  if (item.id === "${selectedContent.id}") {
-    return { ...item, posterUrl: "${imageUrl}" };
-  }
-  return item;
-});`;
+  const handleContentSaved = (content: Content) => {
+    // If we're editing, find and replace the content
+    if (isEditMode) {
+      setUpdatedContentList(prev => 
+        prev.map(item => item.id === content.id ? content : item)
+      );
+    } else {
+      // Otherwise add the new content
+      setUpdatedContentList(prev => [...prev, content]);
     }
-    return `posterUrl: "${imageUrl}"`;
+    
+    setShowContentEditor(false);
+    
+    // Refresh the list
+    const savedContent = localStorage.getItem('hogflix_content');
+    if (savedContent) {
+      try {
+        const parsed = JSON.parse(savedContent);
+        setUpdatedContentList(parsed);
+      } catch (e) {
+        console.error("Error parsing saved content:", e);
+      }
+    }
+    
+    // Show success message
+    toast({
+      title: isEditMode ? "Content updated" : "Content added",
+      description: `"${content.title}" has been ${isEditMode ? 'updated' : 'added'} successfully.`
+    });
+  };
+  
+  const handleEditContent = (content: Content) => {
+    setSelectedContent(content);
+    setIsEditMode(true);
+    setShowContentEditor(true);
+  };
+  
+  const handleDeleteContent = (contentId: string) => {
+    // Find the content to get its title for the confirmation message
+    const contentToDelete = updatedContentList.find(item => item.id === contentId);
+    
+    if (!contentToDelete) return;
+    
+    if (confirm(`Are you sure you want to delete "${contentToDelete.title}"? This action cannot be undone.`)) {
+      // Remove from state
+      const newList = updatedContentList.filter(item => item.id !== contentId);
+      setUpdatedContentList(newList);
+      
+      // Save to localStorage
+      localStorage.setItem('hogflix_content', JSON.stringify(newList));
+      
+      // If this was the selected content, clear the selection
+      if (selectedContent?.id === contentId) {
+        setSelectedContent(null);
+      }
+      
+      // Track in PostHog
+      posthog?.capture('content_deleted', {
+        contentTitle: contentToDelete.title
+      });
+      
+      // Show success message
+      toast({
+        title: "Content deleted",
+        description: `"${contentToDelete.title}" has been removed.`
+      });
+    }
+  };
+  
+  const refreshImageList = async () => {
+    setIsLoadingImages(true);
+    
+    try {
+      const { data: imageFiles, error } = await supabase.storage
+        .from('media')
+        .list('', {
+          limit: 100,
+          sortBy: { column: 'created_at', order: 'desc' }
+        });
+        
+      if (error) {
+        throw error;
+      }
+      
+      if (imageFiles) {
+        // Get public URLs for each file
+        const urls = imageFiles.map(file => {
+          const { data } = supabase.storage
+            .from('media')
+            .getPublicUrl(file.name);
+          return data.publicUrl;
+        });
+        
+        setUploadedImages(urls);
+        
+        toast({
+          title: "Images refreshed",
+          description: `Found ${urls.length} images in your storage.`
+        });
+      }
+    } catch (error) {
+      console.error("Error refreshing images:", error);
+      toast({
+        title: "Failed to refresh images",
+        description: "There was a problem loading your uploaded images.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingImages(false);
+    }
   };
   
   // New function to view all content with their images
@@ -239,6 +387,17 @@ const updatedContent = mockContent.map(item => {
               Series
             </Button>
           </div>
+          
+          <Button 
+            variant="default" 
+            onClick={() => {
+              setIsEditMode(false);
+              setShowContentEditor(true);
+              setSelectedContent(null);
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add New
+          </Button>
         </div>
         
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -246,8 +405,7 @@ const updatedContent = mockContent.map(item => {
             filteredLibrary.map(item => (
               <Card 
                 key={item.id} 
-                className="bg-netflix-darkgray border-netflix-gray/20 overflow-hidden cursor-pointer hover:border-netflix-red transition-colors"
-                onClick={() => selectContentItem(item)}
+                className="bg-netflix-darkgray border-netflix-gray/20 overflow-hidden hover:border-netflix-red transition-colors"
               >
                 <div className="aspect-[2/3] relative">
                   {item.posterUrl ? (
@@ -256,7 +414,7 @@ const updatedContent = mockContent.map(item => {
                       alt={item.title} 
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Image';
+                        e.currentTarget.src = DEFAULT_IMAGES.poster;
                       }}
                     />
                   ) : (
@@ -264,10 +422,34 @@ const updatedContent = mockContent.map(item => {
                       No Image
                     </div>
                   )}
+                  <div className="absolute top-2 right-2 flex space-x-1">
+                    <button
+                      onClick={() => handleEditContent(item)}
+                      className="bg-black/70 p-1.5 rounded-full hover:bg-black"
+                    >
+                      <Save className="h-4 w-4 text-white" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteContent(item.id)}
+                      className="bg-black/70 p-1.5 rounded-full hover:bg-netflix-red"
+                    >
+                      <Trash2 className="h-4 w-4 text-white" />
+                    </button>
+                  </div>
                 </div>
                 <CardContent className="p-3">
                   <h3 className="text-sm font-medium line-clamp-1">{item.title}</h3>
-                  <p className="text-xs text-netflix-gray">{item.type}</p>
+                  <p className="text-xs text-netflix-gray">{item.type} • {item.releaseYear}</p>
+                  <div className="flex flex-wrap mt-1 gap-1">
+                    {item.genre.slice(0, 2).map((genre, i) => (
+                      <span key={i} className="text-xs bg-netflix-gray/20 px-1.5 py-0.5 rounded">
+                        {genre}
+                      </span>
+                    ))}
+                    {item.genre.length > 2 && (
+                      <span className="text-xs text-netflix-gray">+{item.genre.length - 2}</span>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))
@@ -297,12 +479,43 @@ const updatedContent = mockContent.map(item => {
             )}
           </div>
           
-          <Tabs defaultValue="upload" className="w-full">
+          <Dialog open={showContentEditor} onOpenChange={setShowContentEditor}>
+            <DialogContent className="max-w-4xl bg-netflix-black border-netflix-gray/20">
+              <DialogHeader>
+                <DialogTitle>{isEditMode ? 'Edit Content' : 'Add New Content'}</DialogTitle>
+                <DialogDescription>
+                  {isEditMode 
+                    ? 'Update details for this movie or series' 
+                    : 'Add a new movie or series to your library'}
+                </DialogDescription>
+              </DialogHeader>
+              <ContentEditor 
+                content={isEditMode ? selectedContent || undefined : undefined}
+                isEdit={isEditMode}
+                onSave={handleContentSaved}
+                onCancel={() => setShowContentEditor(false)}
+              />
+            </DialogContent>
+          </Dialog>
+          
+          <Tabs defaultValue="content" className="w-full">
             <TabsList className="grid grid-cols-3 w-full max-w-md mb-6">
+              <TabsTrigger value="content">Content Library</TabsTrigger>
               <TabsTrigger value="upload">Upload Images</TabsTrigger>
               <TabsTrigger value="map">Map to Content</TabsTrigger>
-              <TabsTrigger value="library">Content Library</TabsTrigger>
             </TabsList>
+            
+            <TabsContent value="content">
+              <Card className="bg-netflix-darkgray border-netflix-gray/20">
+                <CardHeader>
+                  <CardTitle>Content Library</CardTitle>
+                  <CardDescription>Browse, edit and manage all movies and series</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ContentLibrary />
+                </CardContent>
+              </Card>
+            </TabsContent>
             
             <TabsContent value="upload">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -324,12 +537,30 @@ const updatedContent = mockContent.map(item => {
                 
                 {/* Gallery Section */}
                 <Card className="bg-netflix-darkgray border-netflix-gray/20">
-                  <CardHeader>
-                    <CardTitle>Your Uploaded Images</CardTitle>
-                    <CardDescription>Recent uploads for your content</CardDescription>
+                  <CardHeader className="flex flex-row justify-between items-center">
+                    <div>
+                      <CardTitle>Your Uploaded Images</CardTitle>
+                      <CardDescription>Recent uploads for your content</CardDescription>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={refreshImageList}
+                      disabled={isLoadingImages}
+                    >
+                      <RefreshCcw className={`h-4 w-4 mr-1 ${isLoadingImages ? 'animate-spin' : ''}`} />
+                      Refresh
+                    </Button>
                   </CardHeader>
                   <CardContent>
-                    {uploadedImages.length > 0 ? (
+                    {isLoadingImages ? (
+                      <div className="flex justify-center items-center h-32">
+                        <div className="animate-pulse flex flex-col items-center">
+                          <div className="h-8 w-8 bg-netflix-gray rounded-full mb-2"></div>
+                          <div className="h-4 w-24 bg-netflix-gray rounded"></div>
+                        </div>
+                      </div>
+                    ) : uploadedImages.length > 0 ? (
                       <div className="grid grid-cols-2 gap-4">
                         {uploadedImages.map((url, index) => (
                           <div key={index} className="relative group">
@@ -337,6 +568,9 @@ const updatedContent = mockContent.map(item => {
                               src={url} 
                               alt={`Uploaded ${index + 1}`} 
                               className="rounded-md w-full h-32 object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = DEFAULT_IMAGES.thumbnail;
+                              }}
                             />
                             <button
                               onClick={() => copyToClipboard(url)}
@@ -401,7 +635,7 @@ const updatedContent = mockContent.map(item => {
                                 alt={selectedContent.title}
                                 className="w-full aspect-[2/3] object-cover rounded"
                                 onError={(e) => {
-                                  e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Image';
+                                  e.currentTarget.src = DEFAULT_IMAGES.poster;
                                 }}
                               />
                             ) : (
@@ -415,8 +649,18 @@ const updatedContent = mockContent.map(item => {
                             <h3 className="text-lg font-medium">{selectedContent.title}</h3>
                             <p className="text-netflix-gray text-sm">Type: {selectedContent.type}</p>
                             
+                            <div className="mt-4">
+                              <Button
+                                onClick={() => {
+                                  handleEditContent(selectedContent);
+                                }}
+                              >
+                                <Save className="mr-2 h-4 w-4" /> Edit Details
+                              </Button>
+                            </div>
+                            
                             {selectedContent.posterUrl && (
-                              <div className="mt-2">
+                              <div className="mt-4">
                                 <p className="text-sm text-netflix-gray">Current poster URL:</p>
                                 <div className="flex mt-1">
                                   <code className="bg-black/30 p-2 rounded text-xs flex-1 overflow-x-auto">
@@ -447,7 +691,14 @@ const updatedContent = mockContent.map(item => {
                     <CardDescription>Select an image to use for your selected content</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {uploadedImages.length > 0 ? (
+                    {isLoadingImages ? (
+                      <div className="flex justify-center items-center h-32">
+                        <div className="animate-pulse flex flex-col items-center">
+                          <div className="h-8 w-8 bg-netflix-gray rounded-full mb-2"></div>
+                          <div className="h-4 w-24 bg-netflix-gray rounded"></div>
+                        </div>
+                      </div>
+                    ) : uploadedImages.length > 0 ? (
                       <div className="grid grid-cols-2 gap-4">
                         {uploadedImages.map((url, index) => (
                           <div key={index} className="relative group">
@@ -455,6 +706,9 @@ const updatedContent = mockContent.map(item => {
                               src={url} 
                               alt={`Uploaded ${index + 1}`} 
                               className="rounded-md w-full h-32 object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = DEFAULT_IMAGES.thumbnail;
+                              }}
                             />
                             <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity p-2">
                               <Button 
@@ -495,47 +749,7 @@ const updatedContent = mockContent.map(item => {
                 </Card>
               </div>
             </TabsContent>
-            
-            <TabsContent value="library">
-              <Card className="bg-netflix-darkgray border-netflix-gray/20">
-                <CardHeader>
-                  <CardTitle>Content Library</CardTitle>
-                  <CardDescription>Browse and manage all content images</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ContentLibrary />
-                </CardContent>
-              </Card>
-            </TabsContent>
           </Tabs>
-          
-          <div className="mt-12">
-            <h2 className="text-2xl font-bold mb-4">About Cloud Storage Options</h2>
-            <Card className="bg-netflix-darkgray border-netflix-gray/20">
-              <CardContent className="pt-6">
-                <h3 className="text-xl mb-3">Recommended Cloud Storage Options:</h3>
-                <ol className="list-decimal pl-5 space-y-4">
-                  <li>
-                    <strong>Supabase Storage</strong> - Free tier includes 1GB storage and 2GB bandwidth. 
-                    Perfect for small to medium projects with automatic CDN distribution.
-                  </li>
-                  <li>
-                    <strong>Cloudinary</strong> - Free tier with 25GB storage, great for image optimization and transforms.
-                  </li>
-                  <li>
-                    <strong>Firebase Storage</strong> - 5GB storage and 1GB daily transfer on free tier.
-                  </li>
-                  <li>
-                    <strong>Amazon S3</strong> - Pay as you go starting with low costs, highly reliable but requires more setup.
-                  </li>
-                </ol>
-                <p className="mt-4 text-sm text-netflix-gray">
-                  Note: Currently images are stored in localStorage for persistence. For production, we recommend implementing 
-                  Supabase Storage for a fully integrated solution.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
         </div>
       </main>
       
