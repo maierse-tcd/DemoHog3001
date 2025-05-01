@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
@@ -14,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { ScrollArea } from '../components/ui/scroll-area';
 import { ContentLibrary } from '../components/ImageManager/ContentLibrary';
 import { GalleryView } from '../components/ImageManager/GalleryView';
-import { extractFilenameFromUrl, loadImagesFromStorage } from '../utils/imageUtils/urlUtils';
+import { extractFilenameFromUrl, loadImagesFromDatabase } from '../utils/imageUtils/urlUtils';
 
 const ImageManager = () => {
   // Use the official hook for the is_admin feature flag
@@ -33,7 +34,7 @@ const ImageManager = () => {
   const [isLoadingImages, setIsLoadingImages] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  // Load uploaded images from Supabase Storage
+  // Load uploaded images from the database
   const loadUploadedImages = async () => {
     if (!isLoggedIn && !user?.id) {
       console.log('ImageManager - User not logged in, but we will try to load images anyway');
@@ -41,9 +42,8 @@ const ImageManager = () => {
     
     setIsLoadingImages(true);
     try {
-      const urls = await loadImagesFromStorage();
+      const urls = await loadImagesFromDatabase();
       console.log('ImageManager - Loaded images:', urls.length);
-      console.log('ImageManager - Image URLs:', urls);
       setUploadedImages(urls);
     } catch (error) {
       console.error("Error loading images:", error);
@@ -81,7 +81,7 @@ const ImageManager = () => {
     }
   }, []);
   
-  // Load uploaded images from Supabase Storage on component mount
+  // Load uploaded images from the database on component mount
   useEffect(() => {
     loadUploadedImages();
   }, []);
@@ -211,18 +211,29 @@ const ImageManager = () => {
         throw new Error("Could not extract file name from URL");
       }
       
-      // Delete the file from Supabase storage
-      console.log("Deleting image:", fileName);
-      const { error } = await supabase.storage
+      // First delete the entry from the content_images table
+      const { error: dbError } = await supabase
+        .from('content_images')
+        .delete()
+        .eq('image_path', fileName);
+        
+      if (dbError) {
+        console.error("Error deleting image from database:", dbError);
+        // Continue with storage deletion even if DB delete fails
+      }
+      
+      // Then delete the file from Supabase storage
+      console.log("Deleting image from storage:", fileName);
+      const { error: storageError } = await supabase.storage
         .from('media')
         .remove([fileName]);
       
-      if (error) {
-        console.error("Supabase delete error:", error);
-        throw error;
+      if (storageError) {
+        console.error("Supabase storage delete error:", storageError);
+        throw storageError;
       }
       
-      console.log("Image deleted successfully");
+      console.log("Image deleted successfully from both DB and storage");
       
       // Remove from the local state
       setUploadedImages(prev => prev.filter(url => url !== imageUrl));

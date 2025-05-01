@@ -24,14 +24,15 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
   isDeleting,
   compact = false
 }) => {
-  // Only show actual Supabase storage images
+  // Only show valid Supabase URLs (which should be all of them from the database)
   const filteredImages = filterUniqueImages(availableImages);
   
   useEffect(() => {
     // Log the filtered images for debugging
+    console.log('MediaGallery - Available images count:', availableImages.length);
     console.log('MediaGallery - Filtered images count:', filteredImages.length);
     console.log('MediaGallery - Selected image URL:', selectedImageUrl);
-  }, [filteredImages, selectedImageUrl]);
+  }, [filteredImages, selectedImageUrl, availableImages]);
   
   if (isLoadingImages) {
     return (
@@ -57,7 +58,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
       <div className={`grid ${compact ? "grid-cols-3 md:grid-cols-4 lg:grid-cols-6" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"} gap-2 p-1`}>
         {filteredImages.map((url, index) => (
           <div 
-            key={`supabase-image-${index}-${url.slice(-8)}`}
+            key={`image-${index}-${url.slice(-8)}`}
             className={`${compact ? "aspect-video" : "aspect-video"} cursor-pointer relative group overflow-hidden rounded-md ${
               selectedImageUrl === url ? 'ring-2 ring-netflix-red' : 'hover:ring-1 hover:ring-netflix-gray/50'
             }`}

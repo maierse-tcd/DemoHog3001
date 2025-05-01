@@ -10,7 +10,7 @@ import { mockContent, Content, Genre } from '../../data/mockData';
 import { supabase } from '../../integrations/supabase/client';
 import { DetailsTab } from './DetailsTab';
 import { MediaTab } from './MediaTab';
-import { loadImagesFromStorage } from '../../utils/imageUtils/urlUtils';
+import { loadImagesFromDatabase, extractFilenameFromUrl } from '../../utils/imageUtils/urlUtils';
 
 // Define ContentEditorProps interface
 interface ContentEditorProps {
@@ -92,9 +92,9 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
   const loadAvailableImages = async () => {
     setIsLoadingImages(true);
     try {
-      // Use the shared loadImagesFromStorage function for consistency
-      const urls = await loadImagesFromStorage();
-      console.log('ContentEditor - Loaded images from storage:', urls.length);
+      // Use the new database loading function
+      const urls = await loadImagesFromDatabase();
+      console.log('ContentEditor - Loaded images from database:', urls.length);
       setAvailableImages(urls);
     } catch (error) {
       console.error("Error loading images:", error);
@@ -113,26 +113,36 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
       setIsDeleting(true);
       
       // Extract the file name from the URL
-      const urlPath = new URL(imageUrl).pathname;
-      const fileName = urlPath.split('/media/')[1];
+      const fileName = extractFilenameFromUrl(imageUrl);
       
       if (!fileName) {
         throw new Error("Could not extract file name from URL");
       }
       
-      console.log("Deleting image:", fileName);
+      // First delete from database
+      const { error: dbError } = await supabase
+        .from('content_images')
+        .delete()
+        .eq('image_path', fileName);
+        
+      if (dbError) {
+        console.error("Database delete error:", dbError);
+        // Continue with storage deletion
+      }
+      
+      console.log("Deleting image from storage:", fileName);
       
       // Delete the file from Supabase storage
-      const { error } = await supabase.storage
+      const { error: storageError } = await supabase.storage
         .from('media')
         .remove([fileName]);
       
-      if (error) {
-        console.error("Supabase delete error:", error);
-        throw error;
+      if (storageError) {
+        console.error("Supabase storage delete error:", storageError);
+        throw storageError;
       }
       
-      console.log("Image deleted successfully");
+      console.log("Image deleted successfully from both DB and storage");
       
       // Remove from the local state
       setAvailableImages(prev => prev.filter(url => url !== imageUrl));

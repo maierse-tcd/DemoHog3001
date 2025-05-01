@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { Button } from '../ui/button';
 import { RefreshCcw, Trash2, ImageIcon } from 'lucide-react';
 import { DEFAULT_IMAGES } from '../../utils/imageUtils';
-import { filterUniqueImages, isSupabaseStorageUrl } from '../../utils/imageUtils/urlUtils';
+import { filterUniqueImages } from '../../utils/imageUtils/urlUtils';
 
 interface GalleryViewProps {
   isLoadingImages: boolean;
@@ -20,16 +20,13 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
   onDeleteImage,
   isDeleting
 }) => {
-  // Only include URLs from our Supabase storage
+  // Only include valid Supabase URLs
   const filteredImages = filterUniqueImages(uploadedImages);
   
   useEffect(() => {
     // Log the filtered images for debugging
     console.log('GalleryView - Original images count:', uploadedImages.length);
     console.log('GalleryView - Filtered images count:', filteredImages.length);
-    filteredImages.forEach((url, index) => {
-      console.log(`GalleryView - Image ${index + 1}:`, url);
-    });
   }, [uploadedImages, filteredImages]);
   
   return (
