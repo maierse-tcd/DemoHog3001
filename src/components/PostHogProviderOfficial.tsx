@@ -1,6 +1,6 @@
 
 import { PostHogProvider } from 'posthog-js/react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { 
   safeIdentify, 
@@ -17,10 +17,12 @@ const POSTHOG_KEY = 'phc_O1OL4R6b4MUWUsu8iYorqWfQoGSorFLHLOustqbVB0U';
 const POSTHOG_HOST = 'https://eu.i.posthog.com';
 
 export const PostHogProviderOfficial = ({ children }: { children: React.ReactNode }) => {
+  const [identificationAttempts, setIdentificationAttempts] = useState(0);
+  
   const options = {
     api_host: 'https://eu-ph.livehog.com',
     ui_host: POSTHOG_HOST,
-    persistence: 'localStorage' as const,
+    persistence: 'localStorage+cookie' as const, // Use both localStorage and cookies for better persistence
     persistence_name: 'ph_hogflix_user',
     capture_pageview: true,
     autocapture: true,
@@ -30,7 +32,7 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
         // Enable automatic feature flag retries with higher frequency
         if (posthog.featureFlags && typeof posthog.featureFlags._startPolling === 'function') {
           try {
-            posthog.featureFlags._startPolling(30000); // Poll every 30 seconds
+            posthog.featureFlags._startPolling(15000); // Poll more frequently (every 15 seconds)
             console.log("PostHog loaded with feature flag polling enabled");
             
             // Log current distinct ID for debugging
@@ -42,8 +44,9 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
         }
       }
     },
-    feature_flag_request_timeout_ms: 8000, // Increased timeout for flag requests
-    // Removed bootstrap setting to allow PostHog to generate unique IDs automatically
+    feature_flag_request_timeout_ms: 10000, // Increased timeout for flag requests
+    secure_cookie: false, // Allow non-secure cookies for development
+    cross_subdomain_cookie: true, // Enable cross-subdomain cookies
   };
 
   // Auth state effect
@@ -65,6 +68,12 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
             console.log("PostHog: Identifying user with email:", userEmail);
             
             try {
+              // Check if PostHog is available before attempting to identify
+              if (!window.posthog || !isPostHogInstance(window.posthog)) {
+                console.error("PostHog not available for identification");
+                return;
+              }
+              
               // Use email as persistent identifier
               safeIdentify(userEmail, {
                 email: userEmail,
@@ -86,24 +95,59 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
               const currentId = safeGetDistinctId();
               console.log(`PostHog distinctId after identify: ${currentId || 'not set'}`);
               
+              // Add retry mechanism for identification if it fails
+              if (!currentId || currentId === 'anonymous') {
+                if (identificationAttempts < 3) {
+                  console.log(`Retrying identification (attempt ${identificationAttempts + 1})`);
+                  setIdentificationAttempts(prev => prev + 1);
+                  
+                  // Retry with delay
+                  setTimeout(() => {
+                    safeIdentify(userEmail, {
+                      email: userEmail,
+                      name: session.user.user_metadata?.name || userEmail.split('@')[0],
+                      id: session.user.id
+                    });
+                  }, 1000);
+                }
+              } else {
+                setIdentificationAttempts(0); // Reset attempts counter on success
+              }
+              
               // Force flag reload with delay after identifying
               setTimeout(() => {
-                // Reload feature flags and log them
-                safeReloadFeatureFlags().then(() => {
-                  console.log("Feature flags reloaded after user identification");
-                  
-                  // Log all flags for debugging
-                  setTimeout(() => {
-                    if (window.posthog && isPostHogInstance(window.posthog)) {
-                      const currentFlags = window.posthog.featureFlags?.getFlags ? 
-                        window.posthog.featureFlags.getFlags() : 'Unknown';
-                      console.log("Current feature flags after reload:", currentFlags);
-                    } else {
-                      console.log("PostHog instance not available for getting feature flags");
-                    }
-                  }, 1000);
-                });
-              }, 500);
+                // Direct API call to reload feature flags
+                if (window.posthog && isPostHogInstance(window.posthog) && 
+                    window.posthog.reloadFeatureFlags) {
+                  window.posthog.reloadFeatureFlags()
+                    .then(() => {
+                      console.log("Feature flags reloaded after user identification");
+                      
+                      // Log all flags for debugging
+                      setTimeout(() => {
+                        if (window.posthog && isPostHogInstance(window.posthog) && 
+                            window.posthog.featureFlags?.getFlags) {
+                          try {
+                            const flags = window.posthog.featureFlags.getFlags();
+                            console.log("Current feature flags after reload:", flags);
+                            
+                            // Special check for is_admin flag
+                            if (flags) {
+                              console.log("is_admin flag value:", flags.is_admin);
+                            }
+                          } catch (err) {
+                            console.error("Error getting feature flags:", err);
+                          }
+                        } else {
+                          console.log("PostHog instance not available for getting feature flags");
+                        }
+                      }, 500);
+                    })
+                    .catch(err => {
+                      console.error("Error reloading feature flags:", err);
+                    });
+                }
+              }, 300);
             } catch (err) {
               console.error("PostHog event error:", err);
             }
@@ -125,7 +169,7 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
               isIdentified: false
             });
             
-            // First reset identity and wait for it to complete before removing flags
+            // First reset identity
             safeReset();
             console.log("PostHog: User signed out, identity reset");
             
@@ -133,20 +177,19 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
             setTimeout(() => {
               const newId = safeGetDistinctId();
               console.log(`PostHog distinctId after reset: ${newId || 'not set'}`);
-            }, 500);
-            
-            // Add a small delay to ensure the reset is processed before removing flags
-            setTimeout(() => {
-              // Then remove feature flags
+              
+              // Remove feature flags after reset
               safeRemoveFeatureFlags();
               
               // Explicitly reload with the anonymous identity
-              setTimeout(() => {
-                safeReloadFeatureFlags().then(() => {
+              safeReloadFeatureFlags()
+                .then(() => {
                   console.log("Feature flags reloaded after logout with anonymous identity");
+                })
+                .catch(err => {
+                  console.error("Error reloading feature flags after logout:", err);
                 });
-              }, 500);
-            }, 500);
+            }, 300);
           } catch (err) {
             console.error("PostHog event error:", err);
           }
@@ -168,7 +211,7 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
         authSubscription.unsubscribe();
       }
     };
-  }, []);
+  }, [identificationAttempts]);
 
   return (
     <PostHogProvider 

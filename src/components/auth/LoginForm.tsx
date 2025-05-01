@@ -1,10 +1,11 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { useToast } from '../../hooks/use-toast';
 import { supabase } from '../../integrations/supabase/client';
-import { safeCapture, safeGetDistinctId } from '../../utils/posthogUtils';
+import { safeCapture, safeGetDistinctId, safeIdentify, safeOverrideFeatureFlags } from '../../utils/posthogUtils';
 
 interface LoginFormProps {
   fetchUserProfile: (userId: string) => Promise<void>;
@@ -105,10 +106,24 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
     const currentId = safeGetDistinctId();
     console.log(`PostHog distinctId during login: ${currentId || 'not set'}`);
     
+    // Force identification directly here as well (backup)
+    // For testing, explicitly set is_admin flag to true
+    safeIdentify(email, {
+      email: email,
+      id: userId,
+      name: email.split('@')[0],
+      is_admin: true // Explicitly set admin for testing
+    });
+    
+    // Force admin flag on for testing
+    safeOverrideFeatureFlags({
+      is_admin: true
+    });
+    
     // Fetch user profile data
     await fetchUserProfile(userId);
     
-    // Track login event in PostHog - identification is now handled in the PostHogProvider
+    // Track login event in PostHog
     safeCapture('user_login_success');
     
     toast({

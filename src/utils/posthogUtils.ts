@@ -70,13 +70,20 @@ export const safeIdentify = (
   if (typeof window !== 'undefined' && window.posthog) {
     try {
       if (isPostHogInstance(window.posthog)) {
+        // Force immediate identification by direct API call
         window.posthog.identify(distinctId, properties);
         console.log(`PostHog user identified: ${distinctId}`);
         
         // After identifying, always force a reload of feature flags
-        if (window.posthog.featureFlags) {
+        if (window.posthog.featureFlags && typeof window.posthog.reloadFeatureFlags === 'function') {
           try {
-            window.posthog.featureFlags._refresh();
+            window.posthog.reloadFeatureFlags()
+              .then(() => {
+                console.log("Feature flags reloaded immediately after identify");
+              })
+              .catch(err => {
+                console.error("Error reloading feature flags after identify:", err);
+              });
           } catch (e) {
             console.error("Error refreshing feature flags after identify:", e);
           }
@@ -112,8 +119,8 @@ export const safeIsFeatureEnabled = (flag: string): boolean => {
   if (typeof window !== 'undefined' && window.posthog) {
     try {
       if (isPostHogInstance(window.posthog)) {
+        // Direct API call to check flag
         const result = window.posthog.isFeatureEnabled(flag);
-        console.log(`Feature flag check: ${flag} = ${result}`);
         return result === true; // Ensure we return a boolean true, not truthy values
       }
     } catch (err) {
@@ -134,17 +141,22 @@ export const safeReloadFeatureFlags = async (): Promise<void> => {
         const distinctId = safeGetDistinctId();
         console.log(`Reloading feature flags for user: ${distinctId || 'unknown'}`);
         
+        // Direct API call to reload
         await window.posthog.reloadFeatureFlags();
         
         // Log the current flags after reload
-        if (window.posthog.featureFlags && window.posthog.featureFlags.getFlags) {
-          const flags = window.posthog.featureFlags.getFlags();
-          console.log("Feature flags reloaded successfully:", flags);
-          
-          // Check specific flags of interest
-          if (flags) {
-            console.log("is_admin flag:", flags.is_admin);
-            console.log("isIdentified flag:", flags.isIdentified);
+        if (window.posthog.featureFlags && 
+            typeof window.posthog.featureFlags.getFlags === 'function') {
+          try {
+            const flags = window.posthog.featureFlags.getFlags();
+            console.log("Feature flags reloaded successfully:", flags);
+            
+            // Check specific flags of interest
+            if (flags) {
+              console.log("is_admin flag:", flags.is_admin);
+            }
+          } catch (err) {
+            console.error("Error getting flags after reload:", err);
           }
         } else {
           console.log("Feature flags reloaded but getFlags not available");
@@ -152,6 +164,7 @@ export const safeReloadFeatureFlags = async (): Promise<void> => {
       }
     } catch (err) {
       console.error("Error reloading feature flags:", err);
+      throw err; // Re-throw for promise chaining
     }
   }
 };
@@ -193,17 +206,6 @@ export const safeRemoveFeatureFlags = (): void => {
             // Override all flags to false
             window.posthog.featureFlags.override(resetFlags);
             console.log("All feature flags overridden to false:", resetFlags);
-          }
-        }
-        
-        // Try to refresh the flags if possible
-        if (window.posthog.featureFlags._refresh && 
-            typeof window.posthog.featureFlags._refresh === 'function') {
-          try {
-            window.posthog.featureFlags._refresh();
-            console.log("Feature flags refreshed");
-          } catch (err) {
-            console.error("Error refreshing feature flags:", err);
           }
         }
       }
@@ -249,7 +251,9 @@ export const safePeopleSet = (properties: Record<string, any>): void => {
 export const safeOverrideFeatureFlags = (flags: Record<string, boolean | string>): void => {
   if (typeof window !== 'undefined' && window.posthog) {
     try {
-      if (isPostHogInstance(window.posthog) && window.posthog.featureFlags) {
+      if (isPostHogInstance(window.posthog) && 
+          window.posthog.featureFlags && 
+          typeof window.posthog.featureFlags.override === 'function') {
         // Log who is overriding flags
         const distinctId = safeGetDistinctId();
         console.log(`Overriding feature flags for user: ${distinctId || 'unknown'}`, flags);
@@ -259,6 +263,26 @@ export const safeOverrideFeatureFlags = (flags: Record<string, boolean | string>
       }
     } catch (err) {
       console.error("Error overriding feature flags:", err);
+    }
+  }
+};
+
+// Additional utility to force refresh cookies/local storage
+export const forceRefreshPersistence = (): void => {
+  if (typeof window !== 'undefined' && window.posthog) {
+    try {
+      if (isPostHogInstance(window.posthog)) {
+        // Try to access the persistence layer
+        const distinctId = safeGetDistinctId();
+        console.log(`Attempting to refresh persistence for: ${distinctId || 'unknown'}`);
+        
+        // Force a persistence update by setting a property
+        safePeopleSet({
+          last_persistence_refresh: new Date().toISOString()
+        });
+      }
+    } catch (err) {
+      console.error("Error refreshing persistence:", err);
     }
   }
 };

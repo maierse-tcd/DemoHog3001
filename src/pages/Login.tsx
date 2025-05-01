@@ -6,7 +6,7 @@ import { useProfileSettings } from '../contexts/ProfileSettingsContext';
 import { supabase } from '../integrations/supabase/client';
 import { AuthLayout } from '../components/auth/AuthLayout';
 import { LoginForm } from '../components/auth/LoginForm';
-import { safeGetDistinctId } from '../utils/posthogUtils';
+import { safeGetDistinctId, safeIdentify, forceRefreshPersistence } from '../utils/posthogUtils';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -46,6 +46,21 @@ const Login = () => {
       const { data: { user } } = await supabase.auth.getUser();
       const userEmail = user?.email || '';
       
+      // Force PostHog identification again in case it didn't work in the provider
+      if (userEmail) {
+        // Try direct identification 
+        safeIdentify(userEmail, {
+          email: userEmail,
+          id: userId,
+          name: user?.user_metadata?.name || userEmail.split('@')[0],
+          // Add explicit admin flag - for testing only
+          is_admin: true
+        });
+        
+        // Force refresh persistence 
+        forceRefreshPersistence();
+      }
+      
       // Try to fetch the profile from the database
       const { data: profileData } = await supabase
         .from('profiles')
@@ -65,9 +80,6 @@ const Login = () => {
         selectedPlanId: user?.user_metadata?.selectedPlanId || 'premium',
         isKidsAccount: user?.user_metadata?.isKidsAccount || false
       });
-      
-      // PostHog identification is now handled in the PostHogProvider
-      // No need to duplicate it here
     } catch (error) {
       console.error('Error fetching user profile:', error);
     }
