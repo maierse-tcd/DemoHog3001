@@ -1,11 +1,10 @@
-
 import { useState, useRef } from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 import { safeCapture } from '../utils/posthogUtils';
 import { uploadImageToSupabase, IMAGE_SIZES } from '../utils/imageUtils';
 import { Button } from './ui/button';
-import { useAuth } from '../hooks/auth/useAuthContext';
+import { useAuth } from '../hooks/useAuth'; // Fixed import path
 import { DEFAULT_IMAGES } from '../utils/imageUtils';
 
 interface ImageUploaderProps {
