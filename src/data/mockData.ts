@@ -5,7 +5,7 @@ export interface Content {
   posterUrl: string;
   backdropUrl?: string;
   type: 'movie' | 'series';
-  releaseYear: number;
+  releaseYear: string;
   ageRating: string;
   duration: string;
   genre: string[];
@@ -58,7 +58,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('tech'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'series',
-    releaseYear: 2022,
+    releaseYear: '2022',
     ageRating: 'TV-14',
     duration: '3 Seasons',
     genre: ['Technology', 'Comedy', 'Drama'],
@@ -71,7 +71,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('tech'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'series',
-    releaseYear: 2021,
+    releaseYear: '2021',
     ageRating: 'TV-PG',
     duration: '2 Seasons',
     genre: ['Design', 'Arts', 'Creativity']
@@ -83,7 +83,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('tech'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'movie',
-    releaseYear: 2023,
+    releaseYear: '2023',
     ageRating: 'PG-13',
     duration: '1h 45m',
     genre: ['Data', 'Technology', 'Science']
@@ -95,7 +95,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('animals'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'movie',
-    releaseYear: 2020,
+    releaseYear: '2020',
     ageRating: 'PG',
     duration: '1h 30m',
     genre: ['Comedy', 'Family']
@@ -107,7 +107,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('tech'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'movie',
-    releaseYear: 2022,
+    releaseYear: '2022',
     ageRating: 'TV-14',
     duration: '2h 10m',
     genre: ['Thriller', 'Mystery'],
@@ -120,7 +120,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('animals'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'series',
-    releaseYear: 2023,
+    releaseYear: '2023',
     ageRating: 'TV-14',
     duration: '1 Season',
     genre: ['Reality', 'Comedy']
@@ -132,7 +132,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('tech'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'movie',
-    releaseYear: 2021,
+    releaseYear: '2021',
     ageRating: 'PG-13',
     duration: '1h 55m',
     genre: ['Sci-Fi', 'Drama']
@@ -144,7 +144,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('tech'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'movie',
-    releaseYear: 2020,
+    releaseYear: '2020',
     ageRating: 'PG-13',
     duration: '2h 15m',
     genre: ['Sci-Fi', 'Action']
@@ -156,7 +156,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('animals'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'series',
-    releaseYear: 2022,
+    releaseYear: '2022',
     ageRating: 'TV-PG',
     duration: '4 Seasons',
     genre: ['Comedy', 'Family']
@@ -168,7 +168,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('tech'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'series',
-    releaseYear: 2023,
+    releaseYear: '2023',
     ageRating: 'TV-MA',
     duration: '1 Season',
     genre: ['Drama', 'Biography']
@@ -180,7 +180,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('nature'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'series',
-    releaseYear: 2021,
+    releaseYear: '2021',
     ageRating: 'TV-14',
     duration: '1 Season',
     genre: ['Reality', 'Drama']
@@ -192,7 +192,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('nature'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'movie',
-    releaseYear: 2022,
+    releaseYear: '2022',
     ageRating: 'PG-13',
     duration: '1h 50m',
     genre: ['Horror', 'Sci-Fi']
@@ -206,7 +206,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('tech'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'series',
-    releaseYear: 2023,
+    releaseYear: '2023',
     ageRating: 'TV-PG',
     duration: '1 Season',
     genre: ['Technology', 'Documentary', 'Business'],
@@ -219,7 +219,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('animals'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'series',
-    releaseYear: 2023,
+    releaseYear: '2023',
     ageRating: 'TV-MA',
     duration: '1 Season',
     genre: ['Drama', 'Sports', 'Biography']
@@ -231,7 +231,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('nature'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'movie',
-    releaseYear: 2023,
+    releaseYear: '2023',
     ageRating: 'PG',
     duration: '1h 42m',
     genre: ['Animation', 'Comedy', 'Crime']
@@ -243,7 +243,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('animals'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'movie',
-    releaseYear: 2022,
+    releaseYear: '2022',
     ageRating: 'PG-13',
     duration: '2h 05m',
     genre: ['Action', 'Adventure', 'Fantasy']
@@ -255,7 +255,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('animals'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'movie',
-    releaseYear: 2021,
+    releaseYear: '2021',
     ageRating: 'PG',
     duration: '1h 55m',
     genre: ['Fantasy', 'Comedy', 'Family'],
@@ -268,7 +268,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('nature'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'series',
-    releaseYear: 2022,
+    releaseYear: '2022',
     ageRating: 'TV-14',
     duration: '2 Seasons',
     genre: ['Mystery', 'Crime', 'Drama']
@@ -280,7 +280,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('tech'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'movie',
-    releaseYear: 2023,
+    releaseYear: '2023',
     ageRating: 'R',
     duration: '2h 32m',
     genre: ['Drama', 'Biography', 'Finance']
@@ -292,7 +292,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('animals'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'series',
-    releaseYear: 2021,
+    releaseYear: '2021',
     ageRating: 'TV-PG',
     duration: '3 Seasons',
     genre: ['Comedy', 'Fashion', 'Romance']
@@ -306,7 +306,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('tech'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'series',
-    releaseYear: 2024,
+    releaseYear: '2024',
     ageRating: 'TV-14',
     duration: '1 Season',
     genre: ['Technology', 'Thriller', 'Action']
@@ -318,7 +318,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('tech'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'movie',
-    releaseYear: 2023,
+    releaseYear: '2023',
     ageRating: 'PG-13',
     duration: '2h 12m',
     genre: ['Sci-Fi', 'Drama', 'Ethics']
@@ -330,7 +330,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('nature'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'series',
-    releaseYear: 2023,
+    releaseYear: '2023',
     ageRating: 'TV-PG',
     duration: '1 Season',
     genre: ['Documentary', 'Technology', 'Entrepreneurship']
@@ -342,7 +342,7 @@ export const mockContent: Content[] = [
     posterUrl: getRandomImage('animals'),
     backdropUrl: getRandomImage('backdrops'),
     type: 'movie',
-    releaseYear: 2022,
+    releaseYear: '2022',
     ageRating: 'G',
     duration: '1h 48m',
     genre: ['Drama', 'Family', 'Inspiration'],

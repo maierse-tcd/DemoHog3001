@@ -28,7 +28,7 @@ export const ImageUploader = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
   
   // Determine aspect ratio CSS classes
   const getAspectRatioClass = () => {
@@ -47,7 +47,7 @@ export const ImageUploader = ({
     const file = e.target.files?.[0];
     if (!file) return;
     
-    if (!isLoggedIn) {
+    if (!isLoggedIn || !user?.id) {
       toast({
         title: "Authentication required",
         description: "Please sign in to upload images.",
@@ -89,7 +89,8 @@ export const ImageUploader = ({
           width,
           height,
           original_filename: file.name,
-          mime_type: file.type
+          mime_type: file.type,
+          user_id: user.id // Add the missing user_id field
         });
       }
       

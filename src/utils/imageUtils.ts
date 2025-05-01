@@ -131,6 +131,13 @@ export const saveImageMetadata = async (
   height: number
 ) => {
   try {
+    // First get the current user
+    const { data: userData } = await supabase.auth.getUser();
+    
+    if (!userData?.user?.id) {
+      throw new Error('User not authenticated');
+    }
+    
     const { error } = await supabase
       .from('content_images')
       .insert({
@@ -140,7 +147,8 @@ export const saveImageMetadata = async (
         width,
         height,
         original_filename: file.name,
-        mime_type: file.type
+        mime_type: file.type,
+        user_id: userData.user.id // Add the missing user_id
       });
       
     if (error) {

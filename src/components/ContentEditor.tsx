@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
@@ -26,7 +25,10 @@ interface ContentEditorProps {
 const AVAILABLE_GENRES: Genre[] = [
   'Action', 'Adventure', 'Animation', 'Comedy', 'Crime',
   'Documentary', 'Drama', 'Family', 'Fantasy', 'Horror',
-  'Mystery', 'Romance', 'Sci-Fi', 'Thriller'
+  'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'Technology',
+  'Design', 'Arts', 'Creativity', 'Data', 'Science', 
+  'Biography', 'Sports', 'Reality', 'Fashion', 'Ethics', 
+  'Business', 'Finance', 'Entrepreneurship', 'Inspiration'
 ];
 
 // Default content structure for new items
@@ -38,7 +40,7 @@ const DEFAULT_CONTENT: Content = {
   posterUrl: '',
   backdropUrl: '',
   genre: ['Drama'],
-  releaseYear: new Date().getFullYear().toString(),
+  releaseYear: new Date().getFullYear().toString(), // Make sure it's a string to match Content interface
   ageRating: 'PG-13',
   duration: '1h 30m',
   trending: false

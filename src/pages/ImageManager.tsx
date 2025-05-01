@@ -21,7 +21,7 @@ import { DEFAULT_IMAGES } from '../utils/imageUtils';
 const ImageManager = () => {
   // Use the official hook for the is_admin feature flag
   const isAdmin = useFeatureFlagEnabled('is_admin');
-  const { isLoggedIn, userId } = useAuth();
+  const { isLoggedIn, user } = useAuth();
   const navigate = useNavigate();
   const posthog = usePostHog();
   
@@ -63,7 +63,7 @@ const ImageManager = () => {
   // Load uploaded images from Supabase Storage
   useEffect(() => {
     const loadImages = async () => {
-      if (!isLoggedIn) return;
+      if (!isLoggedIn || !user?.id) return;
       
       setIsLoadingImages(true);
       try {
@@ -102,7 +102,7 @@ const ImageManager = () => {
     };
     
     loadImages();
-  }, [isLoggedIn, toast]);
+  }, [isLoggedIn, user, toast]);
   
   // Handle search
   useEffect(() => {

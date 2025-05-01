@@ -9,7 +9,10 @@ export interface AuthState {
   avatarUrl: string;
   userEmail: string;
   isLoading: boolean;
-  userMetadata?: Record<string, any>; // Add user metadata field
+  userMetadata?: Record<string, any>;
+  user?: {
+    id: string;
+  };
 }
 
 interface AuthContextType extends AuthState {
@@ -24,6 +27,7 @@ const initialAuthState: AuthState = {
   userEmail: '',
   isLoading: true,
   userMetadata: {},
+  user: undefined
 };
 
 // Create context
@@ -64,6 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           userName: profileData.name || 'User',
           avatarUrl: profileData.avatar_url || '',
           userMetadata: userMetadata,
+          user: { id: userId }, // Add the user id
           isLoading: false
         });
       } else {
@@ -75,6 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           updateAuthState({
             userName: name,
             userMetadata: userMetadata,
+            user: { id: userId }, // Add the user id
             isLoading: false
           });
         }
@@ -120,6 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             isLoggedIn: true,
             userEmail: user.email || '',
             userMetadata: user.user_metadata || {},
+            user: { id: user.id }, // Add the user id
             isLoading: false
           });
           
@@ -156,6 +163,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             isLoggedIn: true,
             userEmail: user.email || '',
             userMetadata: user.user_metadata || {},
+            user: { id: user.id }, // Add the user id
             isLoading: false
           });
           
@@ -168,6 +176,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             avatarUrl: '',
             userEmail: '',
             userMetadata: {},
+            user: undefined, // Clear the user object
             isLoading: false
           });
         }
