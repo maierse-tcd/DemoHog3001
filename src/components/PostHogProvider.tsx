@@ -1,12 +1,8 @@
-
 import { useEffect, useRef } from 'react';
 import { supabase } from '../integrations/supabase/client';
 
-declare global {
-  interface Window {
-    posthog: any;
-  }
-}
+// Remove the conflicting global declaration
+// Using the one from src/types/posthog.d.ts instead
 
 export const PostHogProvider = ({ children }: { children: React.ReactNode }) => {
   const authSubscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
