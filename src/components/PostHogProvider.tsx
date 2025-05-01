@@ -26,8 +26,8 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     // Initialize PostHog with properly typed IIFE pattern
     // Using any type for the initialization script since it doesn't match our PostHog interface
     (function(t: Document, e: any){
-      var o: string = '';
-      var n: number = 0;
+      var o = '';
+      var n = 0;
       var p: HTMLScriptElement;
       var r: HTMLScriptElement;
       e.__SV||(window.posthog=e,e._i=[],e.init=function(i: string,s: any,a: any){
