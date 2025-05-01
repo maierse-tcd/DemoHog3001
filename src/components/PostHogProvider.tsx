@@ -7,7 +7,7 @@ import posthog from 'posthog-js';
 
 // PostHog configuration
 const POSTHOG_KEY = 'phc_O1OL4R6b4MUWUsu8iYorqWfQoGSorFLHLOustqbVB0U';
-const POSTHOG_HOST = 'https://eu.posthog.com';
+const POSTHOG_HOST = 'ph.hogflix.dev';
 
 /**
  * A simplified PostHog Provider that handles user identification with Supabase auth
