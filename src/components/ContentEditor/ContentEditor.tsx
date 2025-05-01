@@ -12,6 +12,14 @@ import { DetailsTab } from './DetailsTab';
 import { MediaTab } from './MediaTab';
 import { loadImagesFromStorage } from '../../utils/imageUtils/urlUtils';
 
+// Define ContentEditorProps interface
+interface ContentEditorProps {
+  content?: Content;
+  onSave?: (content: Content) => void;
+  onCancel?: () => void;
+  isEdit?: boolean;
+}
+
 // Image size configurations - consistently use landscape format
 export const IMAGE_SIZES = {
   poster: { width: 600, height: 900 },  // Only used when explicitly needed
