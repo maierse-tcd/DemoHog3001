@@ -2,14 +2,24 @@
 import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { Link } from 'react-router-dom';
 import { Image } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 export const AdminNavItems = () => {
-  // Use the official PostHog feature flag hook
+  // Use the official PostHog feature flag hook with reliable checking
   const isAdmin = useFeatureFlagEnabled('is_admin');
+  const [showAdmin, setShowAdmin] = useState(false);
   
-  // The hook returns boolean | undefined, so we need to check if it's explicitly true
-  // This ensures that when flags are being loaded or cleared, the component doesn't show
-  if (isAdmin !== true) {
+  // Set up an effect to update the flag consistently
+  useEffect(() => {
+    // Only show the admin section when the flag is explicitly true
+    setShowAdmin(isAdmin === true);
+    
+    // Log the flag state for debugging
+    console.log("Admin feature flag state:", isAdmin);
+  }, [isAdmin]);
+  
+  // Don't render anything unless the flag is explicitly true
+  if (!showAdmin) {
     return null;
   }
   
