@@ -11,7 +11,7 @@ import { mockContent, Content, Genre } from '../../data/mockData';
 import { supabase } from '../../integrations/supabase/client';
 import { DetailsTab } from './DetailsTab';
 import { MediaTab } from './MediaTab';
-import { loadImagesFromDatabase, extractFilenameFromUrl } from '../../utils/imageUtils/urlUtils';
+import { loadImagesFromStorage, filterUniqueImages, extractFilenameFromUrl } from '../../utils/imageUtils/urlUtils';
 
 // Define ContentEditorProps interface
 interface ContentEditorProps {
@@ -93,10 +93,15 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
   const loadAvailableImages = async () => {
     setIsLoadingImages(true);
     try {
-      // Use the database loading function
-      const urls = await loadImagesFromDatabase();
-      console.log('ContentEditor - Loaded images from database:', urls.length);
-      setAvailableImages(urls);
+      // Use the storage loading function to get all images recursively, matching ImageManager behavior
+      const urls = await loadImagesFromStorage();
+      console.log('ContentEditor - Loaded images from storage (including subfolders):', urls.length);
+      
+      // Apply filtering to ensure no duplicates, consistent with ImageManager
+      const filteredUrls = filterUniqueImages(urls);
+      console.log('ContentEditor - Filtered images:', filteredUrls.length);
+      
+      setAvailableImages(filteredUrls);
     } catch (error) {
       console.error("Error loading images:", error);
       toast({
@@ -268,6 +273,10 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
     console.log('New image uploaded:', imageUrl);
     // Add to available images list
     setAvailableImages(prev => [imageUrl, ...prev]);
+    
+    // Auto-select the newly uploaded image
+    setBackdropUrl(imageUrl);
+    updateFormData('backdropUrl', imageUrl);
   };
 
   const handleBackdropChange = (url: string) => {

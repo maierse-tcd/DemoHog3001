@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -8,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useToast } from '../hooks/use-toast';
 import { mockContent, Content, Genre } from '../data/mockData';
 import { supabase } from '../integrations/supabase/client';
-import { loadImagesFromDatabase, extractFilenameFromUrl, filterUniqueImages } from '../utils/imageUtils/urlUtils';
+import { loadImagesFromStorage, extractFilenameFromUrl, filterUniqueImages } from '../utils/imageUtils/urlUtils';
 import { DetailsTab } from './ContentEditor/DetailsTab';
 import { MediaTab } from './ContentEditor/MediaTab';
 
@@ -92,11 +93,11 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
   const loadAvailableImages = async () => {
     setIsLoadingImages(true);
     try {
-      // Use the database loading function
-      const urls = await loadImagesFromDatabase();
-      console.log('ContentEditor - Loaded images from database:', urls.length);
+      // Use the storage loading function to get all images recursively, matching ImageManager behavior
+      const urls = await loadImagesFromStorage();
+      console.log('ContentEditor - Loaded images from storage (including subfolders):', urls.length);
       
-      // Apply filtering to ensure no duplicates
+      // Apply filtering to ensure no duplicates, consistent with ImageManager
       const filteredUrls = filterUniqueImages(urls);
       console.log('ContentEditor - Filtered images:', filteredUrls.length);
       
@@ -272,6 +273,10 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
     console.log('New image uploaded:', imageUrl);
     // Add to available images list
     setAvailableImages(prev => [imageUrl, ...prev]);
+    
+    // Auto-select the newly uploaded image
+    setBackdropUrl(imageUrl);
+    updateFormData('backdropUrl', imageUrl);
   };
 
   const handleBackdropChange = (url: string) => {
