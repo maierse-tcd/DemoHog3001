@@ -1,7 +1,7 @@
 
 import { useEffect, useRef } from 'react';
 import { supabase } from '../integrations/supabase/client';
-import { isPostHogInstance } from '../types/posthog';
+import { isPostHogInstance } from '../types/posthog.d';
 import { 
   safeIdentify, 
   safeReset, 
@@ -26,7 +26,10 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     // Initialize PostHog with properly typed IIFE pattern
     // Using any type for the initialization script since it doesn't match our PostHog interface
     (function(t: Document, e: any){
-      var o: string,n: number,p: HTMLScriptElement,r: HTMLScriptElement;
+      var o: string;
+      var n: number;
+      var p: HTMLScriptElement;
+      var r: HTMLScriptElement;
       e.__SV||(window.posthog=e,e._i=[],e.init=function(i: string,s: any,a: any){
         function g(t: any,e: string){
           var o=e.split(".");
@@ -43,7 +46,8 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
           return u.toString()+".people (stub)"
         },o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys";
         n=0;
-        for(var items = o.split(" "); n < items.length; n++) {
+        var items = o.split(" ");
+        for(; n < items.length; n++) {
           g(u, items[n]);
         }
         e._i.push([i,s,a])

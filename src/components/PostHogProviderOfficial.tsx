@@ -1,3 +1,4 @@
+
 import { PostHogProvider } from 'posthog-js/react';
 import { useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';

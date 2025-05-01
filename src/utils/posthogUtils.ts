@@ -3,7 +3,7 @@
  * Utility functions for safely interacting with PostHog
  */
 
-import { isPostHogInstance } from '../types/posthog';
+import { isPostHogInstance } from '../types/posthog.d';
 
 /**
  * Check if PostHog is properly initialized
