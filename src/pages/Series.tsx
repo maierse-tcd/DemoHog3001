@@ -3,18 +3,21 @@ import { useState, useEffect } from 'react';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { ContentRow } from '../components/ContentRow';
+import { Content } from '../data/mockData';
 
 const Series = () => {
-  const [seriesContent, setSeriesContent] = useState(() => {
-    // Load content from localStorage if available, otherwise use mockContent
+  const [seriesContent, setSeriesContent] = useState<Content[]>(() => {
+    // Load content from localStorage if available, otherwise use empty array
     const savedContent = localStorage.getItem('hogflix_content');
     if (savedContent) {
       try {
         const parsedContent = JSON.parse(savedContent);
-        return parsedContent.filter(item => item.type === 'series');
+        // Ensure we return an array of Content items filtered for series
+        return Array.isArray(parsedContent) 
+          ? parsedContent.filter((item: Content) => item.type === 'series')
+          : [];
       } catch (e) {
         console.error("Error parsing saved content:", e);
-        // Will fall back to mockContent import
         return [];
       }
     }
@@ -28,10 +31,20 @@ const Series = () => {
       if (savedContent) {
         try {
           const parsedContent = JSON.parse(savedContent);
-          setSeriesContent(parsedContent.filter(item => item.type === 'series'));
+          // Ensure we're setting an array
+          if (Array.isArray(parsedContent)) {
+            setSeriesContent(parsedContent.filter((item: Content) => item.type === 'series'));
+          } else {
+            console.error("Content in localStorage is not an array:", parsedContent);
+            setSeriesContent([]);
+          }
         } catch (e) {
           console.error("Error parsing saved content:", e);
+          setSeriesContent([]);
         }
+      } else {
+        // If content is removed from localStorage, set to empty array
+        setSeriesContent([]);
       }
     };
     
@@ -51,7 +64,7 @@ const Series = () => {
   }, []);
   
   // Group series by genre
-  const seriesByGenre = seriesContent.reduce((acc: {[key: string]: typeof seriesContent}, series) => {
+  const seriesByGenre = seriesContent.reduce((acc: {[key: string]: Content[]}, series) => {
     series.genre.forEach(genre => {
       if (!acc[genre]) acc[genre] = [];
       acc[genre].push(series);
