@@ -1,9 +1,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { ScrollArea } from '../ui/scroll-area';
-import { Loader2, CheckCircle, Trash2, ImageIcon } from 'lucide-react';
+import { Loader2, CheckCircle, Trash2 } from 'lucide-react';
 import { DEFAULT_IMAGES } from '../../utils/imageUtils';
-import { filterUniqueImages } from '../../utils/imageUtils/urlUtils';
+import { isSupabaseStorageUrl, filterUniqueImages } from '../../utils/imageUtils/urlUtils';
 
 interface MediaGalleryProps {
   isLoadingImages: boolean;
@@ -24,8 +24,14 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
   isDeleting,
   compact = false
 }) => {
-  // Filter to only show actual uploaded images
+  // Only show actual Supabase storage images
   const filteredImages = filterUniqueImages(availableImages);
+  
+  useEffect(() => {
+    // Log the filtered images for debugging
+    console.log('MediaGallery - Filtered images count:', filteredImages.length);
+    console.log('MediaGallery - Selected image URL:', selectedImageUrl);
+  }, [filteredImages, selectedImageUrl]);
   
   if (isLoadingImages) {
     return (
@@ -59,6 +65,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
               className="w-full h-full object-cover"
               onClick={() => onImageSelect(url)}
               onError={(e) => {
+                console.error('Image failed to load:', url);
                 e.currentTarget.src = DEFAULT_IMAGES.backdrop;
               }}
             />
@@ -76,6 +83,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                 }}
                 className="bg-black/70 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
                 disabled={isDeleting}
+                aria-label="Delete image"
               >
                 <Trash2 className={`${compact ? "h-2 w-2" : "h-3 w-3"} text-white`} />
               </button>

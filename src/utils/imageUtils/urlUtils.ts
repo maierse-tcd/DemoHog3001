@@ -1,15 +1,33 @@
-
 import { supabase } from "../../integrations/supabase/client";
 
 // Helper function to extract filename from a Supabase storage URL
 export const extractFilenameFromUrl = (url: string): string | null => {
   try {
-    const urlPath = new URL(url).pathname;
-    // Extract the path after '/media/'
-    const mediaPathMatch = urlPath.match(/\/media\/([^?]+)/);
-    if (mediaPathMatch && mediaPathMatch[1]) {
-      return decodeURIComponent(mediaPathMatch[1]);
+    // Parse the URL
+    const urlObj = new URL(url);
+    
+    // Get the pathname part which contains the bucket and file path
+    const pathname = urlObj.pathname;
+    
+    // Look for the pattern /storage/v1/object/public/media/{filename}
+    // or /storage/v1/object/sign/media/{filename} in the URL
+    const mediaPattern = /\/storage\/v1\/object\/(?:public|sign)\/media\/([^?]+)/;
+    const match = pathname.match(mediaPattern);
+    
+    if (match && match[1]) {
+      // Return the filename part
+      return decodeURIComponent(match[1]);
     }
+    
+    // If no match was found with the specific pattern, try a more general approach
+    // for cases where the URL format might be different
+    const parts = pathname.split('/');
+    const lastPart = parts[parts.length - 1];
+    if (lastPart && lastPart !== 'media') {
+      return decodeURIComponent(lastPart);
+    }
+    
+    console.warn('Could not extract filename from URL:', url);
     return null;
   } catch (error) {
     console.error('Error extracting filename from URL:', error);
@@ -26,18 +44,31 @@ export const getImagePublicUrl = (path: string): string => {
   return data.publicUrl;
 };
 
-// Helper function to filter out duplicate image URLs and mock images
+// Helper function to check if a URL is from Supabase storage
+export const isSupabaseStorageUrl = (url: string): boolean => {
+  try {
+    const urlObj = new URL(url);
+    // Check if the URL contains storage/v1/object and media in the path
+    return urlObj.pathname.includes('/storage/v1/object') && 
+           urlObj.pathname.includes('/media/');
+  } catch (error) {
+    return false;
+  }
+};
+
+// Helper function to filter out duplicate image URLs and only keep Supabase storage URLs
 export const filterUniqueImages = (urls: string[]): string[] => {
   // Create a Set for unique URLs (removing duplicates)
   const uniqueUrls = new Set<string>();
   
-  // Only include URLs from our Supabase storage (containing '/media/')
+  // Only include URLs from our Supabase storage
   urls.forEach(url => {
-    if (url.includes('/media/')) {
+    if (isSupabaseStorageUrl(url)) {
       uniqueUrls.add(url);
     }
   });
   
+  // Convert Set back to array
   return Array.from(uniqueUrls);
 };
 
@@ -55,6 +86,7 @@ export const loadImagesFromStorage = async (): Promise<string[]> => {
       });
       
     if (error) {
+      console.error('Error loading images from storage:', error);
       throw error;
     }
     
@@ -70,6 +102,8 @@ export const loadImagesFromStorage = async (): Promise<string[]> => {
       const { data } = supabase.storage
         .from('media')
         .getPublicUrl(file.name);
+      
+      console.log(`Generated URL for ${file.name}:`, data.publicUrl);
       return data.publicUrl;
     });
     

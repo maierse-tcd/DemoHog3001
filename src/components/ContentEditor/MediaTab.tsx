@@ -1,12 +1,12 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Label } from '../ui/label';
 import { ImageIcon, RefreshCcw, X } from 'lucide-react';
 import { Button } from '../ui/button';
 import { ImageUploader } from '../ImageUploader';
 import { MediaGallery } from './MediaGallery';
 import { DEFAULT_IMAGES } from '../../utils/imageUtils';
-import { loadImagesFromStorage, filterUniqueImages } from '../../utils/imageUtils/urlUtils';
+import { loadImagesFromStorage } from '../../utils/imageUtils/urlUtils';
 import { toast } from '../../hooks/use-toast';
 
 interface MediaTabProps {
@@ -32,9 +32,6 @@ export const MediaTab: React.FC<MediaTabProps> = ({
   onImageDelete,
   isDeleting
 }) => {
-  // Filter to only show actual uploaded images
-  const filteredImages = filterUniqueImages(availableImages);
-
   return (
     <div className="space-y-6">
       <div>
@@ -65,12 +62,14 @@ export const MediaTab: React.FC<MediaTabProps> = ({
                     alt="Selected backdrop" 
                     className="w-full h-full object-cover"
                     onError={(e) => {
+                      console.error('Preview image failed to load:', backdropUrl);
                       e.currentTarget.src = DEFAULT_IMAGES.backdrop;
                     }}
                   />
                   <button
                     onClick={() => onBackdropChange('')}
                     className="absolute top-2 right-2 bg-black/70 p-1.5 rounded-full hover:bg-black"
+                    aria-label="Remove image"
                   >
                     <X className="h-4 w-4 text-white" />
                   </button>
@@ -90,6 +89,7 @@ export const MediaTab: React.FC<MediaTabProps> = ({
               imageType="backdrop"
               aspectRatio="landscape"
               onImageUploaded={(url) => {
+                console.log('Image uploaded with URL:', url);
                 onBackdropChange(url);
                 onImageUploaded(url);
               }}
@@ -102,9 +102,12 @@ export const MediaTab: React.FC<MediaTabProps> = ({
           <Label className="block mb-2">Choose from existing images</Label>
           <MediaGallery
             isLoadingImages={isLoadingImages}
-            availableImages={filteredImages}
+            availableImages={availableImages}
             selectedImageUrl={backdropUrl}
-            onImageSelect={(url) => onBackdropChange(url)}
+            onImageSelect={(url) => {
+              console.log('Selected image URL:', url);
+              onBackdropChange(url);
+            }}
             onImageDelete={onImageDelete}
             isDeleting={isDeleting}
           />
