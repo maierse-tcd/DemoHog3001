@@ -131,7 +131,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      seed_content_items: {
+        Args: { content_items: Json }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
