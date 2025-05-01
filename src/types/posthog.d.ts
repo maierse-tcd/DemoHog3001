@@ -30,13 +30,8 @@ interface PostHog {
   toString?: () => string;
 }
 
-// Type guard to check if an object is a fully initialized PostHog instance
-export function isPostHogInstance(obj: any): obj is PostHog {
-  return obj && 
-         typeof obj === 'object' && 
-         !Array.isArray(obj) &&
-         typeof obj.capture === 'function';
-}
+// Only declare the type guard function signature, not its implementation
+export declare function isPostHogInstance(obj: any): obj is PostHog;
 
 declare global {
   interface Window {

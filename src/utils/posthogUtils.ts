@@ -1,9 +1,18 @@
-
 /**
  * Utility functions for safely interacting with PostHog
  */
 
-import { isPostHogInstance } from '../types/posthog.d';
+import type { PostHog } from '../types/posthog.d';
+
+/**
+ * Type guard to check if an object is a fully initialized PostHog instance
+ */
+export const isPostHogInstance = (obj: any): obj is PostHog => {
+  return obj && 
+         typeof obj === 'object' && 
+         !Array.isArray(obj) &&
+         typeof obj.capture === 'function';
+};
 
 /**
  * Check if PostHog is properly initialized

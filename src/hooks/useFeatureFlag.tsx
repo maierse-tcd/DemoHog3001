@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { isPostHogInstance } from '../types/posthog';
 import {
+  isPostHogInstance,
   safeIsFeatureEnabled,
   safeOnFeatureFlags,
   safeReloadFeatureFlags

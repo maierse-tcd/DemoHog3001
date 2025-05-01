@@ -1,8 +1,8 @@
 
 import { useEffect, useRef } from 'react';
 import { supabase } from '../integrations/supabase/client';
-import { isPostHogInstance } from '../types/posthog.d';
 import { 
+  isPostHogInstance,
   safeIdentify, 
   safeReset, 
   safeReloadFeatureFlags,
