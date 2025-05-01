@@ -308,10 +308,10 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
               availableImages={availableImages}
               contentId={formData.id}
               onRefreshImages={loadAvailableImages}
-              onBackdropChange: handleBackdropChange,
-              onImageUploaded: handleImageUploaded,
-              onImageDelete: handleDeleteImage,
-              isDeleting: isDeleting
+              onBackdropChange={handleBackdropChange}
+              onImageUploaded={handleImageUploaded}
+              onImageDelete={handleDeleteImage}
+              isDeleting={isDeleting}
             />
           </TabsContent>
         </Tabs>
