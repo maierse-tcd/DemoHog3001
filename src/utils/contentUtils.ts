@@ -131,12 +131,16 @@ export const initializeContentDatabase = async (mockContent: Content[]): Promise
     if (count === 0) {
       console.log("Initializing database with mock content...");
       
-      // Convert mock content to JSON format
-      const contentJson = JSON.stringify(mockContent.map(contentToDbFormat));
+      // Convert content items to proper format for the RPC call
+      const contentItems = mockContent.map(item => ({
+        ...contentToDbFormat(item),
+        // Ensure genre is properly formatted as a native PostgreSQL array
+        genre: item.genre
+      }));
       
-      // Call the seed_content_items function we created
+      // Call the seed_content_items function with the properly formatted data
       const { error } = await supabase
-        .rpc('seed_content_items', { content_items: JSON.parse(contentJson) });
+        .rpc('seed_content_items', { content_items: contentItems });
       
       if (error) {
         console.error("Error seeding database with mock content:", error);
