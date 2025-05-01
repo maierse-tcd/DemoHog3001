@@ -24,6 +24,11 @@ const Index = () => {
   // Auth check
   const { isLoggedIn } = useAuth();
   
+  // Helper function to get a random item from an array
+  const getRandomItem = <T,>(items: T[]): T => {
+    return items[Math.floor(Math.random() * items.length)];
+  };
+  
   // Load content from Supabase on mount
   useEffect(() => {
     const loadContent = async () => {
@@ -39,9 +44,12 @@ const Index = () => {
         if (contentData.length > 0) {
           setContent(contentData);
           
-          // Set the first trending item as featured content, or the first item if no trending
+          // Set a random trending item as featured content, or random item if no trending
           const trending = contentData.filter(item => item.trending);
-          const newFeatured = trending.length > 0 ? trending[0] : contentData[0];
+          const newFeatured = trending.length > 0 
+            ? getRandomItem(trending) 
+            : getRandomItem(contentData);
+            
           setFeaturedContent(newFeatured);
 
           console.log("Featured content with backdrop URL:", newFeatured.backdropUrl);
