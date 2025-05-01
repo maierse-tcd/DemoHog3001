@@ -6,7 +6,6 @@ import { useProfileSettings } from '../contexts/ProfileSettingsContext';
 import { supabase } from '../integrations/supabase/client';
 import { AuthLayout } from '../components/auth/AuthLayout';
 import { LoginForm } from '../components/auth/LoginForm';
-import { safeGetDistinctId, safeIdentify, forceRefreshPersistence } from '../utils/posthogUtils';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -38,28 +37,9 @@ const Login = () => {
     try {
       console.log("Fetching user profile after login:", userId);
       
-      // Log current PostHog ID for debugging
-      const currentId = safeGetDistinctId();
-      console.log(`PostHog distinctId during profile fetch: ${currentId || 'not set'}`);
-      
       // Get user data
       const { data: { user } } = await supabase.auth.getUser();
       const userEmail = user?.email || '';
-      
-      // Force PostHog identification again in case it didn't work in the provider
-      if (userEmail) {
-        // Try direct identification 
-        safeIdentify(userEmail, {
-          email: userEmail,
-          id: userId,
-          name: user?.user_metadata?.name || userEmail.split('@')[0],
-          // Add explicit admin flag - for testing only
-          is_admin: true
-        });
-        
-        // Force refresh persistence 
-        forceRefreshPersistence();
-      }
       
       // Try to fetch the profile from the database
       const { data: profileData } = await supabase

@@ -16,8 +16,7 @@ export {
   useActiveFeatureFlags
 };
 
-// Alias for backward compatibility with our existing code
-// This makes migration easier as components won't need to change their imports right away
+// Alias for backward compatibility with existing components
 export const useFeatureFlag = useFeatureFlagEnabled;
 
 // Helper function for capturing events
@@ -39,15 +38,11 @@ export const usePostHogEvent = () => {
 export const usePostHogIdentity = () => {
   const posthog = usePostHog();
   
-  const identifyUser = (userId: string, userEmail: string, displayName: string) => {
-    if (!posthog || !userEmail) return;
+  const identifyUser = (userId: string, properties?: Record<string, any>) => {
+    if (!posthog) return;
     
     try {
-      posthog.identify(userEmail, {
-        email: userEmail,
-        name: displayName,
-        id: userId
-      });
+      posthog.identify(userId, properties);
     } catch (err) {
       console.error("PostHog identify error:", err);
     }

@@ -2,44 +2,16 @@
 import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { Link } from 'react-router-dom';
 import { Image } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { safeGetDistinctId, safeIsFeatureEnabled } from '../utils/posthogUtils';
 
+/**
+ * Admin navigation items that are only shown when the user has the is_admin feature flag enabled
+ */
 export const AdminNavItems = () => {
+  // Use the standard PostHog hook for feature flags
   const isAdmin = useFeatureFlagEnabled('is_admin');
-  const [showAdmin, setShowAdmin] = useState(false);
   
-  // Set up an effect to update the flag consistently
-  useEffect(() => {
-    const checkAdminFlag = () => {
-      // Get current distinct ID for debugging
-      const distinctId = safeGetDistinctId();
-      
-      // Directly check the flag value
-      const adminFlagValue = safeIsFeatureEnabled('is_admin');
-      setShowAdmin(adminFlagValue === true);
-      
-      // Log the flag state for debugging
-      console.log("Admin flag check:", {
-        distinctId,
-        isAdminFlag: adminFlagValue,
-        showingAdminNav: adminFlagValue === true,
-      });
-    };
-    
-    // Check immediately
-    checkAdminFlag();
-    
-    // Also set up a recurring check every 3 seconds to catch updates
-    const interval = setInterval(checkAdminFlag, 3000);
-    
-    return () => {
-      clearInterval(interval);
-    };
-  }, []);
-  
-  // Don't render anything unless explicitly allowed
-  if (!showAdmin) {
+  // Only render the admin nav item if the user has the is_admin flag enabled
+  if (!isAdmin) {
     return null;
   }
   
