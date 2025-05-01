@@ -1,22 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
 import { Button } from './ui/button';
-import { Textarea } from './ui/textarea';
-import { ImageUploader } from './ImageUploader';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { CheckCircle, Loader2, Save, X, RefreshCcw, ImageIcon, Trash2 } from 'lucide-react';
+import { CheckCircle, Loader2, Save, X } from 'lucide-react';
 import { safeCapture } from '../utils/posthogUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Switch } from './ui/switch';
 import { useToast } from '../hooks/use-toast';
 import { mockContent, Content, Genre } from '../data/mockData';
 import { supabase } from '../integrations/supabase/client';
-import { DEFAULT_IMAGES } from '../utils/imageUtils';
-import { ScrollArea } from './ui/scroll-area';
-import { loadImagesFromDatabase, extractFilenameFromUrl } from '../utils/imageUtils/urlUtils';
+import { loadImagesFromDatabase, extractFilenameFromUrl, filterUniqueImages } from '../utils/imageUtils/urlUtils';
 import { DetailsTab } from './ContentEditor/DetailsTab';
 import { MediaTab } from './ContentEditor/MediaTab';
 
@@ -72,7 +64,6 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   
-  
   // Load available images on component mount
   useEffect(() => {
     loadAvailableImages();
@@ -101,10 +92,15 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
   const loadAvailableImages = async () => {
     setIsLoadingImages(true);
     try {
-      // Use the database loading function instead of directly querying storage
+      // Use the database loading function
       const urls = await loadImagesFromDatabase();
       console.log('ContentEditor - Loaded images from database:', urls.length);
-      setAvailableImages(urls);
+      
+      // Apply filtering to ensure no duplicates
+      const filteredUrls = filterUniqueImages(urls);
+      console.log('ContentEditor - Filtered images:', filteredUrls.length);
+      
+      setAvailableImages(filteredUrls);
     } catch (error) {
       console.error("Error loading images:", error);
       toast({

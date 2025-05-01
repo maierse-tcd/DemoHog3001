@@ -24,19 +24,14 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
   isDeleting,
   compact = false
 }) => {
-  // Only show valid Supabase URLs (which should be all of them from the database)
-  const filteredImages = filterUniqueImages(availableImages);
+  // Apply the same successful filtering approach we used before
+  const filteredImages = filterUniqueImages([...new Set(availableImages)]);
   
   useEffect(() => {
     // Log the filtered images for debugging
     console.log('MediaGallery - Available images count:', availableImages.length);
     console.log('MediaGallery - Filtered images count:', filteredImages.length);
     console.log('MediaGallery - Selected image URL:', selectedImageUrl);
-    
-    // If we have few images after filtering, log them all for debugging
-    if (filteredImages.length < 5) {
-      console.log('MediaGallery - Filtered images:', filteredImages);
-    }
   }, [filteredImages, selectedImageUrl, availableImages]);
   
   if (isLoadingImages) {

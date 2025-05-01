@@ -1,4 +1,3 @@
-
 import { supabase } from "../../integrations/supabase/client";
 
 // Helper function to extract filename from a Supabase storage URL
@@ -108,8 +107,12 @@ export const filterUniqueImages = (urls: string[]): string[] => {
   
   console.log('Filtering images from array of length:', urls.length);
   
-  // Filter out any non-Supabase URLs first
-  const validSupabaseUrls = urls.filter(url => {
+  // First, create a Set to eliminate direct duplicates
+  const uniqueUrls = [...new Set(urls)];
+  console.log('After Set deduplication:', uniqueUrls.length);
+  
+  // Then filter out any non-Supabase URLs
+  const validSupabaseUrls = uniqueUrls.filter(url => {
     const isValid = url && isSupabaseStorageUrl(url);
     if (!isValid && url) {
       console.log('Filtering out non-Supabase URL:', url);
@@ -119,11 +122,24 @@ export const filterUniqueImages = (urls: string[]): string[] => {
   
   console.log('Valid Supabase URLs after filtering:', validSupabaseUrls.length);
   
-  // Create a Set for unique URLs (removing duplicates)
-  const uniqueUrls = new Set<string>(validSupabaseUrls);
+  // Deduplicate again based on filenames
+  const seenFilenames = new Set<string>();
+  const deduplicatedUrls = validSupabaseUrls.filter(url => {
+    const filename = extractFilenameFromUrl(url);
+    if (!filename) return false;
+    
+    if (seenFilenames.has(filename)) {
+      console.log('Filtering out duplicate filename:', filename);
+      return false;
+    }
+    
+    seenFilenames.add(filename);
+    return true;
+  });
   
-  // Convert Set back to array
-  return Array.from(uniqueUrls);
+  console.log('Final deduplicated URLs:', deduplicatedUrls.length);
+  
+  return deduplicatedUrls;
 };
 
 // FIXED FUNCTION: Load images from the content_images database table

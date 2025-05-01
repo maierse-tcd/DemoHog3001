@@ -20,8 +20,8 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
   onDeleteImage,
   isDeleting
 }) => {
-  // We're now getting direct storage URLs, so we need to filter them
-  const filteredImages = uploadedImages;
+  // Apply the same filtering approach to ensure we only show unique images
+  const filteredImages = filterUniqueImages([...new Set(uploadedImages)]);
   
   useEffect(() => {
     // Log the filtered images for debugging
