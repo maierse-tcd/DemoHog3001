@@ -1,3 +1,4 @@
+
 import { useState, useRef } from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
@@ -111,7 +112,7 @@ export const ImageUploader = ({
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
-      }, 1000);
+      }, 500);
       
     } catch (error) {
       console.error("Upload error:", error);
@@ -186,22 +187,19 @@ export const ImageUploader = ({
           </div>
         ) : (
           <div 
-            className={`border-2 border-dashed border-gray-300 rounded-md p-6 flex flex-col items-center justify-center cursor-pointer h-full ${isUploading ? 'opacity-50' : ''}`}
+            className={`border-2 border-dashed border-gray-300 rounded-md p-4 flex flex-col items-center justify-center cursor-pointer h-full ${isUploading ? 'opacity-50' : ''}`}
             onClick={() => !isUploading && canUpload && fileInputRef.current?.click()}
           >
             {isUploading ? (
               <>
-                <Loader2 className="h-8 w-8 text-gray-400 animate-spin mb-2" />
+                <Loader2 className="h-6 w-6 text-gray-400 animate-spin mb-2" />
                 <p className="text-center text-sm text-gray-400">Uploading...</p>
               </>
             ) : (
               <>
-                <Upload className="h-12 w-12 text-gray-400 mb-2" />
+                <Upload className="h-8 w-8 text-gray-400 mb-2" />
                 <p className="text-center text-sm text-gray-400">
-                  {canUpload ? "Click to upload an image" : "Sign in to upload images"}
-                </p>
-                <p className="text-center text-xs text-gray-400 mt-1">
-                  Recommended: {IMAGE_SIZES[imageType].width}x{IMAGE_SIZES[imageType].height}
+                  {canUpload ? "Click to upload" : "Sign in to upload"}
                 </p>
               </>
             )}
@@ -216,14 +214,6 @@ export const ImageUploader = ({
           className="hidden"
           disabled={isUploading || !canUpload}
         />
-      </div>
-      
-      <div className="mt-4 text-xs text-gray-400">
-        {preview ? (
-          <p>Your image will be automatically resized to fit the recommended dimensions.</p>
-        ) : (
-          <p>Original images will be resized to fit the required dimensions.</p>
-        )}
       </div>
       
       {!canUpload && (

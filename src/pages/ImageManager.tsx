@@ -2,14 +2,12 @@ import { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
-import { ImageUploader } from '../components/ImageUploader';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
 import { useToast } from '../hooks/use-toast';
 import { mockContent, Content } from '../data/mockData';
 import { Input } from '../components/ui/input';
-import { Search, Copy, Save, CheckCircle, Plus, RefreshCcw, Trash2 } from 'lucide-react';
+import { Search, Pencil, Trash2, Plus, RefreshCcw } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { useFeatureFlagEnabled } from '../hooks/usePostHogFeatures';
 import { useAuth } from '../hooks/useAuth';
 import { usePostHog } from '../hooks/usePostHogFeatures';
@@ -62,59 +60,8 @@ const ImageManager = () => {
   
   // Load uploaded images from Supabase Storage
   useEffect(() => {
-    const loadImages = async () => {
-      if (!isLoggedIn || !user?.id) return;
-      
-      setIsLoadingImages(true);
-      try {
-        const { data: imageFiles, error } = await supabase.storage
-          .from('media')
-          .list('', {
-            limit: 100,
-            sortBy: { column: 'created_at', order: 'desc' }
-          });
-          
-        if (error) {
-          throw error;
-        }
-        
-        if (imageFiles) {
-          // Get public URLs for each file
-          const urls = imageFiles.map(file => {
-            const { data } = supabase.storage
-              .from('media')
-              .getPublicUrl(file.name);
-            return data.publicUrl;
-          });
-          
-          setUploadedImages(urls);
-        }
-      } catch (error) {
-        console.error("Error loading images:", error);
-        toast({
-          title: "Failed to load images",
-          description: "There was a problem loading your uploaded images.",
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoadingImages(false);
-      }
-    };
-    
-    loadImages();
-  }, [isLoggedIn, user, toast]);
-  
-  // Handle search
-  useEffect(() => {
-    if (searchTerm) {
-      const filtered = updatedContentList.filter(item => 
-        item.title.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredContent(filtered);
-    } else {
-      setFilteredContent([]);
-    }
-  }, [searchTerm, updatedContentList]);
+    loadUploadedImages();
+  }, [isLoggedIn, user]);
   
   // If user is not logged in or not an admin (feature flag is explicitly false), redirect to home
   if (!isLoggedIn) {
@@ -145,87 +92,43 @@ const ImageManager = () => {
     );
   }
   
-  const handleImageUploaded = (imageUrl: string) => {
-    setUploadedImages(prevImages => {
-      const newImages = [imageUrl, ...prevImages];
-      // Track in PostHog
-      posthog?.capture('image_uploaded');
-      return newImages;
-    });
-  };
-  
-  const copyToClipboard = (text: string, contentInfo?: string) => {
-    navigator.clipboard.writeText(text)
-      .then(() => {
-        toast({
-          title: 'URL copied to clipboard!',
-          description: contentInfo 
-            ? `You can use this URL for "${contentInfo}"`
-            : 'You can now use this URL in your content.',
+  const loadUploadedImages = async () => {
+    if (!isLoggedIn || !user?.id) return;
+    
+    setIsLoadingImages(true);
+    try {
+      const { data: imageFiles, error } = await supabase.storage
+        .from('media')
+        .list('', {
+          limit: 100,
+          sortBy: { column: 'created_at', order: 'desc' }
         });
         
-        posthog?.capture('image_url_copied', {
-          contentTitle: contentInfo
-        });
-      })
-      .catch((err) => {
-        console.error('Failed to copy URL:', err);
-        toast({
-          title: 'Failed to copy URL',
-          description: 'Please try again or copy manually.',
-          variant: 'destructive',
-        });
-      });
-  };
-  
-  const selectContentItem = (item: Content) => {
-    setSelectedContent(item);
-    setSearchTerm(item.title);
-    setFilteredContent([]);
-    
-    // Track in PostHog
-    posthog?.capture('content_selected_for_image', {
-      contentId: item.id,
-      contentTitle: item.title,
-      contentType: item.type
-    });
-  };
-  
-  const updateContentImage = (imageUrl: string) => {
-    if (!selectedContent) return;
-    
-    // Update the content item with the new image URL
-    const updatedList = updatedContentList.map(item => {
-      if (item.id === selectedContent.id) {
-        return { ...item, posterUrl: imageUrl };
+      if (error) {
+        throw error;
       }
-      return item;
-    });
-    
-    // Update the state and local mock
-    setUpdatedContentList(updatedList);
-    
-    // Update the selected content to show the new image
-    setSelectedContent({...selectedContent, posterUrl: imageUrl});
-    
-    // Save to localStorage for persistence
-    localStorage.setItem('hogflix_content', JSON.stringify(updatedList));
-    
-    // Show success toast
-    toast({
-      title: "Image updated successfully!",
-      description: `The poster for "${selectedContent.title}" has been updated.`
-    });
-    
-    // Track in PostHog
-    posthog?.capture('content_image_updated', {
-      contentId: selectedContent.id,
-      contentTitle: selectedContent.title,
-      contentType: selectedContent.type
-    });
-    
-    setSavedChanges(true);
-    setTimeout(() => setSavedChanges(false), 3000);
+      
+      if (imageFiles) {
+        // Get public URLs for each file
+        const urls = imageFiles.map(file => {
+          const { data } = supabase.storage
+            .from('media')
+            .getPublicUrl(file.name);
+          return data.publicUrl;
+        });
+        
+        setUploadedImages(urls);
+      }
+    } catch (error) {
+      console.error("Error loading images:", error);
+      toast({
+        title: "Failed to load images",
+        description: "There was a problem loading your uploaded images.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingImages(false);
+    }
   };
   
   const handleContentSaved = (content: Content) => {
@@ -256,6 +159,13 @@ const ImageManager = () => {
     toast({
       title: isEditMode ? "Content updated" : "Content added",
       description: `"${content.title}" has been ${isEditMode ? 'updated' : 'added'} successfully.`
+    });
+    
+    // Track in PostHog
+    posthog?.capture(isEditMode ? 'content_updated' : 'content_created', {
+      contentId: content.id,
+      contentTitle: content.title,
+      contentType: content.type
     });
   };
   
@@ -297,50 +207,49 @@ const ImageManager = () => {
     }
   };
   
-  const refreshImageList = async () => {
-    setIsLoadingImages(true);
-    
+  const handleDeleteImage = async (imageUrl: string) => {
     try {
-      const { data: imageFiles, error } = await supabase.storage
+      // Extract the file name from the URL
+      const fileName = imageUrl.split('/').pop();
+      
+      if (!fileName) {
+        throw new Error("Could not extract file name from URL");
+      }
+      
+      // Delete the file from Supabase storage
+      const { error } = await supabase.storage
         .from('media')
-        .list('', {
-          limit: 100,
-          sortBy: { column: 'created_at', order: 'desc' }
-        });
-        
+        .remove([fileName]);
+      
       if (error) {
         throw error;
       }
       
-      if (imageFiles) {
-        // Get public URLs for each file
-        const urls = imageFiles.map(file => {
-          const { data } = supabase.storage
-            .from('media')
-            .getPublicUrl(file.name);
-          return data.publicUrl;
-        });
-        
-        setUploadedImages(urls);
-        
-        toast({
-          title: "Images refreshed",
-          description: `Found ${urls.length} images in your storage.`
-        });
-      }
-    } catch (error) {
-      console.error("Error refreshing images:", error);
+      // Remove from the local state
+      setUploadedImages(prev => prev.filter(url => url !== imageUrl));
+      
+      // Track in PostHog
+      posthog?.capture('image_deleted', {
+        fileName
+      });
+      
+      // Show success message
       toast({
-        title: "Failed to refresh images",
-        description: "There was a problem loading your uploaded images.",
+        title: "Image deleted",
+        description: "The image has been removed from your storage."
+      });
+      
+    } catch (error) {
+      console.error("Error deleting image:", error);
+      toast({
+        title: "Failed to delete image",
+        description: "There was a problem removing the image. Please try again.",
         variant: "destructive"
       });
-    } finally {
-      setIsLoadingImages(false);
     }
   };
   
-  // New function to view all content with their images
+  // Content Library
   const ContentLibrary = () => {
     const [viewType, setViewType] = useState<'all' | 'movies' | 'series'>('all');
     const [librarySearch, setLibrarySearch] = useState('');
@@ -426,12 +335,14 @@ const ImageManager = () => {
                     <button
                       onClick={() => handleEditContent(item)}
                       className="bg-black/70 p-1.5 rounded-full hover:bg-black"
+                      title="Edit content"
                     >
-                      <Save className="h-4 w-4 text-white" />
+                      <Pencil className="h-4 w-4 text-white" />
                     </button>
                     <button
                       onClick={() => handleDeleteContent(item.id)}
                       className="bg-black/70 p-1.5 rounded-full hover:bg-netflix-red"
+                      title="Delete content"
                     >
                       <Trash2 className="h-4 w-4 text-white" />
                     </button>
@@ -463,6 +374,65 @@ const ImageManager = () => {
     );
   };
   
+  // Image Gallery
+  const ImageGallery = () => {
+    return (
+      <div>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium">Available Images</h3>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={loadUploadedImages}
+            disabled={isLoadingImages}
+          >
+            <RefreshCcw className={`h-4 w-4 mr-1 ${isLoadingImages ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
+        
+        {isLoadingImages ? (
+          <div className="flex justify-center items-center h-32">
+            <div className="animate-pulse flex flex-col items-center">
+              <div className="h-8 w-8 bg-netflix-gray rounded-full mb-2"></div>
+              <div className="h-4 w-24 bg-netflix-gray rounded"></div>
+            </div>
+          </div>
+        ) : uploadedImages.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {uploadedImages.map((url, index) => (
+              <div key={index} className="relative group">
+                <img 
+                  src={url} 
+                  alt={`Uploaded ${index + 1}`} 
+                  className="rounded-md w-full h-40 object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = DEFAULT_IMAGES.thumbnail;
+                  }}
+                />
+                <div className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button 
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleDeleteImage(url)}
+                    title="Delete image"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-netflix-gray">
+            <p>No images uploaded yet. Add images by editing content.</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+  
   return (
     <div className="bg-netflix-black min-h-screen">
       <Navbar />
@@ -470,13 +440,7 @@ const ImageManager = () => {
       <main className="pt-24 pb-12">
         <div className="px-4 md:px-8 lg:px-16 max-w-7xl mx-auto">
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold">Image Manager</h1>
-            {savedChanges && (
-              <div className="flex items-center text-green-500">
-                <CheckCircle className="mr-2 h-5 w-5" />
-                <span>Changes saved</span>
-              </div>
-            )}
+            <h1 className="text-3xl md:text-4xl font-bold">Content Library</h1>
           </div>
           
           <Dialog open={showContentEditor} onOpenChange={setShowContentEditor}>
@@ -498,258 +462,27 @@ const ImageManager = () => {
             </DialogContent>
           </Dialog>
           
-          <Tabs defaultValue="content" className="w-full">
-            <TabsList className="grid grid-cols-3 w-full max-w-md mb-6">
-              <TabsTrigger value="content">Content Library</TabsTrigger>
-              <TabsTrigger value="upload">Upload Images</TabsTrigger>
-              <TabsTrigger value="map">Map to Content</TabsTrigger>
-            </TabsList>
+          <div className="space-y-8">
+            <Card className="bg-netflix-darkgray border-netflix-gray/20">
+              <CardHeader>
+                <CardTitle>Content Library</CardTitle>
+                <CardDescription>Browse, edit and manage all movies and series</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ContentLibrary />
+              </CardContent>
+            </Card>
             
-            <TabsContent value="content">
-              <Card className="bg-netflix-darkgray border-netflix-gray/20">
-                <CardHeader>
-                  <CardTitle>Content Library</CardTitle>
-                  <CardDescription>Browse, edit and manage all movies and series</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ContentLibrary />
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="upload">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Upload Section */}
-                <Card className="bg-netflix-darkgray border-netflix-gray/20">
-                  <CardHeader>
-                    <CardTitle>Upload New Image</CardTitle>
-                    <CardDescription>Upload custom images for your movies and series</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ImageUploader onImageUploaded={handleImageUploaded} />
-                  </CardContent>
-                  <CardFooter className="flex flex-col items-start">
-                    <p className="text-sm text-netflix-gray mb-4">
-                      After uploading, you can map these images to your content titles.
-                    </p>
-                  </CardFooter>
-                </Card>
-                
-                {/* Gallery Section */}
-                <Card className="bg-netflix-darkgray border-netflix-gray/20">
-                  <CardHeader className="flex flex-row justify-between items-center">
-                    <div>
-                      <CardTitle>Your Uploaded Images</CardTitle>
-                      <CardDescription>Recent uploads for your content</CardDescription>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={refreshImageList}
-                      disabled={isLoadingImages}
-                    >
-                      <RefreshCcw className={`h-4 w-4 mr-1 ${isLoadingImages ? 'animate-spin' : ''}`} />
-                      Refresh
-                    </Button>
-                  </CardHeader>
-                  <CardContent>
-                    {isLoadingImages ? (
-                      <div className="flex justify-center items-center h-32">
-                        <div className="animate-pulse flex flex-col items-center">
-                          <div className="h-8 w-8 bg-netflix-gray rounded-full mb-2"></div>
-                          <div className="h-4 w-24 bg-netflix-gray rounded"></div>
-                        </div>
-                      </div>
-                    ) : uploadedImages.length > 0 ? (
-                      <div className="grid grid-cols-2 gap-4">
-                        {uploadedImages.map((url, index) => (
-                          <div key={index} className="relative group">
-                            <img 
-                              src={url} 
-                              alt={`Uploaded ${index + 1}`} 
-                              className="rounded-md w-full h-32 object-cover"
-                              onError={(e) => {
-                                e.currentTarget.src = DEFAULT_IMAGES.thumbnail;
-                              }}
-                            />
-                            <button
-                              onClick={() => copyToClipboard(url)}
-                              className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <span className="text-white text-sm">Click to copy URL</span>
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-netflix-gray">
-                        <p>No images uploaded yet</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="map">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Content Search Section */}
-                <Card className="bg-netflix-darkgray border-netflix-gray/20">
-                  <CardHeader>
-                    <CardTitle>Find Content</CardTitle>
-                    <CardDescription>Search for movies or series to map images to</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search movie or series titles..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 bg-black/40 border-netflix-gray/40"
-                      />
-                      
-                      {filteredContent.length > 0 && searchTerm && (
-                        <div className="absolute z-10 w-full mt-1 bg-netflix-darkgray border border-netflix-gray/20 rounded-md shadow-lg max-h-60 overflow-auto">
-                          {filteredContent.map(item => (
-                            <div 
-                              key={`${item.type}-${item.id}`} 
-                              className="p-2 hover:bg-netflix-red/20 cursor-pointer flex justify-between"
-                              onClick={() => selectContentItem(item)}
-                            >
-                              <span>{item.title}</span>
-                              <span className="text-netflix-gray text-xs">{item.type}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    
-                    {selectedContent && (
-                      <div className="mt-4 p-4 border border-netflix-gray/20 rounded-md">
-                        <div className="flex flex-col md:flex-row gap-4">
-                          <div className="w-full md:w-1/3">
-                            {selectedContent.posterUrl ? (
-                              <img 
-                                src={selectedContent.posterUrl} 
-                                alt={selectedContent.title}
-                                className="w-full aspect-[2/3] object-cover rounded"
-                                onError={(e) => {
-                                  e.currentTarget.src = DEFAULT_IMAGES.poster;
-                                }}
-                              />
-                            ) : (
-                              <div className="w-full aspect-[2/3] bg-black/50 flex items-center justify-center text-netflix-gray rounded">
-                                No Image
-                              </div>
-                            )}
-                          </div>
-                          
-                          <div className="flex-1">
-                            <h3 className="text-lg font-medium">{selectedContent.title}</h3>
-                            <p className="text-netflix-gray text-sm">Type: {selectedContent.type}</p>
-                            
-                            <div className="mt-4">
-                              <Button
-                                onClick={() => {
-                                  handleEditContent(selectedContent);
-                                }}
-                              >
-                                <Save className="mr-2 h-4 w-4" /> Edit Details
-                              </Button>
-                            </div>
-                            
-                            {selectedContent.posterUrl && (
-                              <div className="mt-4">
-                                <p className="text-sm text-netflix-gray">Current poster URL:</p>
-                                <div className="flex mt-1">
-                                  <code className="bg-black/30 p-2 rounded text-xs flex-1 overflow-x-auto">
-                                    {selectedContent.posterUrl}
-                                  </code>
-                                  <Button 
-                                    variant="outline" 
-                                    size="icon"
-                                    className="ml-2"
-                                    onClick={() => copyToClipboard(selectedContent.posterUrl || '', selectedContent.title)}
-                                  >
-                                    <Copy className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-                
-                {/* Image Mapping Section */}
-                <Card className="bg-netflix-darkgray border-netflix-gray/20">
-                  <CardHeader>
-                    <CardTitle>Map Images to Content</CardTitle>
-                    <CardDescription>Select an image to use for your selected content</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {isLoadingImages ? (
-                      <div className="flex justify-center items-center h-32">
-                        <div className="animate-pulse flex flex-col items-center">
-                          <div className="h-8 w-8 bg-netflix-gray rounded-full mb-2"></div>
-                          <div className="h-4 w-24 bg-netflix-gray rounded"></div>
-                        </div>
-                      </div>
-                    ) : uploadedImages.length > 0 ? (
-                      <div className="grid grid-cols-2 gap-4">
-                        {uploadedImages.map((url, index) => (
-                          <div key={index} className="relative group">
-                            <img 
-                              src={url} 
-                              alt={`Uploaded ${index + 1}`} 
-                              className="rounded-md w-full h-32 object-cover"
-                              onError={(e) => {
-                                e.currentTarget.src = DEFAULT_IMAGES.thumbnail;
-                              }}
-                            />
-                            <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity p-2">
-                              <Button 
-                                variant="default"
-                                size="sm"
-                                className="w-full mb-1 bg-netflix-red hover:bg-netflix-red/80"
-                                disabled={!selectedContent}
-                                onClick={() => {
-                                  if (selectedContent) {
-                                    updateContentImage(url);
-                                  }
-                                }}
-                              >
-                                <Save className="h-4 w-4 mr-1" />
-                                {selectedContent ? "Save to content" : "Select content first"}
-                              </Button>
-                              <Button 
-                                variant="ghost"
-                                size="sm"
-                                className="w-full"
-                                onClick={() => {
-                                  copyToClipboard(url);
-                                }}
-                              >
-                                <Copy className="h-4 w-4 mr-1" />
-                                Copy URL
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-netflix-gray">
-                        <p>No images uploaded yet. Go to Upload Images tab first.</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-          </Tabs>
+            <Card className="bg-netflix-darkgray border-netflix-gray/20">
+              <CardHeader>
+                <CardTitle>Image Gallery</CardTitle>
+                <CardDescription>Manage images used across your content</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ImageGallery />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </main>
       

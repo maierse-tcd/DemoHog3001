@@ -7,7 +7,7 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { ImageUploader } from './ImageUploader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { CheckCircle, Loader2, Save, X, RefreshCcw, ImageIcon } from 'lucide-react';
+import { CheckCircle, Loader2, Save, X, RefreshCcw, ImageIcon, Trash2 } from 'lucide-react';
 import { safeCapture } from '../utils/posthogUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -54,47 +54,15 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
   const [selectedGenres, setSelectedGenres] = useState<Set<Genre>>(new Set(formData.genre));
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [uploadedPosterUrl, setUploadedPosterUrl] = useState(formData.posterUrl || '');
-  const [uploadedBackdropUrl, setUploadedBackdropUrl] = useState(formData.backdropUrl || '');
+  const [posterUrl, setPosterUrl] = useState(formData.posterUrl || '');
+  const [backdropUrl, setBackdropUrl] = useState(formData.backdropUrl || '');
   const [availableImages, setAvailableImages] = useState<string[]>([]);
   const [isLoadingImages, setIsLoadingImages] = useState(false);
   const { toast } = useToast();
   
   // Load available images on component mount
   useEffect(() => {
-    const fetchAvailableImages = async () => {
-      setIsLoadingImages(true);
-      try {
-        const { data: imageFiles, error } = await supabase.storage
-          .from('media')
-          .list('', {
-            limit: 100,
-            sortBy: { column: 'created_at', order: 'desc' }
-          });
-          
-        if (error) {
-          throw error;
-        }
-        
-        if (imageFiles) {
-          // Get public URLs for each file
-          const urls = imageFiles.map(file => {
-            const { data } = supabase.storage
-              .from('media')
-              .getPublicUrl(file.name);
-            return data.publicUrl;
-          });
-          
-          setAvailableImages(urls);
-        }
-      } catch (error) {
-        console.error("Error loading images:", error);
-      } finally {
-        setIsLoadingImages(false);
-      }
-    };
-    
-    fetchAvailableImages();
+    loadAvailableImages();
   }, []);
   
   // Helper to update form data
@@ -115,6 +83,95 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
     }
     setSelectedGenres(updatedGenres);
     updateFormData('genre', Array.from(updatedGenres));
+  };
+  
+  const loadAvailableImages = async () => {
+    setIsLoadingImages(true);
+    try {
+      const { data: imageFiles, error } = await supabase.storage
+        .from('media')
+        .list('', {
+          limit: 100,
+          sortBy: { column: 'created_at', order: 'desc' }
+        });
+        
+      if (error) {
+        throw error;
+      }
+      
+      if (imageFiles) {
+        const urls = imageFiles.map(file => {
+          const { data } = supabase.storage
+            .from('media')
+            .getPublicUrl(file.name);
+          return data.publicUrl;
+        });
+        
+        setAvailableImages(urls);
+      }
+    } catch (error) {
+      console.error("Error loading images:", error);
+      toast({
+        title: "Failed to load images",
+        description: "There was a problem loading your uploaded images.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingImages(false);
+    }
+  };
+
+  const handleDeleteImage = async (imageUrl: string) => {
+    try {
+      // Extract the file name from the URL
+      const fileName = imageUrl.split('/').pop();
+      
+      if (!fileName) {
+        throw new Error("Could not extract file name from URL");
+      }
+      
+      // Delete the file from Supabase storage
+      const { error } = await supabase.storage
+        .from('media')
+        .remove([fileName]);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Remove from the local state
+      setAvailableImages(prev => prev.filter(url => url !== imageUrl));
+      
+      // If this was the selected poster or backdrop, clear the selection
+      if (posterUrl === imageUrl) {
+        setPosterUrl('');
+        updateFormData('posterUrl', '');
+      }
+      
+      if (backdropUrl === imageUrl) {
+        setBackdropUrl('');
+        updateFormData('backdropUrl', '');
+      }
+      
+      // Show success message
+      toast({
+        title: "Image deleted",
+        description: "The image has been removed from your storage."
+      });
+      
+      // Track in PostHog
+      safeCapture('image_deleted', {
+        fileName
+      });
+      
+    } catch (error) {
+      console.error("Error deleting image:", error);
+      toast({
+        title: "Failed to delete image",
+        description: "There was a problem removing the image. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
   
   // Handle form submission
@@ -145,8 +202,8 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
     // Update images from state
     const updatedContent = {
       ...formData,
-      posterUrl: uploadedPosterUrl || formData.posterUrl,
-      backdropUrl: uploadedBackdropUrl || formData.backdropUrl,
+      posterUrl: posterUrl,
+      backdropUrl: backdropUrl,
       genre: Array.from(selectedGenres)
     };
     
@@ -199,46 +256,6 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
       setSaving(false);
     }
   };
-
-  const refreshAvailableImages = async () => {
-    setIsLoadingImages(true);
-    try {
-      const { data: imageFiles, error } = await supabase.storage
-        .from('media')
-        .list('', {
-          limit: 100,
-          sortBy: { column: 'created_at', order: 'desc' }
-        });
-        
-      if (error) {
-        throw error;
-      }
-      
-      if (imageFiles) {
-        const urls = imageFiles.map(file => {
-          const { data } = supabase.storage
-            .from('media')
-            .getPublicUrl(file.name);
-          return data.publicUrl;
-        });
-        
-        setAvailableImages(urls);
-        toast({
-          title: "Images refreshed",
-          description: `Found ${urls.length} images in your storage.`
-        });
-      }
-    } catch (error) {
-      console.error("Error refreshing images:", error);
-      toast({
-        title: "Failed to refresh images",
-        description: "There was a problem loading your uploaded images.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoadingImages(false);
-    }
-  };
   
   const handleImageUploaded = (imageUrl: string) => {
     // Add to available images list
@@ -258,10 +275,9 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
       
       <CardContent>
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
             <TabsTrigger value="details">Basic Details</TabsTrigger>
             <TabsTrigger value="media">Media</TabsTrigger>
-            <TabsTrigger value="metadata">Additional Info</TabsTrigger>
           </TabsList>
           
           {/* Basic Details Tab */}
@@ -326,199 +342,8 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
                 ))}
               </div>
             </div>
-          </TabsContent>
-          
-          {/* Media Tab */}
-          <TabsContent value="media" className="space-y-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg">Media Files</h3>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={refreshAvailableImages}
-                disabled={isLoadingImages}
-              >
-                <RefreshCcw className={`h-4 w-4 mr-1 ${isLoadingImages ? 'animate-spin' : ''}`} />
-                Refresh Images
-              </Button>
-            </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Poster Image Section */}
-              <div className="space-y-2">
-                <Label>Poster Image (Portrait)</Label>
-                <div className="flex flex-col space-y-4">
-                  {uploadedPosterUrl ? (
-                    <div className="relative aspect-[2/3] max-w-[200px]">
-                      <img 
-                        src={uploadedPosterUrl} 
-                        alt="Selected Poster"
-                        className="w-full h-full object-cover rounded-md"
-                        onError={(e) => {
-                          e.currentTarget.src = DEFAULT_IMAGES.poster;
-                        }}
-                      />
-                      <button
-                        onClick={() => setUploadedPosterUrl('')}
-                        className="absolute top-2 right-2 bg-black/70 p-1 rounded-full hover:bg-black"
-                      >
-                        <X className="h-4 w-4 text-white" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="aspect-[2/3] max-w-[200px] bg-black/40 flex items-center justify-center rounded-md">
-                      <ImageIcon className="h-8 w-8 text-netflix-gray" />
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <Label>Upload New Poster</Label>
-                    <ImageUploader 
-                      contentId={formData.id}
-                      imageType="poster"
-                      aspectRatio="portrait"
-                      onImageUploaded={(url) => {
-                        setUploadedPosterUrl(url);
-                        updateFormData('posterUrl', url);
-                        handleImageUploaded(url);
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="mb-2 block">Or Select From Existing Images</Label>
-                    <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto">
-                      {isLoadingImages ? (
-                        <div className="col-span-3 flex justify-center py-4">
-                          <Loader2 className="h-6 w-6 animate-spin text-netflix-gray" />
-                        </div>
-                      ) : availableImages.length > 0 ? (
-                        availableImages.map((url, index) => (
-                          <div 
-                            key={`poster-${index}`}
-                            className={`aspect-[2/3] cursor-pointer relative group ${
-                              uploadedPosterUrl === url ? 'ring-2 ring-netflix-red' : ''
-                            }`}
-                            onClick={() => {
-                              setUploadedPosterUrl(url);
-                              updateFormData('posterUrl', url);
-                            }}
-                          >
-                            <img 
-                              src={url} 
-                              alt={`Available ${index + 1}`}
-                              className="w-full h-full object-cover rounded-md"
-                              onError={(e) => {
-                                e.currentTarget.src = DEFAULT_IMAGES.poster;
-                              }}
-                            />
-                            {uploadedPosterUrl === url && (
-                              <div className="absolute top-1 right-1 bg-netflix-red rounded-full p-1">
-                                <CheckCircle className="h-3 w-3 text-white" />
-                              </div>
-                            )}
-                          </div>
-                        ))
-                      ) : (
-                        <div className="col-span-3 text-center py-4 text-netflix-gray">
-                          No images available
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Backdrop Image Section */}
-              <div className="space-y-2">
-                <Label>Backdrop Image (Landscape)</Label>
-                <div className="flex flex-col space-y-4">
-                  {uploadedBackdropUrl ? (
-                    <div className="relative aspect-video max-w-[300px]">
-                      <img 
-                        src={uploadedBackdropUrl} 
-                        alt="Selected Backdrop"
-                        className="w-full h-full object-cover rounded-md"
-                        onError={(e) => {
-                          e.currentTarget.src = DEFAULT_IMAGES.backdrop;
-                        }}
-                      />
-                      <button
-                        onClick={() => setUploadedBackdropUrl('')}
-                        className="absolute top-2 right-2 bg-black/70 p-1 rounded-full hover:bg-black"
-                      >
-                        <X className="h-4 w-4 text-white" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="aspect-video max-w-[300px] bg-black/40 flex items-center justify-center rounded-md">
-                      <ImageIcon className="h-8 w-8 text-netflix-gray" />
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <Label>Upload New Backdrop</Label>
-                    <ImageUploader 
-                      contentId={formData.id}
-                      imageType="backdrop"
-                      aspectRatio="landscape"
-                      onImageUploaded={(url) => {
-                        setUploadedBackdropUrl(url);
-                        updateFormData('backdropUrl', url);
-                        handleImageUploaded(url);
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="mb-2 block">Or Select From Existing Images</Label>
-                    <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto">
-                      {isLoadingImages ? (
-                        <div className="col-span-3 flex justify-center py-4">
-                          <Loader2 className="h-6 w-6 animate-spin text-netflix-gray" />
-                        </div>
-                      ) : availableImages.length > 0 ? (
-                        availableImages.map((url, index) => (
-                          <div 
-                            key={`backdrop-${index}`}
-                            className={`aspect-video cursor-pointer relative group ${
-                              uploadedBackdropUrl === url ? 'ring-2 ring-netflix-red' : ''
-                            }`}
-                            onClick={() => {
-                              setUploadedBackdropUrl(url);
-                              updateFormData('backdropUrl', url);
-                            }}
-                          >
-                            <img 
-                              src={url} 
-                              alt={`Available ${index + 1}`}
-                              className="w-full h-full object-cover rounded-md"
-                              onError={(e) => {
-                                e.currentTarget.src = DEFAULT_IMAGES.backdrop;
-                              }}
-                            />
-                            {uploadedBackdropUrl === url && (
-                              <div className="absolute top-1 right-1 bg-netflix-red rounded-full p-1">
-                                <CheckCircle className="h-3 w-3 text-white" />
-                              </div>
-                            )}
-                          </div>
-                        ))
-                      ) : (
-                        <div className="col-span-3 text-center py-4 text-netflix-gray">
-                          No images available
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-          
-          {/* Metadata Tab */}
-          <TabsContent value="metadata" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
               <div className="space-y-2">
                 <Label htmlFor="releaseYear">Release Year</Label>
                 <Input 
@@ -573,6 +398,236 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
                 onCheckedChange={(checked) => updateFormData('trending', checked)}
               />
               <Label htmlFor="trending">Mark as trending content</Label>
+            </div>
+          </TabsContent>
+          
+          {/* Media Tab */}
+          <TabsContent value="media" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium">Images</h3>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={loadAvailableImages}
+                disabled={isLoadingImages}
+              >
+                <RefreshCcw className={`h-4 w-4 mr-1 ${isLoadingImages ? 'animate-spin' : ''}`} />
+                Refresh Images
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Poster Image Section */}
+              <div className="space-y-4 border p-4 rounded-md border-netflix-gray/20">
+                <Label className="text-lg">Poster Image</Label>
+                
+                <div className="flex items-start space-x-4">
+                  {/* Selected poster preview */}
+                  <div className="relative aspect-[2/3] w-40">
+                    {posterUrl ? (
+                      <div className="relative h-full">
+                        <img 
+                          src={posterUrl} 
+                          alt="Selected Poster"
+                          className="w-full h-full object-cover rounded-md"
+                          onError={(e) => {
+                            e.currentTarget.src = DEFAULT_IMAGES.poster;
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            setPosterUrl('');
+                            updateFormData('posterUrl', '');
+                          }}
+                          className="absolute top-2 right-2 bg-black/70 p-1 rounded-full hover:bg-black"
+                        >
+                          <X className="h-4 w-4 text-white" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="w-full h-full bg-black/40 flex items-center justify-center rounded-md">
+                        <ImageIcon className="h-8 w-8 text-netflix-gray" />
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Upload section */}
+                  <div className="flex-1">
+                    <Label className="block mb-2">Upload New Image</Label>
+                    <ImageUploader 
+                      contentId={formData.id}
+                      imageType="poster"
+                      aspectRatio="portrait"
+                      onImageUploaded={(url) => {
+                        setPosterUrl(url);
+                        updateFormData('posterUrl', url);
+                        handleImageUploaded(url);
+                      }}
+                    />
+                  </div>
+                </div>
+                
+                {/* Gallery select - simplified */}
+                <div>
+                  <Label className="block mb-2">Select From Existing Images</Label>
+                  <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto">
+                    {isLoadingImages ? (
+                      <div className="col-span-3 flex justify-center py-4">
+                        <Loader2 className="h-6 w-6 animate-spin text-netflix-gray" />
+                      </div>
+                    ) : availableImages.length > 0 ? (
+                      availableImages.map((url, index) => (
+                        <div 
+                          key={`poster-${index}`}
+                          className={`aspect-[2/3] cursor-pointer relative group ${
+                            posterUrl === url ? 'ring-2 ring-netflix-red' : ''
+                          }`}
+                        >
+                          <img 
+                            src={url} 
+                            alt={`Available ${index + 1}`}
+                            className="w-full h-full object-cover rounded-md"
+                            onClick={() => {
+                              setPosterUrl(url);
+                              updateFormData('posterUrl', url);
+                            }}
+                            onError={(e) => {
+                              e.currentTarget.src = DEFAULT_IMAGES.poster;
+                            }}
+                          />
+                          {posterUrl === url && (
+                            <div className="absolute top-1 right-1 bg-netflix-red rounded-full p-1">
+                              <CheckCircle className="h-3 w-3 text-white" />
+                            </div>
+                          )}
+                          
+                          {/* Delete button on hover */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteImage(url);
+                            }}
+                            className="absolute top-1 right-1 bg-black/70 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                            style={{ display: posterUrl === url ? 'none' : 'block' }}
+                          >
+                            <Trash2 className="h-3 w-3 text-white" />
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-3 text-center py-4 text-netflix-gray">
+                        No images available
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Backdrop Image Section */}
+              <div className="space-y-4 border p-4 rounded-md border-netflix-gray/20">
+                <Label className="text-lg">Backdrop Image</Label>
+                
+                <div className="flex items-start space-x-4">
+                  {/* Selected backdrop preview */}
+                  <div className="relative aspect-video w-64">
+                    {backdropUrl ? (
+                      <div className="relative h-full">
+                        <img 
+                          src={backdropUrl} 
+                          alt="Selected Backdrop"
+                          className="w-full h-full object-cover rounded-md"
+                          onError={(e) => {
+                            e.currentTarget.src = DEFAULT_IMAGES.backdrop;
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            setBackdropUrl('');
+                            updateFormData('backdropUrl', '');
+                          }}
+                          className="absolute top-2 right-2 bg-black/70 p-1 rounded-full hover:bg-black"
+                        >
+                          <X className="h-4 w-4 text-white" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="w-full h-full bg-black/40 flex items-center justify-center rounded-md">
+                        <ImageIcon className="h-8 w-8 text-netflix-gray" />
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Upload section */}
+                  <div className="flex-1">
+                    <Label className="block mb-2">Upload New Image</Label>
+                    <ImageUploader 
+                      contentId={formData.id}
+                      imageType="backdrop"
+                      aspectRatio="landscape"
+                      onImageUploaded={(url) => {
+                        setBackdropUrl(url);
+                        updateFormData('backdropUrl', url);
+                        handleImageUploaded(url);
+                      }}
+                    />
+                  </div>
+                </div>
+                
+                {/* Gallery select - simplified */}
+                <div>
+                  <Label className="block mb-2">Select From Existing Images</Label>
+                  <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto">
+                    {isLoadingImages ? (
+                      <div className="col-span-3 flex justify-center py-4">
+                        <Loader2 className="h-6 w-6 animate-spin text-netflix-gray" />
+                      </div>
+                    ) : availableImages.length > 0 ? (
+                      availableImages.map((url, index) => (
+                        <div 
+                          key={`backdrop-${index}`}
+                          className={`aspect-video cursor-pointer relative group ${
+                            backdropUrl === url ? 'ring-2 ring-netflix-red' : ''
+                          }`}
+                        >
+                          <img 
+                            src={url} 
+                            alt={`Available ${index + 1}`}
+                            className="w-full h-full object-cover rounded-md"
+                            onClick={() => {
+                              setBackdropUrl(url);
+                              updateFormData('backdropUrl', url);
+                            }}
+                            onError={(e) => {
+                              e.currentTarget.src = DEFAULT_IMAGES.backdrop;
+                            }}
+                          />
+                          {backdropUrl === url && (
+                            <div className="absolute top-1 right-1 bg-netflix-red rounded-full p-1">
+                              <CheckCircle className="h-3 w-3 text-white" />
+                            </div>
+                          )}
+                          
+                          {/* Delete button on hover */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteImage(url);
+                            }}
+                            className="absolute top-1 right-1 bg-black/70 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                            style={{ display: backdropUrl === url ? 'none' : 'block' }}
+                          >
+                            <Trash2 className="h-3 w-3 text-white" />
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-3 text-center py-4 text-netflix-gray">
+                        No images available
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </TabsContent>
         </Tabs>
