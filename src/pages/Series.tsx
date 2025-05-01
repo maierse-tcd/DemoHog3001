@@ -5,6 +5,7 @@ import { Footer } from '../components/Footer';
 import { ContentRow } from '../components/ContentRow';
 import { Content } from '../data/mockData';
 import { loadContentFromSupabase } from '../utils/contentUtils';
+import { toast } from '../hooks/use-toast';
 
 const Series = () => {
   const [seriesContent, setSeriesContent] = useState<Content[]>([]);
@@ -24,6 +25,11 @@ const Series = () => {
         setSeriesContent(series);
       } catch (error) {
         console.error("Error loading series:", error);
+        toast({
+          title: "Error loading series",
+          description: "There was a problem loading series. Please try again later.",
+          variant: "destructive"
+        });
       } finally {
         setIsLoading(false);
       }

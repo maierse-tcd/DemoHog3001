@@ -5,6 +5,7 @@ import { Footer } from '../components/Footer';
 import { ContentRow } from '../components/ContentRow';
 import { Content } from '../data/mockData';
 import { loadContentFromSupabase } from '../utils/contentUtils';
+import { toast } from '../hooks/use-toast';
 
 const Movies = () => {
   const [movieContent, setMovieContent] = useState<Content[]>([]);
@@ -24,6 +25,11 @@ const Movies = () => {
         setMovieContent(movies);
       } catch (error) {
         console.error("Error loading movies:", error);
+        toast({
+          title: "Error loading movies",
+          description: "There was a problem loading movies. Please try again later.",
+          variant: "destructive"
+        });
       } finally {
         setIsLoading(false);
       }

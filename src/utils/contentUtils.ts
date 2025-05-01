@@ -134,15 +134,23 @@ export const initializeContentDatabase = async (mockContent: Content[]): Promise
       // Convert mock content to DB format
       const dbContent = mockContent.map(contentToDbFormat);
       
-      const { error } = await supabase
-        .from('content_items')
-        .upsert(dbContent);
-      
-      if (error) {
-        console.error("Error seeding database with mock content:", error);
-      } else {
-        console.log("Successfully seeded database with mock content");
+      // Process in smaller batches to avoid overwhelming the database
+      const batchSize = 5;
+      for (let i = 0; i < dbContent.length; i += batchSize) {
+        const batch = dbContent.slice(i, i + batchSize);
+        
+        const { error } = await supabase
+          .from('content_items')
+          .upsert(batch);
+        
+        if (error) {
+          console.error(`Error seeding batch ${i}-${i + batchSize} with mock content:`, error);
+        } else {
+          console.log(`Successfully seeded batch ${i}-${i + batchSize} with mock content`);
+        }
       }
+      
+      console.log("Database seeding complete");
     } else {
       console.log("Database already contains content, skipping initialization");
     }

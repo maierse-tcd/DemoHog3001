@@ -9,6 +9,7 @@ import { safeGetDistinctId } from '../utils/posthogUtils';
 import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { useAuth } from '../hooks/useAuth';
 import { loadContentFromSupabase, initializeContentDatabase } from '../utils/contentUtils';
+import { toast } from '../hooks/use-toast';
 
 const Index = () => {
   const [featuredContent, setFeaturedContent] = useState<Content>(getFeaturedContent());
@@ -45,6 +46,11 @@ const Index = () => {
         }
       } catch (error) {
         console.error("Error loading content:", error);
+        toast({
+          title: "Error loading content",
+          description: "There was a problem loading content. Please try again later.",
+          variant: "destructive"
+        });
       } finally {
         setIsLoading(false);
       }
@@ -135,9 +141,9 @@ const Index = () => {
       <Navbar />
       
       <main>
-        <HeroSection content={featuredContent} />
+        {featuredContent && <HeroSection content={featuredContent} />}
         
-        <div className="mt-[-80px] relative z-10">
+        <div className={featuredContent ? "mt-[-80px] relative z-10" : "mt-24 relative z-10"}>
           {categories.map((category) => (
             <ContentRow 
               key={category.id} 
@@ -145,6 +151,12 @@ const Index = () => {
               contentList={getContentByCategoryFromState(category.id)} 
             />
           ))}
+          
+          {content.length === 0 && (
+            <div className="text-center py-12 px-4">
+              <p className="text-netflix-gray text-xl">No content available. Please check back later.</p>
+            </div>
+          )}
         </div>
       </main>
       
