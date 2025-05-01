@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { SearchBar } from './SearchBar';
 import { ProfileDropdown } from './ProfileDropdown';
-import { Bell, Menu, X, Film, ListCheck, Image } from 'lucide-react';
+import { Bell, Menu, X, Film, ListCheck } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import { useFeatureFlagEnabled } from '../hooks/usePostHogFeatures';
+import { AdminNavItems } from './AdminNavItems';
 import { safeCapture } from '../utils/posthogUtils';
 
 export const Navbar = () => {
@@ -11,9 +12,6 @@ export const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
-  
-  // Use the official hook for the is_admin feature flag
-  const isAdmin = useFeatureFlagEnabled('is_admin');
   
   useEffect(() => {
     const handleScroll = () => {
@@ -71,13 +69,8 @@ export const Navbar = () => {
             <ListCheck size={16} />
             <span>Series</span>
           </Link>
-          {/* Only show Images link if the user is an admin */}
-          {isAdmin === true && (
-            <Link to="/image-manager" className="navbar-link flex items-center gap-1">
-              <Image size={16} />
-              <span>Images</span>
-            </Link>
-          )}
+          {/* Admin navigation items - shown conditionally */}
+          <AdminNavItems />
         </div>
       </div>
 
@@ -106,13 +99,8 @@ export const Navbar = () => {
             <ListCheck size={16} />
             <span>Series</span>
           </Link>
-          {/* Only show Images link in mobile menu if the user is an admin */}
-          {isAdmin === true && (
-            <Link to="/image-manager" className="navbar-link flex items-center gap-2">
-              <Image size={16} />
-              <span>Images</span>
-            </Link>
-          )}
+          {/* Admin navigation items in mobile menu - shown conditionally */}
+          <AdminNavItems />
           {!isAuthPage && (
             <div className="pt-2">
               <SearchBar />
