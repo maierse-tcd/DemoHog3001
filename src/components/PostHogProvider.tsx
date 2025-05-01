@@ -7,7 +7,7 @@ import posthog from 'posthog-js';
 
 // PostHog configuration
 const POSTHOG_KEY = 'phc_O1OL4R6b4MUWUsu8iYorqWfQoGSorFLHLOustqbVB0U';
-const POSTHOG_HOST = 'ph.hogflix.dev';
+const POSTHOG_HOST = 'https://ph.hogflix.dev'; // Updated to use proper URL format with https
 
 /**
  * A simplified PostHog Provider that handles user identification with Supabase auth
@@ -20,7 +20,7 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
 
   // Configure PostHog with best practices
   const options = {
-    api_host: POSTHOG_HOST,
+    api_host: POSTHOG_HOST, // Using the full host URL with protocol
     persistence: 'localStorage' as const,
     capture_pageview: true,
     autocapture: true,

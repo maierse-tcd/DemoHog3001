@@ -6,6 +6,9 @@
 import { PostHog } from '../types/posthog';
 import posthog from 'posthog-js';
 
+// Consistent host configuration
+export const POSTHOG_HOST = 'https://ph.hogflix.dev';
+
 /**
  * Type guard to check if an object is a PostHog instance
  */
