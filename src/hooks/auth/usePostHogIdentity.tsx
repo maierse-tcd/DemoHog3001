@@ -4,17 +4,21 @@ import { safeIdentify, safeCapture } from '../../utils/posthogUtils';
 
 export const usePostHogIdentity = () => {
   const identifyUserInPostHog = useCallback((userId: string, userEmail: string, displayName: string) => {
-    if (!userId) {
+    if (!userEmail) {
+      console.warn('Email is required for PostHog identification');
       return;
     }
     
     try {
-      // Use user ID as primary identifier (more reliable than email)
-      safeIdentify(userId, {
+      // Use email as primary identifier (more reliable for cross-platform identification)
+      safeIdentify(userEmail, {
         email: userEmail,
         name: displayName,
-        id: userId
+        id: userId,
+        supabase_id: userId
       });
+      
+      console.log(`User identified in PostHog with email: ${userEmail}`);
     } catch (err) {
       console.error("PostHog identify error:", err);
     }

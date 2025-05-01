@@ -5,6 +5,7 @@ import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { useToast } from '../../hooks/use-toast';
 import { supabase } from '../../integrations/supabase/client';
+import { safeIdentify, safeCapture } from '../../utils/posthogUtils';
 
 interface LoginFormProps {
   fetchUserProfile: (userId: string) => Promise<void>;
@@ -74,16 +75,16 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
               });
               
             // Since we've just created the account, let's sign in now
-            await handleSuccessfulLogin(signUpData.user.id);
+            await handleSuccessfulLogin(signUpData.user.id, email);
           } catch (profileError) {
             console.warn("Could not create profile, but continuing:", profileError);
             // Still proceed with login
-            await handleSuccessfulLogin(signUpData.user.id);
+            await handleSuccessfulLogin(signUpData.user.id, email);
           }
         }
       } else if (data && data.user) {
         console.log("Login successful:", data.user.id);
-        await handleSuccessfulLogin(data.user.id);
+        await handleSuccessfulLogin(data.user.id, email);
       }
     } catch (error: any) {
       console.error("Login failed:", error);
@@ -98,8 +99,17 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
     }
   };
   
-  const handleSuccessfulLogin = async (userId: string) => {
+  const handleSuccessfulLogin = async (userId: string, userEmail: string) => {
     console.log('Login success, user ID:', userId);
+    
+    // Identify user in PostHog with email
+    console.log(`Identifying user in PostHog with email: ${userEmail}`);
+    safeIdentify(userEmail, {
+      email: userEmail,
+      supabase_id: userId
+    });
+    
+    safeCapture('user_login_success');
     
     // Fetch user profile data
     await fetchUserProfile(userId);

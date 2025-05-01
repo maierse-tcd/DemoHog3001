@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '../ui/input';
@@ -91,11 +92,13 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
           });
           
           // Identify user in PostHog using email as primary identifier
+          console.log(`Identifying new user in PostHog with email: ${email}`);
           safeIdentify(email, {
             email: email,
             name,
             plan: selectedPlanId,
-            isKidsAccount
+            isKidsAccount,
+            supabase_id: data.user.id
           });
           safeCapture('user_signup_complete');
           

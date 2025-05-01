@@ -32,18 +32,21 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
       
       // Handle sign in event
       if (event === 'SIGNED_IN' && session?.user) {
-        // Use the Supabase user ID as the PostHog distinct ID (more reliable than email)
-        const userId = session.user.id;
         const userEmail = session.user.email;
         
-        console.log(`Identifying user in PostHog: ${userId}`);
+        if (!userEmail) {
+          console.warn('User email is missing, cannot identify in PostHog');
+          return;
+        }
         
-        // Use setTimeout to avoid potential deadlocks with PostHog initialization
+        console.log(`Identifying user in PostHog using email: ${userEmail}`);
+        
+        // Use email as the primary identifier for PostHog
         setTimeout(() => {
-          safeIdentify(userId, {
+          safeIdentify(userEmail, {
             email: userEmail,
             name: session.user.user_metadata?.name || userEmail?.split('@')[0],
-            supabase_id: userId
+            supabase_id: session.user.id
           });
           
           // Reload feature flags after identification
