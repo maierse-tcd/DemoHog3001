@@ -1,14 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { useToast } from '../hooks/use-toast';
 import { mockContent, Content } from '../data/mockData';
-import { Input } from '../components/ui/input';
-import { Search, Pencil, Trash2, Plus, RefreshCcw, ImageIcon } from 'lucide-react';
-import { Button } from '../components/ui/button';
 import { useFeatureFlagEnabled } from '../hooks/usePostHogFeatures';
 import { useAuth } from '../hooks/useAuth';
 import { usePostHog } from '../hooks/usePostHogFeatures';
@@ -17,6 +13,9 @@ import { supabase } from '../integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
 import { DEFAULT_IMAGES } from '../utils/imageUtils';
 import { ScrollArea } from '../components/ui/scroll-area';
+import { ContentLibrary } from '../components/ImageManager/ContentLibrary';
+import { GalleryView } from '../components/ImageManager/GalleryView';
+import { extractFilenameFromUrl } from '../utils/imageUtils';
 
 const ImageManager = () => {
   // Use the official hook for the is_admin feature flag
@@ -24,8 +23,18 @@ const ImageManager = () => {
   const { isLoggedIn, user } = useAuth();
   const navigate = useNavigate();
   const posthog = usePostHog();
+  const { toast } = useToast();
   
-  // Define loadUploadedImages BEFORE it's used in useEffect
+  // State management
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [selectedContent, setSelectedContent] = useState<Content | null>(null);
+  const [updatedContentList, setUpdatedContentList] = useState<Content[]>([]);
+  const [showContentEditor, setShowContentEditor] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isLoadingImages, setIsLoadingImages] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Load uploaded images from Supabase Storage
   const loadUploadedImages = async () => {
     if (!isLoggedIn || !user?.id) return;
     
@@ -64,18 +73,6 @@ const ImageManager = () => {
       setIsLoadingImages(false);
     }
   };
-  
-  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filteredContent, setFilteredContent] = useState<Content[]>([]);
-  const [selectedContent, setSelectedContent] = useState<Content | null>(null);
-  const [updatedContentList, setUpdatedContentList] = useState<Content[]>([]);
-  const [savedChanges, setSavedChanges] = useState(false);
-  const [showContentEditor, setShowContentEditor] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [isLoadingImages, setIsLoadingImages] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const { toast } = useToast();
   
   // Check authentication status and redirect if not logged in
   useEffect(() => {
@@ -174,6 +171,9 @@ const ImageManager = () => {
     
     // Refresh uploaded images to show any new uploads
     loadUploadedImages();
+    
+    // Dispatch a custom event to notify other components about the change
+    window.dispatchEvent(new Event('content-updated'));
   };
   
   const handleEditContent = (content: Content) => {
@@ -211,6 +211,9 @@ const ImageManager = () => {
         title: "Content deleted",
         description: `"${contentToDelete.title}" has been removed.`
       });
+      
+      // Dispatch a custom event to notify other components about the change
+      window.dispatchEvent(new Event('content-updated'));
     }
   };
   
@@ -219,8 +222,7 @@ const ImageManager = () => {
       setIsDeleting(true);
       
       // Extract the file name from the URL
-      const urlPath = new URL(imageUrl).pathname;
-      const fileName = urlPath.split('/media/')[1];
+      const fileName = extractFilenameFromUrl(imageUrl);
       
       if (!fileName) {
         throw new Error("Could not extract file name from URL");
@@ -261,9 +263,6 @@ const ImageManager = () => {
         setUpdatedContentList(updatedList);
         localStorage.setItem('hogflix_content', JSON.stringify(updatedList));
         
-        // Dispatch a custom event to notify other components about the change
-        window.dispatchEvent(new Event('content-updated'));
-        
         // Notify user that content was updated
         toast({
           title: "Content updated",
@@ -282,6 +281,9 @@ const ImageManager = () => {
         description: "The image has been removed from your storage."
       });
       
+      // Dispatch a custom event to notify other components about the change
+      window.dispatchEvent(new Event('content-updated'));
+      
     } catch (error) {
       console.error("Error deleting image:", error);
       toast({
@@ -292,195 +294,6 @@ const ImageManager = () => {
     } finally {
       setIsDeleting(false);
     }
-  };
-  
-  // Content Library
-  const ContentLibrary = () => {
-    const [viewType, setViewType] = useState<'all' | 'movies' | 'series'>('all');
-    const [librarySearch, setLibrarySearch] = useState('');
-    
-    const filteredLibrary = updatedContentList.filter(item => {
-      const matchesSearch = item.title.toLowerCase().includes(librarySearch.toLowerCase());
-      const matchesType = viewType === 'all' || item.type === viewType;
-      return matchesSearch && matchesType;
-    });
-    
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div className="relative w-full md:w-auto">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search content..."
-              value={librarySearch}
-              onChange={(e) => setLibrarySearch(e.target.value)}
-              className="pl-10 bg-black/40 border-netflix-gray/40"
-            />
-          </div>
-          
-          <div className="flex gap-2">
-            <Button 
-              variant={viewType === 'all' ? "default" : "outline"} 
-              onClick={() => setViewType('all')}
-              className="min-w-20"
-            >
-              All
-            </Button>
-            <Button 
-              variant={viewType === 'movies' ? "default" : "outline"} 
-              onClick={() => setViewType('movies')}
-              className="min-w-20"
-            >
-              Movies
-            </Button>
-            <Button 
-              variant={viewType === 'series' ? "default" : "outline"} 
-              onClick={() => setViewType('series')}
-              className="min-w-20"
-            >
-              Series
-            </Button>
-          </div>
-          
-          <Button 
-            variant="default" 
-            onClick={() => {
-              setIsEditMode(false);
-              setShowContentEditor(true);
-              setSelectedContent(null);
-            }}
-          >
-            <Plus className="mr-2 h-4 w-4" /> Add New
-          </Button>
-        </div>
-        
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filteredLibrary.length > 0 ? (
-            filteredLibrary.map(item => (
-              <Card 
-                key={item.id} 
-                className="bg-netflix-darkgray border-netflix-gray/20 overflow-hidden hover:border-netflix-red transition-colors"
-              >
-                <div className="aspect-video relative">
-                  {item.backdropUrl ? (
-                    <img 
-                      src={item.backdropUrl} 
-                      alt={item.title} 
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = DEFAULT_IMAGES.backdrop;
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-black/50 flex items-center justify-center text-netflix-gray">
-                      <ImageIcon className="h-8 w-8 text-netflix-gray/50" />
-                    </div>
-                  )}
-                  <div className="absolute top-2 right-2 flex space-x-1">
-                    <button
-                      onClick={() => handleEditContent(item)}
-                      className="bg-black/70 p-1.5 rounded-full hover:bg-black"
-                      title="Edit content"
-                    >
-                      <Pencil className="h-4 w-4 text-white" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteContent(item.id)}
-                      className="bg-black/70 p-1.5 rounded-full hover:bg-netflix-red"
-                      title="Delete content"
-                    >
-                      <Trash2 className="h-4 w-4 text-white" />
-                    </button>
-                  </div>
-                </div>
-                <CardContent className="p-3">
-                  <h3 className="text-sm font-medium line-clamp-1">{item.title}</h3>
-                  <p className="text-xs text-netflix-gray">{item.type} • {item.releaseYear}</p>
-                  <div className="flex flex-wrap mt-1 gap-1">
-                    {item.genre.slice(0, 2).map((genre, i) => (
-                      <span key={i} className="text-xs bg-netflix-gray/20 px-1.5 py-0.5 rounded">
-                        {genre}
-                      </span>
-                    ))}
-                    {item.genre.length > 2 && (
-                      <span className="text-xs text-netflix-gray">+{item.genre.length - 2}</span>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <div className="col-span-full text-center py-8 text-netflix-gray">
-              <p>No content found matching your search.</p>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-  
-  // Image Gallery
-  const ImageGallery = () => {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium">Available Images</h3>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={loadUploadedImages}
-            disabled={isLoadingImages}
-          >
-            <RefreshCcw className={`h-4 w-4 mr-1 ${isLoadingImages ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        </div>
-        
-        {isLoadingImages ? (
-          <div className="flex justify-center items-center h-32">
-            <div className="animate-pulse flex flex-col items-center">
-              <div className="h-8 w-8 bg-netflix-gray rounded-full mb-2"></div>
-              <div className="h-4 w-24 bg-netflix-gray rounded"></div>
-            </div>
-          </div>
-        ) : uploadedImages.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {uploadedImages.map((url, index) => (
-              <div key={index} className="relative group">
-                <img 
-                  src={url} 
-                  alt={`Uploaded ${index + 1}`} 
-                  className="rounded-md w-full aspect-video object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src = DEFAULT_IMAGES.backdrop;
-                  }}
-                />
-                <div className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button 
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteImage(url)}
-                    disabled={isDeleting}
-                    title="Delete image"
-                  >
-                    {isDeleting ? (
-                      <RefreshCcw className="h-4 w-4 mr-1 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4 mr-1" />
-                    )}
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-netflix-gray">
-            <p>No images uploaded yet. Add images by editing content.</p>
-          </div>
-        )}
-      </div>
-    );
   };
   
   return (
@@ -523,7 +336,16 @@ const ImageManager = () => {
                 <CardDescription>Browse, edit and manage all movies and series</CardDescription>
               </CardHeader>
               <CardContent>
-                <ContentLibrary />
+                <ContentLibrary 
+                  content={updatedContentList}
+                  onEditContent={handleEditContent}
+                  onDeleteContent={handleDeleteContent}
+                  onAddNew={() => {
+                    setIsEditMode(false);
+                    setShowContentEditor(true);
+                    setSelectedContent(null);
+                  }}
+                />
               </CardContent>
             </Card>
             
@@ -533,7 +355,13 @@ const ImageManager = () => {
                 <CardDescription>Manage images used across your content</CardDescription>
               </CardHeader>
               <CardContent>
-                <ImageGallery />
+                <GalleryView 
+                  isLoadingImages={isLoadingImages}
+                  uploadedImages={uploadedImages}
+                  onRefreshImages={loadUploadedImages}
+                  onDeleteImage={handleDeleteImage}
+                  isDeleting={isDeleting}
+                />
               </CardContent>
             </Card>
           </div>

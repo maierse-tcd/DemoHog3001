@@ -6,9 +6,9 @@ export const extractFilenameFromUrl = (url: string): string | null => {
   try {
     const urlPath = new URL(url).pathname;
     // Extract the path after '/media/'
-    const mediaPathMatch = urlPath.match(/\/media\/(.+)/);
+    const mediaPathMatch = urlPath.match(/\/media\/([^?]+)/);
     if (mediaPathMatch && mediaPathMatch[1]) {
-      return mediaPathMatch[1];
+      return decodeURIComponent(mediaPathMatch[1]);
     }
     return null;
   } catch (error) {

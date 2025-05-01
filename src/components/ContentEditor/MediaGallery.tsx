@@ -11,6 +11,7 @@ interface MediaGalleryProps {
   onImageSelect: (url: string) => void;
   onImageDelete: (url: string) => void;
   isDeleting: boolean;
+  compact?: boolean;
 }
 
 export const MediaGallery: React.FC<MediaGalleryProps> = ({ 
@@ -19,7 +20,8 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
   selectedImageUrl, 
   onImageSelect,
   onImageDelete,
-  isDeleting
+  isDeleting,
+  compact = false
 }) => {
   if (isLoadingImages) {
     return (
@@ -38,12 +40,12 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
   }
 
   return (
-    <ScrollArea className="max-h-60">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 p-1">
+    <ScrollArea className={compact ? "max-h-40" : "max-h-60"}>
+      <div className={`grid ${compact ? "grid-cols-3 md:grid-cols-4 lg:grid-cols-6" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"} gap-2 p-1`}>
         {availableImages.map((url, index) => (
           <div 
             key={index}
-            className={`aspect-video cursor-pointer relative group overflow-hidden rounded-md ${
+            className={`${compact ? "aspect-video" : "aspect-video"} cursor-pointer relative group overflow-hidden rounded-md ${
               selectedImageUrl === url ? 'ring-2 ring-netflix-red' : 'hover:ring-1 hover:ring-netflix-gray/50'
             }`}
           >
@@ -59,7 +61,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
             <div className="absolute inset-0 flex justify-between items-start p-1">
               {selectedImageUrl === url && (
                 <div className="bg-netflix-red rounded-full p-1">
-                  <CheckCircle className="h-3 w-3 text-white" />
+                  <CheckCircle className={`${compact ? "h-2 w-2" : "h-3 w-3"} text-white`} />
                 </div>
               )}
               
@@ -71,7 +73,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                 className="bg-black/70 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
                 disabled={isDeleting}
               >
-                <Trash2 className="h-3 w-3 text-white" />
+                <Trash2 className={`${compact ? "h-2 w-2" : "h-3 w-3"} text-white`} />
               </button>
             </div>
           </div>
