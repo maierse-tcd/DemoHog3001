@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { useToast } from '../hooks/use-toast';
-import { mockContent, Content } from '../data/mockData';
+import { Content } from '../data/mockData';
 import { useFeatureFlagEnabled } from '../hooks/usePostHogFeatures';
 import { useAuth } from '../hooks/useAuth';
 import { usePostHog } from '../hooks/usePostHogFeatures';
@@ -19,6 +20,7 @@ import {
   loadImagesFromStorage, 
   filterUniqueImages 
 } from '../utils/imageUtils/urlUtils';
+import { loadContentFromSupabase, deleteContentFromSupabase } from '../utils/contentUtils';
 
 const ImageManager = () => {
   // Use the official hook for the is_admin feature flag
@@ -31,10 +33,11 @@ const ImageManager = () => {
   // State management
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [selectedContent, setSelectedContent] = useState<Content | null>(null);
-  const [updatedContentList, setUpdatedContentList] = useState<Content[]>([]);
+  const [contentList, setContentList] = useState<Content[]>([]);
   const [showContentEditor, setShowContentEditor] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isLoadingImages, setIsLoadingImages] = useState(false);
+  const [isLoadingContent, setIsLoadingContent] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   
   // Load uploaded images using recursive storage listing
@@ -74,20 +77,35 @@ const ImageManager = () => {
     }
   }, [isLoggedIn, navigate]);
   
-  // Load any previously saved content from localStorage on component mount
-  useEffect(() => {
-    const savedContent = localStorage.getItem('hogflix_content');
-    if (savedContent) {
-      try {
-        const parsed = JSON.parse(savedContent);
-        setUpdatedContentList(parsed);
-      } catch (e) {
-        console.error("Error parsing saved content:", e);
-        setUpdatedContentList(mockContent);
-      }
-    } else {
-      setUpdatedContentList(mockContent);
+  // Load content directly from Supabase on component mount
+  const loadContentData = async () => {
+    setIsLoadingContent(true);
+    try {
+      const content = await loadContentFromSupabase();
+      setContentList(content);
+      console.log('Loaded content from Supabase:', content.length, 'items');
+    } catch (error) {
+      console.error("Error loading content:", error);
+      toast({
+        title: "Failed to load content",
+        description: "There was a problem loading your content library. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingContent(false);
     }
+  };
+  
+  // Load content on mount and when content is updated
+  useEffect(() => {
+    loadContentData();
+    
+    // Listen for content-updated events
+    window.addEventListener('content-updated', loadContentData);
+    
+    return () => {
+      window.removeEventListener('content-updated', loadContentData);
+    };
   }, []);
   
   // Load uploaded images from storage on component mount
@@ -125,28 +143,11 @@ const ImageManager = () => {
   }
   
   const handleContentSaved = (content: Content) => {
-    // If we're editing, find and replace the content
-    if (isEditMode) {
-      setUpdatedContentList(prev => 
-        prev.map(item => item.id === content.id ? content : item)
-      );
-    } else {
-      // Otherwise add the new content
-      setUpdatedContentList(prev => [...prev, content]);
-    }
+    // Refresh the content list from the database
+    loadContentData();
     
+    // Close the editor
     setShowContentEditor(false);
-    
-    // Refresh the list
-    const savedContent = localStorage.getItem('hogflix_content');
-    if (savedContent) {
-      try {
-        const parsed = JSON.parse(savedContent);
-        setUpdatedContentList(parsed);
-      } catch (e) {
-        console.error("Error parsing saved content:", e);
-      }
-    }
     
     // Show success message
     toast({
@@ -174,38 +175,46 @@ const ImageManager = () => {
     setShowContentEditor(true);
   };
   
-  const handleDeleteContent = (contentId: string) => {
+  const handleDeleteContent = async (contentId: string) => {
     // Find the content to get its title for the confirmation message
-    const contentToDelete = updatedContentList.find(item => item.id === contentId);
+    const contentToDelete = contentList.find(item => item.id === contentId);
     
     if (!contentToDelete) return;
     
     if (confirm(`Are you sure you want to delete "${contentToDelete.title}"? This action cannot be undone.`)) {
-      // Remove from state
-      const newList = updatedContentList.filter(item => item.id !== contentId);
-      setUpdatedContentList(newList);
-      
-      // Save to localStorage
-      localStorage.setItem('hogflix_content', JSON.stringify(newList));
-      
-      // If this was the selected content, clear the selection
-      if (selectedContent?.id === contentId) {
-        setSelectedContent(null);
+      try {
+        // Delete from Supabase
+        await deleteContentFromSupabase(contentId);
+        
+        // Remove from state
+        setContentList(prev => prev.filter(item => item.id !== contentId));
+        
+        // If this was the selected content, clear the selection
+        if (selectedContent?.id === contentId) {
+          setSelectedContent(null);
+        }
+        
+        // Track in PostHog
+        posthog?.capture('content_deleted', {
+          contentTitle: contentToDelete.title
+        });
+        
+        // Show success message
+        toast({
+          title: "Content deleted",
+          description: `"${contentToDelete.title}" has been removed.`
+        });
+        
+        // Dispatch a custom event to notify other components about the change
+        window.dispatchEvent(new Event('content-updated'));
+      } catch (error) {
+        console.error("Error deleting content:", error);
+        toast({
+          title: "Failed to delete content",
+          description: "There was a problem removing the content. Please try again.",
+          variant: "destructive"
+        });
       }
-      
-      // Track in PostHog
-      posthog?.capture('content_deleted', {
-        contentTitle: contentToDelete.title
-      });
-      
-      // Show success message
-      toast({
-        title: "Content deleted",
-        description: `"${contentToDelete.title}" has been removed.`
-      });
-      
-      // Dispatch a custom event to notify other components about the change
-      window.dispatchEvent(new Event('content-updated'));
     }
   };
   
@@ -249,23 +258,29 @@ const ImageManager = () => {
       setUploadedImages(prev => prev.filter(url => url !== imageUrl));
       
       // Also check if any content was using this image and update it
-      const contentToUpdate = updatedContentList.filter(item => 
+      const contentToUpdate = contentList.filter(item => 
         item.posterUrl === imageUrl || item.backdropUrl === imageUrl
       );
       
       if (contentToUpdate.length > 0) {
-        const updatedList = updatedContentList.map(item => {
-          if (item.posterUrl === imageUrl) {
-            return { ...item, posterUrl: '' };
-          }
-          if (item.backdropUrl === imageUrl) {
-            return { ...item, backdropUrl: '' };
-          }
-          return item;
-        });
+        // Update each content item that was using this image
+        for (const item of contentToUpdate) {
+          // Create an updated version of the content with image URLs removed
+          const updatedItem = { 
+            ...item,
+            posterUrl: item.posterUrl === imageUrl ? '' : item.posterUrl,
+            backdropUrl: item.backdropUrl === imageUrl ? '' : item.backdropUrl
+          };
+          
+          // Save the updated content to Supabase
+          await supabase.from('content_items').update({
+            poster_url: updatedItem.posterUrl,
+            backdrop_url: updatedItem.backdropUrl
+          }).eq('id', item.id);
+        }
         
-        setUpdatedContentList(updatedList);
-        localStorage.setItem('hogflix_content', JSON.stringify(updatedList));
+        // Refresh content list to reflect updates
+        loadContentData();
         
         // Notify user that content was updated
         toast({
@@ -340,16 +355,25 @@ const ImageManager = () => {
                 <CardDescription>Browse, edit and manage all movies and series</CardDescription>
               </CardHeader>
               <CardContent>
-                <ContentLibrary 
-                  content={updatedContentList}
-                  onEditContent={handleEditContent}
-                  onDeleteContent={handleDeleteContent}
-                  onAddNew={() => {
-                    setIsEditMode(false);
-                    setShowContentEditor(true);
-                    setSelectedContent(null);
-                  }}
-                />
+                {isLoadingContent ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-pulse flex flex-col items-center">
+                      <div className="h-8 w-32 bg-netflix-gray rounded mb-4"></div>
+                      <div className="text-netflix-gray">Loading content...</div>
+                    </div>
+                  </div>
+                ) : (
+                  <ContentLibrary 
+                    content={contentList}
+                    onEditContent={handleEditContent}
+                    onDeleteContent={handleDeleteContent}
+                    onAddNew={() => {
+                      setIsEditMode(false);
+                      setShowContentEditor(true);
+                      setSelectedContent(null);
+                    }}
+                  />
+                )}
               </CardContent>
             </Card>
             

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,7 @@ import { safeCapture } from '../utils/posthogUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '../hooks/use-toast';
-import { mockContent, Content, Genre } from '../data/mockData';
+import { Content, Genre } from '../data/mockData';
 import { supabase } from '../integrations/supabase/client';
 import { DetailsTab } from './ContentEditor/DetailsTab';
 import { MediaTab } from './ContentEditor/MediaTab';
