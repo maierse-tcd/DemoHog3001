@@ -16,7 +16,7 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import HelpPage from "./pages/HelpPage";
 import ImageManager from "./pages/ImageManager";
-import { PostHogProvider } from "./components/PostHogProvider";
+import { PostHogProviderOfficial } from "./components/PostHogProviderOfficial";
 import { AuthProvider } from "./hooks/useAuth";
 
 const queryClient = new QueryClient();
@@ -25,7 +25,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <ProfileSettingsProvider>
-        <PostHogProvider>
+        <PostHogProviderOfficial>
           <AuthProvider>
             <Toaster />
             <Sonner />
@@ -46,7 +46,7 @@ const App = () => (
               </Routes>
             </BrowserRouter>
           </AuthProvider>
-        </PostHogProvider>
+        </PostHogProviderOfficial>
       </ProfileSettingsProvider>
     </TooltipProvider>
   </QueryClientProvider>

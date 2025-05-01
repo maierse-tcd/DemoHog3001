@@ -4,7 +4,7 @@ import { SearchBar } from './SearchBar';
 import { ProfileDropdown } from './ProfileDropdown';
 import { Bell, Menu, X, Film, ListCheck, Image } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import { useFeatureFlag } from '../hooks/useFeatureFlag';
+import { useFeatureFlagEnabled } from '../hooks/usePostHogFeatures';
 
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -12,8 +12,8 @@ export const Navbar = () => {
   const location = useLocation();
   const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
   
-  // Use the is_admin feature flag to determine if images navigation should be shown
-  const isAdmin = useFeatureFlag('is_admin');
+  // Use the official hook for the is_admin feature flag
+  const isAdmin = useFeatureFlagEnabled('is_admin');
   
   useEffect(() => {
     const handleScroll = () => {

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
@@ -11,14 +10,15 @@ import { Input } from '../components/ui/input';
 import { Search, Copy, Save, CheckCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { useFeatureFlag } from '../hooks/useFeatureFlag';
+import { useFeatureFlagEnabled, usePostHog } from '../hooks/usePostHogFeatures';
 
 // Create a copy of mockContent that we can modify
 let localMockContent = [...mockContent];
 
 const ImageManager = () => {
-  // Use feature flag to determine if user is an admin
-  const isAdmin = useFeatureFlag('is_admin');
+  // Use the official hook for the is_admin feature flag
+  const isAdmin = useFeatureFlagEnabled('is_admin');
+  const posthog = usePostHog();
   
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -83,9 +83,7 @@ const ImageManager = () => {
     setUploadedImages(prevImages => {
       const newImages = [...prevImages, imageUrl];
       // Track in PostHog
-      if (window.posthog) {
-        window.posthog.capture('image_uploaded');
-      }
+      posthog?.capture('image_uploaded');
       return newImages;
     });
   };
@@ -100,11 +98,9 @@ const ImageManager = () => {
             : 'You can now use this URL in your content.',
         });
         
-        if (window.posthog) {
-          window.posthog.capture('image_url_copied', {
-            contentTitle: contentInfo
-          });
-        }
+        posthog?.capture('image_url_copied', {
+          contentTitle: contentInfo
+        });
       })
       .catch((err) => {
         console.error('Failed to copy URL:', err);
@@ -122,13 +118,11 @@ const ImageManager = () => {
     setFilteredContent([]);
     
     // Track in PostHog
-    if (window.posthog) {
-      window.posthog.capture('content_selected_for_image', {
-        contentId: item.id,
-        contentTitle: item.title,
-        contentType: item.type
-      });
-    }
+    posthog?.capture('content_selected_for_image', {
+      contentId: item.id,
+      contentTitle: item.title,
+      contentType: item.type
+    });
   };
   
   const updateContentImage = (imageUrl: string) => {
@@ -159,13 +153,11 @@ const ImageManager = () => {
     });
     
     // Track in PostHog
-    if (window.posthog) {
-      window.posthog.capture('content_image_updated', {
-        contentId: selectedContent.id,
-        contentTitle: selectedContent.title,
-        contentType: selectedContent.type
-      });
-    }
+    posthog?.capture('content_image_updated', {
+      contentId: selectedContent.id,
+      contentTitle: selectedContent.title,
+      contentType: selectedContent.type
+    });
     
     setSavedChanges(true);
     setTimeout(() => setSavedChanges(false), 3000);
