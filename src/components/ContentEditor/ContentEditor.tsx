@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -13,12 +12,12 @@ import { DetailsTab } from './DetailsTab';
 import { MediaTab } from './MediaTab';
 import { loadImagesFromStorage } from '../../utils/imageUtils/urlUtils';
 
-interface ContentEditorProps {
-  content?: Content;
-  onSave?: (content: Content) => void;
-  onCancel?: () => void;
-  isEdit?: boolean;
-}
+// Image size configurations - consistently use landscape format
+export const IMAGE_SIZES = {
+  poster: { width: 600, height: 900 },  // Only used when explicitly needed
+  backdrop: { width: 1280, height: 720 }, // 16:9 aspect ratio
+  thumbnail: { width: 480, height: 270 }  // 16:9 aspect ratio
+};
 
 // Available genres based on the mockData
 const AVAILABLE_GENRES: Genre[] = [

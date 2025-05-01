@@ -75,11 +75,24 @@ export const isSupabaseStorageUrl = (url: string): boolean => {
     const mediaPattern = /\/storage\/v1\/object\/(?:public|sign)\/media\/[^?]+/;
     const isValid = mediaPattern.test(urlObj.pathname);
     
+    // 5. Should not be a folder
+    const pathParts = urlObj.pathname.split('/');
+    const lastPart = pathParts[pathParts.length - 1];
+    
+    // Check if the path ends with a slash or has no extension (likely a folder)
+    const isLikelyFolder = lastPart === '' || 
+                          (!lastPart.includes('.') && !urlObj.search.includes('='));
+    
+    if (isLikelyFolder) {
+      console.log('Rejected URL - appears to be a folder:', url);
+      return false;
+    }
+    
     if (!isValid) {
       console.log('Rejected URL - does not match pattern:', url);
     }
     
-    return isValid;
+    return isValid && !isLikelyFolder;
   } catch (error) {
     console.error('Error checking if URL is from Supabase storage:', error);
     return false;
@@ -136,10 +149,31 @@ export const loadImagesFromStorage = async (): Promise<string[]> => {
       return [];
     }
     
-    console.log(`Found ${imageFiles.length} images in storage`);
+    console.log(`Found ${imageFiles.length} items in storage`);
+    
+    // Filter out folders and non-image files
+    const actualImageFiles = imageFiles.filter(file => {
+      // Skip directories
+      if (file.id === null || file.metadata === null) {
+        console.log('Skipping directory:', file.name);
+        return false;
+      }
+      
+      // Check if it's an image file by looking at metadata mimetype or extension
+      const isImage = file.metadata?.mimetype?.startsWith('image/') || 
+                     /\.(jpg|jpeg|png|gif|webp|avif|svg)$/i.test(file.name);
+      
+      if (!isImage) {
+        console.log('Skipping non-image file:', file.name);
+      }
+      
+      return isImage;
+    });
+    
+    console.log(`Found ${actualImageFiles.length} actual image files after filtering`);
     
     // Get public URLs for each file
-    const urls = imageFiles.map(file => {
+    const urls = actualImageFiles.map(file => {
       const { data } = supabase.storage
         .from('media')
         .getPublicUrl(file.name);

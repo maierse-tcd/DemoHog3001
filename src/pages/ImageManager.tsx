@@ -11,7 +11,6 @@ import { usePostHog } from '../hooks/usePostHogFeatures';
 import { ContentEditor } from '../components/ContentEditor';
 import { supabase } from '../integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
-import { DEFAULT_IMAGES } from '../utils/imageUtils';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { ContentLibrary } from '../components/ImageManager/ContentLibrary';
 import { GalleryView } from '../components/ImageManager/GalleryView';
@@ -36,12 +35,15 @@ const ImageManager = () => {
   
   // Load uploaded images from Supabase Storage
   const loadUploadedImages = async () => {
-    if (!isLoggedIn || !user?.id) return;
+    if (!isLoggedIn && !user?.id) {
+      console.log('ImageManager - User not logged in, but we will try to load images anyway');
+    }
     
     setIsLoadingImages(true);
     try {
       const urls = await loadImagesFromStorage();
       console.log('ImageManager - Loaded images:', urls.length);
+      console.log('ImageManager - Image URLs:', urls);
       setUploadedImages(urls);
     } catch (error) {
       console.error("Error loading images:", error);
@@ -79,10 +81,10 @@ const ImageManager = () => {
     }
   }, []);
   
-  // Load uploaded images from Supabase Storage
+  // Load uploaded images from Supabase Storage on component mount
   useEffect(() => {
     loadUploadedImages();
-  }, [isLoggedIn, user]);
+  }, []);
   
   // If user is not logged in or not an admin (feature flag is explicitly false), redirect to home
   if (!isLoggedIn) {

@@ -28,7 +28,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
     console.log('GalleryView - Original images count:', uploadedImages.length);
     console.log('GalleryView - Filtered images count:', filteredImages.length);
     filteredImages.forEach((url, index) => {
-      console.log(`Image ${index + 1}:`, url);
+      console.log(`GalleryView - Image ${index + 1}:`, url);
     });
   }, [uploadedImages, filteredImages]);
   
@@ -57,16 +57,18 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
       ) : filteredImages.length > 0 ? (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
           {filteredImages.map((url, index) => (
-            <div key={`image-${index}`} className="relative group">
-              <img 
-                src={url} 
-                alt={`Uploaded ${index + 1}`} 
-                className="rounded-md w-full aspect-video object-cover"
-                onError={(e) => {
-                  console.error('Image failed to load:', url);
-                  e.currentTarget.src = DEFAULT_IMAGES.backdrop;
-                }}
-              />
+            <div key={`image-${index}-${url.slice(-8)}`} className="relative group">
+              <div className="aspect-video w-full overflow-hidden rounded-md bg-netflix-gray/20">
+                <img 
+                  src={url} 
+                  alt={`Uploaded ${index + 1}`} 
+                  className="rounded-md w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error('Image failed to load:', url);
+                    e.currentTarget.src = DEFAULT_IMAGES.backdrop;
+                  }}
+                />
+              </div>
               <div className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button 
                   variant="destructive"
@@ -88,7 +90,10 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
         </div>
       ) : (
         <div className="text-center py-8 text-netflix-gray">
-          <p>No images uploaded yet. Add images by editing content.</p>
+          <div className="flex flex-col items-center">
+            <ImageIcon className="h-10 w-10 text-netflix-gray/30 mb-3" />
+            <p>No images uploaded yet. Add images by editing content.</p>
+          </div>
         </div>
       )}
     </div>

@@ -1,6 +1,6 @@
 
-// Collection of empty placeholder references 
-// These should not be used directly in the app anymore
+// This file is now just a placeholder and should eventually be removed.
+// We no longer use placeholder images in the app.
 
 export const placeholderImages = {
   heroBackdrop: "",
