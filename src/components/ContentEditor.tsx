@@ -66,9 +66,10 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
   const [backdropUrl, setBackdropUrl] = useState(formData.backdropUrl || '');
   const [availableImages, setAvailableImages] = useState<string[]>([]);
   const [isLoadingImages, setIsLoadingImages] = useState(false);
-  const [activeTab, setActiveTab] useState('details');
+  const [activeTab, setActiveTab] = useState('details');
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
+  
   
   // Load available images on component mount
   useEffect(() => {
@@ -348,7 +349,7 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
             </>
           ) : saved ? (
             <>
-              <Check className="mr-2 h-4 w-4" /> Saved
+              <CheckCircle className="mr-2 h-4 w-4" /> Saved
             </>
           ) : (
             <>
@@ -360,4 +361,3 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
     </Card>
   );
 };
-
