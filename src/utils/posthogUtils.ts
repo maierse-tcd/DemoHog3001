@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for safely interacting with PostHog
  */
@@ -27,9 +28,12 @@ export const isPostHogReady = (): boolean => {
  * Safely capture an event in PostHog
  */
 export const safeCapture = (event: string, properties?: Record<string, any>): void => {
-  if (isPostHogReady()) {
+  if (typeof window !== 'undefined' && window.posthog) {
     try {
-      window.posthog.capture(event, properties);
+      // First ensure posthog is an object with the capture method
+      if (isPostHogInstance(window.posthog)) {
+        window.posthog.capture(event, properties);
+      }
     } catch (err) {
       console.error("PostHog event error:", err);
     }
@@ -43,9 +47,11 @@ export const safeIdentify = (
   distinctId: string, 
   properties?: Record<string, any>
 ): void => {
-  if (isPostHogReady()) {
+  if (typeof window !== 'undefined' && window.posthog) {
     try {
-      window.posthog.identify(distinctId, properties);
+      if (isPostHogInstance(window.posthog)) {
+        window.posthog.identify(distinctId, properties);
+      }
     } catch (err) {
       console.error("PostHog identify error:", err);
     }
@@ -56,9 +62,11 @@ export const safeIdentify = (
  * Safely reset user identity in PostHog
  */
 export const safeReset = (): void => {
-  if (isPostHogReady()) {
+  if (typeof window !== 'undefined' && window.posthog) {
     try {
-      window.posthog.reset();
+      if (isPostHogInstance(window.posthog)) {
+        window.posthog.reset();
+      }
     } catch (err) {
       console.error("PostHog reset error:", err);
     }
@@ -69,9 +77,11 @@ export const safeReset = (): void => {
  * Safely check if a feature flag is enabled
  */
 export const safeIsFeatureEnabled = (flag: string): boolean => {
-  if (isPostHogReady()) {
+  if (typeof window !== 'undefined' && window.posthog) {
     try {
-      return window.posthog.isFeatureEnabled(flag);
+      if (isPostHogInstance(window.posthog)) {
+        return window.posthog.isFeatureEnabled(flag);
+      }
     } catch (err) {
       console.error(`Error checking feature flag ${flag}:`, err);
     }
@@ -83,9 +93,11 @@ export const safeIsFeatureEnabled = (flag: string): boolean => {
  * Safely reload feature flags
  */
 export const safeReloadFeatureFlags = async (): Promise<void> => {
-  if (isPostHogReady()) {
+  if (typeof window !== 'undefined' && window.posthog) {
     try {
-      await window.posthog.reloadFeatureFlags();
+      if (isPostHogInstance(window.posthog)) {
+        await window.posthog.reloadFeatureFlags();
+      }
     } catch (err) {
       console.error("Error reloading feature flags:", err);
     }
@@ -96,9 +108,11 @@ export const safeReloadFeatureFlags = async (): Promise<void> => {
  * Safely register a callback for feature flag changes
  */
 export const safeOnFeatureFlags = (callback: () => void): void => {
-  if (isPostHogReady()) {
+  if (typeof window !== 'undefined' && window.posthog) {
     try {
-      window.posthog.onFeatureFlags(callback);
+      if (isPostHogInstance(window.posthog)) {
+        window.posthog.onFeatureFlags(callback);
+      }
     } catch (err) {
       console.error("Error setting feature flag callback:", err);
     }
@@ -109,9 +123,11 @@ export const safeOnFeatureFlags = (callback: () => void): void => {
  * Safely set user properties
  */
 export const safePeopleSet = (properties: Record<string, any>): void => {
-  if (isPostHogReady() && window.posthog.people) {
+  if (typeof window !== 'undefined' && window.posthog) {
     try {
-      window.posthog.people.set(properties);
+      if (isPostHogInstance(window.posthog) && window.posthog.people) {
+        window.posthog.people.set(properties);
+      }
     } catch (err) {
       console.error("Error setting people properties:", err);
     }
@@ -122,9 +138,11 @@ export const safePeopleSet = (properties: Record<string, any>): void => {
  * Safely override feature flags
  */
 export const safeOverrideFeatureFlags = (flags: Record<string, boolean | string>): void => {
-  if (isPostHogReady() && window.posthog.featureFlags) {
+  if (typeof window !== 'undefined' && window.posthog) {
     try {
-      window.posthog.featureFlags.override(flags);
+      if (isPostHogInstance(window.posthog) && window.posthog.featureFlags) {
+        window.posthog.featureFlags.override(flags);
+      }
     } catch (err) {
       console.error("Error overriding feature flags:", err);
     }
