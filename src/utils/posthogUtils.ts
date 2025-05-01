@@ -32,17 +32,31 @@ export const safeCapture = (event: string, properties?: Record<string, any>): vo
 
 /**
  * Safely identify a user in PostHog
+ * Uses email as the primary identifier for consistent cross-platform identification
  */
 export const safeIdentify = (distinctId: string, properties?: Record<string, any>): void => {
-  if (typeof window !== 'undefined' && window.posthog) {
-    try {
-      if (isPostHogInstance(window.posthog)) {
-        window.posthog.identify(distinctId, properties);
-        console.log(`PostHog: User identified with ID: ${distinctId}`);
+  if (typeof window === 'undefined' || !window.posthog) {
+    console.warn("PostHog not available, identification skipped");
+    return;
+  }
+  
+  try {
+    if (isPostHogInstance(window.posthog)) {
+      // Check if PostHog is ready to identify users
+      if (!window.posthog.config) {
+        console.warn("PostHog not fully initialized yet, identification may fail");
       }
-    } catch (err) {
-      console.error("PostHog identify error:", err);
+      
+      // Get current distinct ID to check if we need to identify
+      const currentId = window.posthog.get_distinct_id?.();
+      console.log(`Current PostHog distinct ID: ${currentId}, identifying as: ${distinctId}`);
+      
+      // Identify the user
+      window.posthog.identify(distinctId, properties);
+      console.log(`PostHog: User identified with ID: ${distinctId}`);
     }
+  } catch (err) {
+    console.error("PostHog identify error:", err);
   }
 };
 

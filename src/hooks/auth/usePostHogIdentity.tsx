@@ -10,15 +10,10 @@ export const usePostHogIdentity = () => {
     }
     
     try {
-      // Use email as primary identifier (more reliable for cross-platform identification)
-      safeIdentify(userEmail, {
-        email: userEmail,
-        name: displayName,
-        id: userId,
-        supabase_id: userId
-      });
-      
-      console.log(`User identified in PostHog with email: ${userEmail}`);
+      // PostHog identification is now centralized in PostHogProvider
+      // This function is kept for backward compatibility, but actual identification
+      // should now happen through the PostHogProvider's auth listener
+      console.log(`PostHog identity now managed by PostHogProvider for: ${userEmail}`);
     } catch (err) {
       console.error("PostHog identify error:", err);
     }

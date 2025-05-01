@@ -5,6 +5,7 @@ import { HeroSection } from '../components/HeroSection';
 import { ContentRow } from '../components/ContentRow';
 import { Footer } from '../components/Footer';
 import { mockCategories, mockContent, getFeaturedContent, getContentByCategory } from '../data/mockData';
+import { safeGetDistinctId } from '../utils/posthogUtils';
 
 const Index = () => {
   const [featuredContent, setFeaturedContent] = useState(getFeaturedContent());
@@ -13,6 +14,13 @@ const Index = () => {
   // Simulate page view analytics event
   useEffect(() => {
     console.log('Analytics Event: Page View - Homepage');
+  }, []);
+  
+  // Debug PostHog identity
+  useEffect(() => {
+    // Check if user is properly identified in PostHog
+    const currentId = safeGetDistinctId();
+    console.log(`PostHog Debug - Current user identifier: ${currentId}`);
   }, []);
   
   // Simulate content impression analytics events
