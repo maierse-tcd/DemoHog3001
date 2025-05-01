@@ -4,6 +4,7 @@
 interface PostHogFeatureFlags {
   currentFlags: Record<string, boolean | string>;
   override: (flags: Record<string, boolean | string>) => void;
+  // Note: clear() doesn't exist in the actual API
 }
 
 interface PostHogPeople {

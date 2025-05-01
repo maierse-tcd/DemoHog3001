@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for safely interacting with PostHog
  */
@@ -111,12 +112,8 @@ export const safeRemoveFeatureFlags = (): void => {
   if (typeof window !== 'undefined' && window.posthog) {
     try {
       if (isPostHogInstance(window.posthog) && window.posthog.featureFlags) {
-        // If there's a direct method to clear flags, use it
-        if (typeof window.posthog.featureFlags.clear === 'function') {
-          window.posthog.featureFlags.clear();
-        } 
-        // Otherwise override with empty values
-        else if (typeof window.posthog.featureFlags.override === 'function') {
+        // Override with empty values since clear() method doesn't exist
+        if (typeof window.posthog.featureFlags.override === 'function') {
           // Get all currently active flags
           if (window.posthog.featureFlags.currentFlags) {
             const currentFlags = Object.keys(window.posthog.featureFlags.currentFlags);
