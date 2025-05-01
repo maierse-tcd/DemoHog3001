@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { toast } from '../../hooks/use-toast';
 import { ProfileSettings } from '../../contexts/ProfileSettingsContext';
 import { supabase } from '../../integrations/supabase/client';
+import { safeIdentify } from '../../utils/posthogUtils';
 
 interface ProfileInfoProps {
   settings: ProfileSettings;
@@ -41,8 +42,8 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
       if (error) throw error;
 
       // Store the name in PostHog for better identification
-      if (window.posthog && email) {
-        window.posthog.identify(email, { name });
+      if (email) {
+        safeIdentify(email, { name });
       }
 
       // Update the context

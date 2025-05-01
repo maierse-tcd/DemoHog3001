@@ -1,10 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { SearchBar } from './SearchBar';
 import { ProfileDropdown } from './ProfileDropdown';
 import { Bell, Menu, X, Film, ListCheck, Image } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useFeatureFlagEnabled } from '../hooks/usePostHogFeatures';
+import { safeCapture } from '../utils/posthogUtils';
 
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -32,23 +32,19 @@ export const Navbar = () => {
 
   // Track page view in PostHog whenever the route changes
   useEffect(() => {
-    if (window.posthog) {
-      try {
-        const path = location.pathname;
-        const title = document.title;
-        
-        // Manually capture pageview
-        if (window.posthog.capture) {
-          window.posthog.capture('$pageview', {
-            path,
-            title,
-            $current_url: window.location.href,
-          });
-          console.log("Navbar: PageView tracked for path:", path);
-        }
-      } catch (error) {
-        console.error("Error capturing pageview:", error);
-      }
+    try {
+      const path = location.pathname;
+      const title = document.title;
+      
+      // Manually capture pageview
+      safeCapture('$pageview', {
+        path,
+        title,
+        $current_url: window.location.href,
+      });
+      console.log("Navbar: PageView tracked for path:", path);
+    } catch (error) {
+      console.error("Error capturing pageview:", error);
     }
   }, [location.pathname]);
 

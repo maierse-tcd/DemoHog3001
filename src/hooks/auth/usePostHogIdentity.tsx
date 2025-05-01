@@ -1,15 +1,16 @@
 
 import { useCallback } from 'react';
+import { safeIdentify, safeCapture } from '../../utils/posthogUtils';
 
 export const usePostHogIdentity = () => {
   const identifyUserInPostHog = useCallback((userId: string, userEmail: string, displayName: string) => {
-    if (!window.posthog || !userEmail) {
+    if (!userEmail) {
       return;
     }
     
     try {
       // Use email as primary identifier
-      window.posthog.identify(userEmail, {
+      safeIdentify(userEmail, {
         email: userEmail,
         name: displayName,
         id: userId
@@ -20,12 +21,8 @@ export const usePostHogIdentity = () => {
   }, []);
   
   const capturePostHogEvent = useCallback((eventName: string, properties?: Record<string, any>) => {
-    if (!window.posthog) {
-      return;
-    }
-    
     try {
-      window.posthog.capture(eventName, properties);
+      safeCapture(eventName, properties);
     } catch (err) {
       console.error("PostHog event error:", err);
     }

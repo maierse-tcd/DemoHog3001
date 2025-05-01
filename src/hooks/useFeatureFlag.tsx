@@ -1,5 +1,11 @@
 
 import { useState, useEffect } from 'react';
+import { isPostHogInstance } from '../types/posthog';
+import {
+  safeIsFeatureEnabled,
+  safeOnFeatureFlags,
+  safeReloadFeatureFlags
+} from '../utils/posthogUtils';
 
 export function useFeatureFlag(flagName: string): boolean | undefined {
   const [enabled, setEnabled] = useState<boolean | undefined>(undefined);
@@ -23,7 +29,7 @@ export function useFeatureFlag(flagName: string): boolean | undefined {
       
       try {
         // Initial check when PostHog is available
-        const initialValue = window.posthog.isFeatureEnabled(flagName);
+        const initialValue = safeIsFeatureEnabled(flagName);
         console.log(`Feature flag ${flagName} initial value:`, initialValue);
         
         if (isMounted) {
@@ -33,7 +39,7 @@ export function useFeatureFlag(flagName: string): boolean | undefined {
         // Set up listener for flag changes
         const onFlagChange = () => {
           try {
-            const newValue = window.posthog.isFeatureEnabled(flagName);
+            const newValue = safeIsFeatureEnabled(flagName);
             console.log(`Feature flag ${flagName} updated:`, newValue);
             
             if (isMounted) {
@@ -45,23 +51,24 @@ export function useFeatureFlag(flagName: string): boolean | undefined {
         };
         
         // Register callback for flag updates
-        if (window.posthog.onFeatureFlags) {
-          window.posthog.onFeatureFlags(onFlagChange);
-        }
+        safeOnFeatureFlags(onFlagChange);
         
         // Ensure flags are loaded
-        if (!window.posthog.featureFlags || 
+        if (!window.posthog || 
+            !isPostHogInstance(window.posthog) || 
+            !window.posthog.featureFlags || 
             !window.posthog.featureFlags.currentFlags || 
             Object.keys(window.posthog.featureFlags.currentFlags).length === 0) {
           console.log("Reloading feature flags...");
-          window.posthog.reloadFeatureFlags();
+          safeReloadFeatureFlags();
         }
         
         return () => {
           isMounted = false;
-          if (window.posthog && window.posthog.onFeatureFlags) {
+          // Clean up listener
+          if (window.posthog && isPostHogInstance(window.posthog)) {
             try {
-              window.posthog.onFeatureFlags(onFlagChange, true); // Remove listener
+              safeOnFeatureFlags(onFlagChange);
             } catch (e) {
               console.error('Error removing PostHog feature flag listener:', e);
             }

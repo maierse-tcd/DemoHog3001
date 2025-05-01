@@ -1,7 +1,7 @@
-
 import { useState, useRef } from 'react';
 import { Upload, Image, X } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
+import { safeCapture } from '../utils/posthogUtils';
 
 interface ImageUploaderProps {
   onImageUploaded?: (imageUrl: string) => void;
@@ -20,12 +20,10 @@ export const ImageUploader = ({ onImageUploaded }: ImageUploaderProps) => {
     setIsUploading(true);
     
     // Track upload start in PostHog
-    if (window.posthog) {
-      window.posthog.capture('image_upload_started', {
-        fileType: file.type,
-        fileSize: file.size
-      });
-    }
+    safeCapture('image_upload_started', {
+      fileType: file.type,
+      fileSize: file.size
+    });
     
     // Create a local URL for preview
     const objectUrl = URL.createObjectURL(file);
@@ -47,12 +45,10 @@ export const ImageUploader = ({ onImageUploaded }: ImageUploaderProps) => {
       });
       
       // Track successful upload in PostHog
-      if (window.posthog) {
-        window.posthog.capture('image_upload_complete', {
-          fileType: file.type,
-          fileSize: file.size
-        });
-      }
+      safeCapture('image_upload_complete', {
+        fileType: file.type,
+        fileSize: file.size
+      });
     }, 1000);
   };
   
@@ -67,9 +63,7 @@ export const ImageUploader = ({ onImageUploaded }: ImageUploaderProps) => {
     }
     
     // Track image removal in PostHog
-    if (window.posthog) {
-      window.posthog.capture('image_removed');
-    }
+    safeCapture('image_removed');
   };
   
   return (

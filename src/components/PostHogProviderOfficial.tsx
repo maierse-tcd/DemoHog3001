@@ -1,7 +1,12 @@
-
 import { PostHogProvider } from 'posthog-js/react';
 import { useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
+import { 
+  safeIdentify, 
+  safeReset, 
+  safeReloadFeatureFlags,
+  safeOverrideFeatureFlags
+} from '../utils/posthogUtils';
 
 const POSTHOG_KEY = 'phc_O1OL4R6b4MUWUsu8iYorqWfQoGSorFLHLOustqbVB0U';
 const POSTHOG_HOST = 'https://eu.i.posthog.com';
@@ -37,12 +42,12 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
         if (event === 'SIGNED_IN' && session?.user) {
           const userEmail = session.user.email;
           
-          if (userEmail && window.posthog) {
+          if (userEmail) {
             console.log("PostHog: Identifying user with email:", userEmail);
             
             try {
               // Use email as identifier
-              window.posthog.identify(userEmail, {
+              safeIdentify(userEmail, {
                 email: userEmail,
                 name: session.user.user_metadata?.name || userEmail.split('@')[0],
                 id: session.user.id
@@ -50,18 +55,15 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
               
               // Force flag reload with delay after identifying
               setTimeout(() => {
-                if (window.posthog) {
-                  window.posthog.reloadFeatureFlags();
-                  console.log("Feature flags reloaded after user identification");
-                  
-                  // Override is_admin flag for testing
-                  if (window.posthog.featureFlags) {
-                    window.posthog.featureFlags.override({
-                      'is_admin': true
-                    });
-                    console.log("Feature flag overridden for testing: is_admin=true");
-                  }
-                }
+                // Reload feature flags
+                safeReloadFeatureFlags();
+                console.log("Feature flags reloaded after user identification");
+                
+                // Override is_admin flag for testing
+                safeOverrideFeatureFlags({
+                  'is_admin': true
+                });
+                console.log("Feature flag overridden for testing: is_admin=true");
               }, 500);
             } catch (err) {
               console.error("PostHog event error:", err);
@@ -69,10 +71,10 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
           }
         }
         
-        if (event === 'SIGNED_OUT' && window.posthog) {
+        if (event === 'SIGNED_OUT') {
           try {
             // Reset identity after sign out
-            window.posthog.reset();
+            safeReset();
             console.log("PostHog: User signed out, identity reset");
           } catch (err) {
             console.error("PostHog event error:", err);

@@ -6,6 +6,12 @@ interface PostHogFeatureFlags {
   override: (flags: Record<string, boolean | string>) => void;
 }
 
+interface PostHogPeople {
+  set: (properties: Record<string, any>) => void;
+  set_once: (properties: Record<string, any>) => void;
+  toString: () => string;
+}
+
 interface PostHog {
   capture: (event: string, properties?: Record<string, any>) => void;
   identify: (distinctId: string, properties?: Record<string, any>) => void;
@@ -16,11 +22,20 @@ interface PostHog {
   featureFlags: PostHogFeatureFlags;
   onFeatureFlags: (callback: () => void, timeout?: boolean) => void;
   group: (groupType: string, groupKey: string, groupProperties?: Record<string, any>) => void;
-  // Adding additional properties for initialization script
+  people: PostHogPeople;
+  // Properties for initialization
   __SV?: number;
   _i?: any[];
   init?: Function;
-  people?: any;
+  toString?: () => string;
+}
+
+// Type guard to check if an object is a fully initialized PostHog instance
+export function isPostHogInstance(obj: any): obj is PostHog {
+  return obj && 
+         typeof obj === 'object' && 
+         !Array.isArray(obj) &&
+         typeof obj.capture === 'function';
 }
 
 declare global {
@@ -28,5 +43,3 @@ declare global {
     posthog?: PostHog | any[];
   }
 }
-
-export {};

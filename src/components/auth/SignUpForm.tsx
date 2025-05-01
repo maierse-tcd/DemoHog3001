@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '../ui/input';
@@ -6,6 +5,7 @@ import { Button } from '../ui/button';
 import { useToast } from '../../hooks/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { useProfileSettings } from '../../contexts/ProfileSettingsContext';
+import { safeIdentify, safeCapture } from '../../utils/posthogUtils';
 
 interface SignUpFormProps {
   selectedPlanId: string | null;
@@ -91,15 +91,13 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
           });
           
           // Identify user in PostHog using email as primary identifier
-          if (window.posthog) {
-            window.posthog.identify(email, {
-              email: email,
-              name,
-              plan: selectedPlanId,
-              isKidsAccount
-            });
-            window.posthog.capture('user_signup_complete');
-          }
+          safeIdentify(email, {
+            email: email,
+            name,
+            plan: selectedPlanId,
+            isKidsAccount
+          });
+          safeCapture('user_signup_complete');
           
           toast({
             title: "Sign up successful!",

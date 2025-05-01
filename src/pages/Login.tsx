@@ -6,6 +6,7 @@ import { useProfileSettings } from '../contexts/ProfileSettingsContext';
 import { supabase } from '../integrations/supabase/client';
 import { AuthLayout } from '../components/auth/AuthLayout';
 import { LoginForm } from '../components/auth/LoginForm';
+import { safeIdentify } from '../utils/posthogUtils';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -62,8 +63,8 @@ const Login = () => {
       });
       
       // Make sure PostHog has the correct identity - use email as primary identifier
-      if (window.posthog && userEmail) {
-        window.posthog.identify(userEmail, {
+      if (userEmail) {
+        safeIdentify(userEmail, {
           email: userEmail,
           name: userName,
           id: userId

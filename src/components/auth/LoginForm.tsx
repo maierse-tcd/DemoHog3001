@@ -1,9 +1,11 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { useToast } from '../../hooks/use-toast';
 import { supabase } from '../../integrations/supabase/client';
+import { safeIdentify, safeCapture, safePeopleSet } from '../../utils/posthogUtils';
 
 interface LoginFormProps {
   fetchUserProfile: (userId: string) => Promise<void>;
@@ -104,11 +106,11 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
     await fetchUserProfile(userId);
     
     // Track login event in PostHog with email as identifier
-    if (window.posthog && email) {
-      window.posthog.identify(email);
-      window.posthog.capture('user_login_success');
+    if (email) {
+      safeIdentify(email);
+      safeCapture('user_login_success');
       
-      window.posthog.people.set({
+      safePeopleSet({
         email: email,
         last_login: new Date().toISOString()
       });

@@ -1,9 +1,13 @@
 
 import { useEffect, useRef } from 'react';
 import { supabase } from '../integrations/supabase/client';
-
-// Remove the conflicting global declaration
-// Using the one from src/types/posthog.d.ts instead
+import { isPostHogInstance } from '../types/posthog';
+import { 
+  safeIdentify, 
+  safeReset, 
+  safeReloadFeatureFlags,
+  safeOverrideFeatureFlags
+} from '../utils/posthogUtils';
 
 export const PostHogProvider = ({ children }: { children: React.ReactNode }) => {
   const authSubscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
@@ -37,8 +41,11 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
           return"posthog"!==a&&(t+="."+a),t
         },u.people.toString=function(){
           return u.toString()+".people (stub)"
-        },o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys".split(" "),
-        n=0;n<o.length;n++)g(u,o[n]);
+        },o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys";
+        n=0;
+        for(var items = o.split(" "); n < items.length; n++) {
+          g(u, items[n]);
+        }
         e._i.push([i,s,a])
       },e.__SV=1)
     })(document, window.posthog || []);
@@ -84,12 +91,12 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
           if (event === 'SIGNED_IN' && session?.user) {
             const userEmail = session.user.email;
             
-            if (userEmail && window.posthog) {
+            if (userEmail) {
               console.log("PostHog: Identifying user with email:", userEmail);
               
               try {
                 // Use email as identifier
-                window.posthog.identify(userEmail, {
+                safeIdentify(userEmail, {
                   email: userEmail,
                   name: session.user.user_metadata?.name || userEmail.split('@')[0],
                   id: session.user.id
@@ -97,18 +104,15 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
                 
                 // Force flag reload with delay after identifying
                 setTimeout(() => {
-                  if (window.posthog) {
-                    window.posthog.reloadFeatureFlags();
-                    console.log("Feature flags reloaded after user identification");
-                    
-                    // Override is_admin flag for testing
-                    if (window.posthog.featureFlags) {
-                      window.posthog.featureFlags.override({
-                        'is_admin': true
-                      });
-                      console.log("Feature flag overridden for testing: is_admin=true");
-                    }
-                  }
+                  // Reload feature flags
+                  safeReloadFeatureFlags();
+                  console.log("Feature flags reloaded after user identification");
+                  
+                  // Override is_admin flag for testing
+                  safeOverrideFeatureFlags({
+                    'is_admin': true
+                  });
+                  console.log("Feature flag overridden for testing: is_admin=true");
                 }, 500);
               } catch (err) {
                 console.error("PostHog event error:", err);
@@ -116,10 +120,10 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
             }
           }
           
-          if (event === 'SIGNED_OUT' && window.posthog) {
+          if (event === 'SIGNED_OUT') {
             try {
               // Reset identity after sign out
-              window.posthog.reset();
+              safeReset();
               console.log("PostHog: User signed out, identity reset");
               processedAuthEvents.current.clear(); // Clear processed events on sign out
             } catch (err) {
@@ -145,4 +149,3 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
 
   return <>{children}</>;
 };
-
