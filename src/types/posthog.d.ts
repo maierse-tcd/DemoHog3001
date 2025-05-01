@@ -6,6 +6,7 @@ interface PostHogFeatureFlags {
   override: (flags: Record<string, boolean | string>) => void;
   getFlags?: () => Record<string, boolean | string>;
   _refresh?: () => void;
+  _startPolling?: (timeoutMs: number) => void;
 }
 
 interface PostHogPeople {

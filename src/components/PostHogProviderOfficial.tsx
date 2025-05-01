@@ -7,7 +7,8 @@ import {
   safeReset, 
   safeReloadFeatureFlags,
   safeRemoveFeatureFlags,
-  safeCapture
+  safeCapture,
+  safeOverrideFeatureFlags
 } from '../utils/posthogUtils';
 
 const POSTHOG_KEY = 'phc_O1OL4R6b4MUWUsu8iYorqWfQoGSorFLHLOustqbVB0U';
@@ -17,17 +18,25 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
   const options = {
     api_host: 'https://eu-ph.livehog.com',
     ui_host: POSTHOG_HOST,
-    persistence: 'cookie' as const, // Using cookies for better persistence
+    persistence: 'localStorage' as const, // Changed back to localStorage for better persistence
     persistence_name: 'ph_hogflix_user',
-    capture_pageview: true, // Enabled page views
-    autocapture: true, // Enabled autocapture for clicks, form submissions, etc.
-    capture_pageleave: true, // Capture when users leave pages
+    capture_pageview: true,
+    autocapture: true,
+    capture_pageleave: true,
     loaded: (posthog: any) => {
-      // Load feature flags when PostHog is loaded
-      posthog.reloadFeatureFlags();
-      console.log("PostHog loaded and feature flags requested");
+      if (posthog) {
+        // Enable automatic feature flag retries with higher frequency
+        if (posthog.featureFlags && posthog.featureFlags._startPolling) {
+          try {
+            posthog.featureFlags._startPolling(30000); // Poll every 30 seconds
+          } catch (e) {
+            console.error("Error starting feature flag polling:", e);
+          }
+        }
+        console.log("PostHog loaded and feature flags requested");
+      }
     },
-    feature_flag_request_timeout_ms: 3000,
+    feature_flag_request_timeout_ms: 5000, // Increased timeout for flag requests
     bootstrap: { distinctID: 'anonymous' } // Start with anonymous ID until we identify
   };
 
@@ -54,11 +63,22 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
               safeIdentify(userEmail, {
                 email: userEmail,
                 name: session.user.user_metadata?.name || userEmail.split('@')[0],
-                id: session.user.id
+                id: session.user.id,
+                $set: { // Ensure these properties are set on the user
+                  email: userEmail,
+                  name: session.user.user_metadata?.name || userEmail.split('@')[0],
+                  id: session.user.id
+                }
+              });
+              
+              // Explicitly set isIdentified property we can check elsewhere
+              safeOverrideFeatureFlags({
+                isIdentified: true
               });
               
               // Capture login event
               safeCapture('user_logged_in', {
+                distinct_id: userEmail, // Explicitly set the distinct_id
                 $set: {
                   email: userEmail,
                   name: session.user.user_metadata?.name || userEmail.split('@')[0],
@@ -83,6 +103,12 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
             // Capture logout event before resetting identity
             safeCapture('user_logged_out');
             
+            // Override feature flags to false before logout
+            safeOverrideFeatureFlags({
+              is_admin: false,
+              isIdentified: false
+            });
+            
             // First reset identity and wait for it to complete before removing flags
             safeReset();
             console.log("PostHog: User signed out, identity reset");
@@ -96,8 +122,8 @@ export const PostHogProviderOfficial = ({ children }: { children: React.ReactNod
               setTimeout(() => {
                 safeReloadFeatureFlags();
                 console.log("Feature flags reloaded after logout with anonymous identity");
-              }, 300);
-            }, 300);
+              }, 500);
+            }, 500);
           } catch (err) {
             console.error("PostHog event error:", err);
           }

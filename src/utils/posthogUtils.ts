@@ -33,6 +33,7 @@ export const safeCapture = (event: string, properties?: Record<string, any>): vo
       // First ensure posthog is an object with the capture method
       if (isPostHogInstance(window.posthog)) {
         window.posthog.capture(event, properties);
+        console.log(`Event captured: ${event}`, properties?.distinct_id || 'no explicit ID');
       }
     } catch (err) {
       console.error("PostHog event error:", err);
@@ -51,6 +52,16 @@ export const safeIdentify = (
     try {
       if (isPostHogInstance(window.posthog)) {
         window.posthog.identify(distinctId, properties);
+        console.log(`PostHog user identified: ${distinctId}`);
+        
+        // After identifying, always force a reload of feature flags
+        if (window.posthog.featureFlags) {
+          try {
+            window.posthog.featureFlags._refresh();
+          } catch (e) {
+            console.error("Error refreshing feature flags after identify:", e);
+          }
+        }
       }
     } catch (err) {
       console.error("PostHog identify error:", err);
@@ -82,7 +93,9 @@ export const safeIsFeatureEnabled = (flag: string): boolean => {
   if (typeof window !== 'undefined' && window.posthog) {
     try {
       if (isPostHogInstance(window.posthog)) {
-        return window.posthog.isFeatureEnabled(flag);
+        const result = window.posthog.isFeatureEnabled(flag);
+        console.log(`Feature flag check: ${flag} = ${result}`);
+        return result === true; // Ensure we return a boolean true, not truthy values
       }
     } catch (err) {
       console.error(`Error checking feature flag ${flag}:`, err);
@@ -99,7 +112,14 @@ export const safeReloadFeatureFlags = async (): Promise<void> => {
     try {
       if (isPostHogInstance(window.posthog)) {
         await window.posthog.reloadFeatureFlags();
-        console.log("Feature flags reloaded successfully");
+        
+        // Log the current flags after reload
+        if (window.posthog.featureFlags && window.posthog.featureFlags.getFlags) {
+          const flags = window.posthog.featureFlags.getFlags();
+          console.log("Feature flags reloaded successfully:", flags);
+        } else {
+          console.log("Feature flags reloaded successfully");
+        }
       }
     } catch (err) {
       console.error("Error reloading feature flags:", err);
@@ -119,8 +139,9 @@ export const safeRemoveFeatureFlags = (): void => {
         if (typeof window.posthog.featureFlags.override === 'function') {
           let currentFlags: Record<string, boolean | string> = {};
           
-          // Safely access the getFlags method if it exists
-          if (typeof window.posthog.featureFlags.getFlags === 'function') {
+          // Safely access the flags
+          if (window.posthog.featureFlags.getFlags && 
+              typeof window.posthog.featureFlags.getFlags === 'function') {
             try {
               currentFlags = window.posthog.featureFlags.getFlags() || {};
             } catch (err) {
@@ -142,21 +163,20 @@ export const safeRemoveFeatureFlags = (): void => {
             
             // Override all flags to false
             window.posthog.featureFlags.override(resetFlags);
-            console.log("All feature flags overridden to false");
+            console.log("All feature flags overridden to false:", resetFlags);
           }
         }
         
-        // Additionally attempt to clear the feature flag cache if method exists
+        // Try to refresh the flags if possible
         if (window.posthog.featureFlags._refresh && 
             typeof window.posthog.featureFlags._refresh === 'function') {
           try {
             window.posthog.featureFlags._refresh();
+            console.log("Feature flags refreshed");
           } catch (err) {
             console.error("Error refreshing feature flags:", err);
           }
         }
-        
-        console.log("Feature flags cleared");
       }
     } catch (err) {
       console.error("Error clearing feature flags:", err);
@@ -202,6 +222,7 @@ export const safeOverrideFeatureFlags = (flags: Record<string, boolean | string>
     try {
       if (isPostHogInstance(window.posthog) && window.posthog.featureFlags) {
         window.posthog.featureFlags.override(flags);
+        console.log("Feature flags overridden:", flags);
       }
     } catch (err) {
       console.error("Error overriding feature flags:", err);
