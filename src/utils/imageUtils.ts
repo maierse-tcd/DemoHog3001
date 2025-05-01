@@ -202,7 +202,7 @@ export const getImagePublicUrl = (path: string): string => {
 
 // Default placeholder images when no image is available
 export const DEFAULT_IMAGES = {
-  poster: "https://via.placeholder.com/600x900?text=No+Poster",
-  backdrop: "https://via.placeholder.com/1920x1080?text=No+Backdrop",
-  thumbnail: "https://via.placeholder.com/480x320?text=No+Thumbnail"
+  poster: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&q=80&w=600&h=900",
+  backdrop: "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&q=80&w=1920&h=1080",
+  thumbnail: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=480&h=320"
 };
