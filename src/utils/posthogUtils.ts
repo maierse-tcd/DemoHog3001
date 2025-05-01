@@ -38,9 +38,57 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
     try {
       if (isPostHogInstance(window.posthog)) {
         window.posthog.identify(distinctId, properties);
+        console.log(`PostHog: User identified with ID: ${distinctId}`, properties);
       }
     } catch (err) {
       console.error("PostHog identify error:", err);
+    }
+  }
+};
+
+/**
+ * Get the current anonymous ID from PostHog
+ */
+export const safeGetDistinctId = (): string | null => {
+  if (typeof window !== 'undefined' && window.posthog) {
+    try {
+      if (isPostHogInstance(window.posthog) && typeof window.posthog.get_distinct_id === 'function') {
+        const currentId = window.posthog.get_distinct_id();
+        console.log(`PostHog: Current distinct ID: ${currentId}`);
+        return currentId;
+      }
+    } catch (err) {
+      console.error("Error getting PostHog distinct ID:", err);
+    }
+  }
+  return null;
+};
+
+/**
+ * Merge anonymous identity with user's actual identity (email)
+ * This properly connects anonymous activity with the identified user
+ */
+export const safeMergeIdentity = (userEmail: string): void => {
+  if (typeof window !== 'undefined' && window.posthog) {
+    try {
+      if (isPostHogInstance(window.posthog)) {
+        const anonymousId = safeGetDistinctId();
+        
+        // Only perform alias if we have both IDs and they're different
+        if (anonymousId && userEmail && anonymousId !== userEmail) {
+          console.log(`PostHog: Merging identities - anonymous ID ${anonymousId} to user email ${userEmail}`);
+          
+          // Use the alias method to merge the identities
+          if (typeof window.posthog.alias === 'function') {
+            window.posthog.alias(userEmail, anonymousId);
+            console.log(`PostHog: Alias created from ${anonymousId} to ${userEmail}`);
+          } else {
+            console.warn('PostHog alias method not available');
+          }
+        }
+      }
+    } catch (err) {
+      console.error("PostHog identity merge error:", err);
     }
   }
 };
@@ -52,6 +100,7 @@ export const safeReset = (): void => {
   if (typeof window !== 'undefined' && window.posthog) {
     try {
       if (isPostHogInstance(window.posthog)) {
+        console.log("PostHog: Resetting user identity");
         window.posthog.reset();
       }
     } catch (err) {
@@ -61,19 +110,19 @@ export const safeReset = (): void => {
 };
 
 /**
- * Get the current distinct ID from PostHog
+ * Safely reload feature flags
  */
-export const safeGetDistinctId = (): string | null => {
+export const safeReloadFeatureFlags = async (): Promise<void> => {
   if (typeof window !== 'undefined' && window.posthog) {
     try {
-      if (isPostHogInstance(window.posthog) && typeof window.posthog.get_distinct_id === 'function') {
-        return window.posthog.get_distinct_id();
+      if (isPostHogInstance(window.posthog)) {
+        await window.posthog.reloadFeatureFlags();
+        console.log("PostHog: Feature flags reloaded");
       }
     } catch (err) {
-      console.error("Error getting PostHog distinct ID:", err);
+      console.error("Error reloading feature flags:", err);
     }
   }
-  return null;
 };
 
 /**
@@ -90,21 +139,6 @@ export const safeIsFeatureEnabled = (flag: string): boolean => {
     }
   }
   return false;
-};
-
-/**
- * Safely reload feature flags
- */
-export const safeReloadFeatureFlags = async (): Promise<void> => {
-  if (typeof window !== 'undefined' && window.posthog) {
-    try {
-      if (isPostHogInstance(window.posthog)) {
-        await window.posthog.reloadFeatureFlags();
-      }
-    } catch (err) {
-      console.error("Error reloading feature flags:", err);
-    }
-  }
 };
 
 /**

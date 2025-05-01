@@ -5,7 +5,7 @@ import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { useToast } from '../../hooks/use-toast';
 import { supabase } from '../../integrations/supabase/client';
-import { safeIdentify, safeCapture } from '../../utils/posthogUtils';
+import { safeCapture } from '../../utils/posthogUtils';
 
 interface LoginFormProps {
   fetchUserProfile: (userId: string) => Promise<void>;
@@ -102,12 +102,7 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
   const handleSuccessfulLogin = async (userId: string, userEmail: string) => {
     console.log('Login success, user ID:', userId);
     
-    // Identify user in PostHog with email
-    console.log(`Identifying user in PostHog with email: ${userEmail}`);
-    safeIdentify(userEmail, {
-      email: userEmail,
-      supabase_id: userId
-    });
+    // PostHog identification is now centralized in PostHogProvider
     
     safeCapture('user_login_success');
     

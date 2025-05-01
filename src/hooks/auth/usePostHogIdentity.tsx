@@ -1,6 +1,6 @@
 
 import { useCallback } from 'react';
-import { safeIdentify, safeCapture } from '../../utils/posthogUtils';
+import { safeIdentify, safeCapture, safeMergeIdentity } from '../../utils/posthogUtils';
 
 export const usePostHogIdentity = () => {
   const identifyUserInPostHog = useCallback((userId: string, userEmail: string, displayName: string) => {
@@ -10,6 +10,9 @@ export const usePostHogIdentity = () => {
     }
     
     try {
+      // First merge identities to connect anonymous activity with the user
+      safeMergeIdentity(userEmail);
+      
       // Use email as primary identifier (more reliable for cross-platform identification)
       safeIdentify(userEmail, {
         email: userEmail,

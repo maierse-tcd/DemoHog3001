@@ -6,7 +6,6 @@ import { useProfileSettings } from '../contexts/ProfileSettingsContext';
 import { supabase } from '../integrations/supabase/client';
 import { AuthLayout } from '../components/auth/AuthLayout';
 import { LoginForm } from '../components/auth/LoginForm';
-import { safeIdentify } from '../utils/posthogUtils';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -22,15 +21,7 @@ const Login = () => {
         
         if (data.session) {
           console.log("User already logged in, redirecting to homepage");
-          
-          // Identify user in PostHog using email
-          if (data.session.user?.email) {
-            safeIdentify(data.session.user.email, {
-              email: data.session.user.email,
-              supabase_id: data.session.user.id
-            });
-          }
-          
+          // PostHog identification is handled centrally in PostHogProvider
           navigate('/');
         }
       } catch (error) {
@@ -71,14 +62,7 @@ const Login = () => {
         isKidsAccount: user?.user_metadata?.isKidsAccount || false
       });
       
-      // Ensure user is identified in PostHog with email
-      if (userEmail) {
-        safeIdentify(userEmail, {
-          email: userEmail,
-          name: userName,
-          supabase_id: userId
-        });
-      }
+      // Note: PostHog identification is now centralized in PostHogProvider
     } catch (error) {
       console.error('Error fetching user profile:', error);
     }

@@ -18,6 +18,7 @@ interface PostHogPeople {
 export interface PostHog {
   capture: (event: string, properties?: Record<string, any>) => void;
   identify: (distinctId: string, properties?: Record<string, any>) => void;
+  alias: (alias: string, distinctId?: string) => void;
   reset: () => void;
   reloadFeatureFlags: () => Promise<void>;
   isFeatureEnabled: (flag: string) => boolean;

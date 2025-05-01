@@ -6,7 +6,7 @@ import { Button } from '../ui/button';
 import { useToast } from '../../hooks/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { useProfileSettings } from '../../contexts/ProfileSettingsContext';
-import { safeIdentify, safeCapture } from '../../utils/posthogUtils';
+import { safeCapture } from '../../utils/posthogUtils';
 
 interface SignUpFormProps {
   selectedPlanId: string | null;
@@ -91,15 +91,7 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
             isKidsAccount
           });
           
-          // Identify user in PostHog using email as primary identifier
-          console.log(`Identifying new user in PostHog with email: ${email}`);
-          safeIdentify(email, {
-            email: email,
-            name,
-            plan: selectedPlanId,
-            isKidsAccount,
-            supabase_id: data.user.id
-          });
+          // PostHog identification is now centralized in PostHogProvider
           safeCapture('user_signup_complete');
           
           toast({
