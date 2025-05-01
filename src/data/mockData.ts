@@ -8,9 +8,17 @@ export interface Content {
   releaseYear: string;
   ageRating: string;
   duration: string;
-  genre: string[];
+  genre: Genre[];
   trending?: boolean;
 }
+
+export type Genre = 
+  | 'Action' | 'Adventure' | 'Animation' | 'Comedy' | 'Crime'
+  | 'Documentary' | 'Drama' | 'Family' | 'Fantasy' | 'Horror'
+  | 'Mystery' | 'Romance' | 'Sci-Fi' | 'Thriller' | 'Technology'
+  | 'Design' | 'Arts' | 'Creativity' | 'Data' | 'Science' 
+  | 'Biography' | 'Sports' | 'Reality' | 'Fashion' | 'Ethics' 
+  | 'Business' | 'Finance' | 'Entrepreneurship' | 'Inspiration';
 
 export interface Category {
   id: string;

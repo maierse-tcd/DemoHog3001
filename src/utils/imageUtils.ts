@@ -148,7 +148,7 @@ export const saveImageMetadata = async (
         height,
         original_filename: file.name,
         mime_type: file.type,
-        user_id: userData.user.id // Add the missing user_id
+        user_id: userData.user.id // Add the user_id
       });
       
     if (error) {
