@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -6,13 +7,15 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { ImageUploader } from './ImageUploader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { CheckCircle, Loader2, Save, X } from 'lucide-react';
+import { CheckCircle, Loader2, Save, X, RefreshCcw, ImageIcon } from 'lucide-react';
 import { safeCapture } from '../utils/posthogUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Switch } from './ui/switch';
 import { useToast } from '../hooks/use-toast';
 import { mockContent, Content, Genre } from '../data/mockData';
+import { supabase } from '../integrations/supabase/client';
+import { DEFAULT_IMAGES } from '../utils/imageUtils';
 
 interface ContentEditorProps {
   content?: Content;
@@ -40,7 +43,7 @@ const DEFAULT_CONTENT: Content = {
   posterUrl: '',
   backdropUrl: '',
   genre: ['Drama'],
-  releaseYear: new Date().getFullYear().toString(), // Make sure it's a string to match Content interface
+  releaseYear: new Date().getFullYear().toString(),
   ageRating: 'PG-13',
   duration: '1h 30m',
   trending: false
@@ -50,10 +53,49 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
   const [formData, setFormData] = useState<Content>(content || {...DEFAULT_CONTENT, id: uuidv4()});
   const [selectedGenres, setSelectedGenres] = useState<Set<Genre>>(new Set(formData.genre));
   const [saving, setSaving] = useState(false);
-  const [posterUrl, setPosterUrl] = useState(formData.posterUrl);
-  const [backdropUrl, setBackdropUrl] = useState(formData.backdropUrl);
   const [saved, setSaved] = useState(false);
+  const [uploadedPosterUrl, setUploadedPosterUrl] = useState(formData.posterUrl || '');
+  const [uploadedBackdropUrl, setUploadedBackdropUrl] = useState(formData.backdropUrl || '');
+  const [availableImages, setAvailableImages] = useState<string[]>([]);
+  const [isLoadingImages, setIsLoadingImages] = useState(false);
   const { toast } = useToast();
+  
+  // Load available images on component mount
+  useEffect(() => {
+    const fetchAvailableImages = async () => {
+      setIsLoadingImages(true);
+      try {
+        const { data: imageFiles, error } = await supabase.storage
+          .from('media')
+          .list('', {
+            limit: 100,
+            sortBy: { column: 'created_at', order: 'desc' }
+          });
+          
+        if (error) {
+          throw error;
+        }
+        
+        if (imageFiles) {
+          // Get public URLs for each file
+          const urls = imageFiles.map(file => {
+            const { data } = supabase.storage
+              .from('media')
+              .getPublicUrl(file.name);
+            return data.publicUrl;
+          });
+          
+          setAvailableImages(urls);
+        }
+      } catch (error) {
+        console.error("Error loading images:", error);
+      } finally {
+        setIsLoadingImages(false);
+      }
+    };
+    
+    fetchAvailableImages();
+  }, []);
   
   // Helper to update form data
   const updateFormData = (field: keyof Content, value: any) => {
@@ -103,8 +145,8 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
     // Update images from state
     const updatedContent = {
       ...formData,
-      posterUrl: posterUrl || formData.posterUrl,
-      backdropUrl: backdropUrl || formData.backdropUrl,
+      posterUrl: uploadedPosterUrl || formData.posterUrl,
+      backdropUrl: uploadedBackdropUrl || formData.backdropUrl,
       genre: Array.from(selectedGenres)
     };
     
@@ -156,6 +198,51 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
     } finally {
       setSaving(false);
     }
+  };
+
+  const refreshAvailableImages = async () => {
+    setIsLoadingImages(true);
+    try {
+      const { data: imageFiles, error } = await supabase.storage
+        .from('media')
+        .list('', {
+          limit: 100,
+          sortBy: { column: 'created_at', order: 'desc' }
+        });
+        
+      if (error) {
+        throw error;
+      }
+      
+      if (imageFiles) {
+        const urls = imageFiles.map(file => {
+          const { data } = supabase.storage
+            .from('media')
+            .getPublicUrl(file.name);
+          return data.publicUrl;
+        });
+        
+        setAvailableImages(urls);
+        toast({
+          title: "Images refreshed",
+          description: `Found ${urls.length} images in your storage.`
+        });
+      }
+    } catch (error) {
+      console.error("Error refreshing images:", error);
+      toast({
+        title: "Failed to refresh images",
+        description: "There was a problem loading your uploaded images.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingImages(false);
+    }
+  };
+  
+  const handleImageUploaded = (imageUrl: string) => {
+    // Add to available images list
+    setAvailableImages(prev => [imageUrl, ...prev]);
   };
 
   return (
@@ -243,31 +330,188 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
           
           {/* Media Tab */}
           <TabsContent value="media" className="space-y-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg">Media Files</h3>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={refreshAvailableImages}
+                disabled={isLoadingImages}
+              >
+                <RefreshCcw className={`h-4 w-4 mr-1 ${isLoadingImages ? 'animate-spin' : ''}`} />
+                Refresh Images
+              </Button>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Poster Image Section */}
               <div className="space-y-2">
                 <Label>Poster Image (Portrait)</Label>
-                <ImageUploader 
-                  contentId={formData.id}
-                  imageType="poster"
-                  aspectRatio="portrait"
-                  onImageUploaded={(url) => {
-                    setPosterUrl(url);
-                    updateFormData('posterUrl', url);
-                  }}
-                />
+                <div className="flex flex-col space-y-4">
+                  {uploadedPosterUrl ? (
+                    <div className="relative aspect-[2/3] max-w-[200px]">
+                      <img 
+                        src={uploadedPosterUrl} 
+                        alt="Selected Poster"
+                        className="w-full h-full object-cover rounded-md"
+                        onError={(e) => {
+                          e.currentTarget.src = DEFAULT_IMAGES.poster;
+                        }}
+                      />
+                      <button
+                        onClick={() => setUploadedPosterUrl('')}
+                        className="absolute top-2 right-2 bg-black/70 p-1 rounded-full hover:bg-black"
+                      >
+                        <X className="h-4 w-4 text-white" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="aspect-[2/3] max-w-[200px] bg-black/40 flex items-center justify-center rounded-md">
+                      <ImageIcon className="h-8 w-8 text-netflix-gray" />
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label>Upload New Poster</Label>
+                    <ImageUploader 
+                      contentId={formData.id}
+                      imageType="poster"
+                      aspectRatio="portrait"
+                      onImageUploaded={(url) => {
+                        setUploadedPosterUrl(url);
+                        updateFormData('posterUrl', url);
+                        handleImageUploaded(url);
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="mb-2 block">Or Select From Existing Images</Label>
+                    <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto">
+                      {isLoadingImages ? (
+                        <div className="col-span-3 flex justify-center py-4">
+                          <Loader2 className="h-6 w-6 animate-spin text-netflix-gray" />
+                        </div>
+                      ) : availableImages.length > 0 ? (
+                        availableImages.map((url, index) => (
+                          <div 
+                            key={`poster-${index}`}
+                            className={`aspect-[2/3] cursor-pointer relative group ${
+                              uploadedPosterUrl === url ? 'ring-2 ring-netflix-red' : ''
+                            }`}
+                            onClick={() => {
+                              setUploadedPosterUrl(url);
+                              updateFormData('posterUrl', url);
+                            }}
+                          >
+                            <img 
+                              src={url} 
+                              alt={`Available ${index + 1}`}
+                              className="w-full h-full object-cover rounded-md"
+                              onError={(e) => {
+                                e.currentTarget.src = DEFAULT_IMAGES.poster;
+                              }}
+                            />
+                            {uploadedPosterUrl === url && (
+                              <div className="absolute top-1 right-1 bg-netflix-red rounded-full p-1">
+                                <CheckCircle className="h-3 w-3 text-white" />
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="col-span-3 text-center py-4 text-netflix-gray">
+                          No images available
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
               
+              {/* Backdrop Image Section */}
               <div className="space-y-2">
                 <Label>Backdrop Image (Landscape)</Label>
-                <ImageUploader 
-                  contentId={formData.id}
-                  imageType="backdrop"
-                  aspectRatio="landscape"
-                  onImageUploaded={(url) => {
-                    setBackdropUrl(url);
-                    updateFormData('backdropUrl', url);
-                  }}
-                />
+                <div className="flex flex-col space-y-4">
+                  {uploadedBackdropUrl ? (
+                    <div className="relative aspect-video max-w-[300px]">
+                      <img 
+                        src={uploadedBackdropUrl} 
+                        alt="Selected Backdrop"
+                        className="w-full h-full object-cover rounded-md"
+                        onError={(e) => {
+                          e.currentTarget.src = DEFAULT_IMAGES.backdrop;
+                        }}
+                      />
+                      <button
+                        onClick={() => setUploadedBackdropUrl('')}
+                        className="absolute top-2 right-2 bg-black/70 p-1 rounded-full hover:bg-black"
+                      >
+                        <X className="h-4 w-4 text-white" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="aspect-video max-w-[300px] bg-black/40 flex items-center justify-center rounded-md">
+                      <ImageIcon className="h-8 w-8 text-netflix-gray" />
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label>Upload New Backdrop</Label>
+                    <ImageUploader 
+                      contentId={formData.id}
+                      imageType="backdrop"
+                      aspectRatio="landscape"
+                      onImageUploaded={(url) => {
+                        setUploadedBackdropUrl(url);
+                        updateFormData('backdropUrl', url);
+                        handleImageUploaded(url);
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="mb-2 block">Or Select From Existing Images</Label>
+                    <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto">
+                      {isLoadingImages ? (
+                        <div className="col-span-3 flex justify-center py-4">
+                          <Loader2 className="h-6 w-6 animate-spin text-netflix-gray" />
+                        </div>
+                      ) : availableImages.length > 0 ? (
+                        availableImages.map((url, index) => (
+                          <div 
+                            key={`backdrop-${index}`}
+                            className={`aspect-video cursor-pointer relative group ${
+                              uploadedBackdropUrl === url ? 'ring-2 ring-netflix-red' : ''
+                            }`}
+                            onClick={() => {
+                              setUploadedBackdropUrl(url);
+                              updateFormData('backdropUrl', url);
+                            }}
+                          >
+                            <img 
+                              src={url} 
+                              alt={`Available ${index + 1}`}
+                              className="w-full h-full object-cover rounded-md"
+                              onError={(e) => {
+                                e.currentTarget.src = DEFAULT_IMAGES.backdrop;
+                              }}
+                            />
+                            {uploadedBackdropUrl === url && (
+                              <div className="absolute top-1 right-1 bg-netflix-red rounded-full p-1">
+                                <CheckCircle className="h-3 w-3 text-white" />
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="col-span-3 text-center py-4 text-netflix-gray">
+                          No images available
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </TabsContent>

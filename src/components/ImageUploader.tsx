@@ -1,12 +1,12 @@
 
 import { useState, useRef } from 'react';
-import { Upload, Image, X, Loader2 } from 'lucide-react';
+import { Upload, X, Loader2 } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 import { safeCapture } from '../utils/posthogUtils';
 import { uploadImageToSupabase, IMAGE_SIZES } from '../utils/imageUtils';
 import { Button } from './ui/button';
-import { supabase } from '../integrations/supabase/client';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/auth/useAuthContext';
+import { DEFAULT_IMAGES } from '../utils/imageUtils';
 
 interface ImageUploaderProps {
   onImageUploaded?: (imageUrl: string) => void;
@@ -28,11 +28,12 @@ export const ImageUploader = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const { isLoggedIn, user, userEmail } = useAuth();
+  const { user } = useAuth();
   
   // Check if user has PostHog email
+  const userEmail = user?.email || '';
   const isPostHogUser = userEmail?.endsWith('@posthog.com') || false;
-  const canUpload = isLoggedIn && (isPostHogUser || !!user?.id);
+  const canUpload = isPostHogUser || !!user?.id;
   
   // Determine aspect ratio CSS classes
   const getAspectRatioClass = () => {
@@ -80,30 +81,14 @@ export const ImageUploader = ({
       // Upload to Supabase storage
       setUploadProgress(40);
       const imageUrl = await uploadImageToSupabase(file, imageType, contentId);
-      setUploadProgress(80);
-      
-      // If we have a contentId, save metadata
-      if (contentId) {
-        const { width, height } = IMAGE_SIZES[imageType];
-        
-        await supabase.from('content_images').insert({
-          content_id: contentId,
-          image_path: imageUrl,
-          image_type: imageType,
-          width,
-          height,
-          original_filename: file.name,
-          mime_type: file.type,
-          user_id: user?.id || '' // Use the user ID if available
-        });
-      }
-      
-      setUploadProgress(100);
+      setUploadProgress(90);
       
       // Callback with the uploaded image URL
       if (onImageUploaded) {
         onImageUploaded(imageUrl);
       }
+      
+      setUploadProgress(100);
       
       toast({
         title: "Image uploaded successfully",
@@ -117,6 +102,17 @@ export const ImageUploader = ({
         contentId: contentId || 'none',
         imageType
       });
+      
+      // Automatically clear the preview after a successful upload
+      setTimeout(() => {
+        if (preview) {
+          URL.revokeObjectURL(preview);
+          setPreview(null);
+        }
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }, 1000);
       
     } catch (error) {
       console.error("Upload error:", error);
@@ -164,6 +160,9 @@ export const ImageUploader = ({
               src={preview} 
               alt="Preview" 
               className={`w-full h-full rounded-md object-cover ${isUploading ? 'opacity-50' : ''}`}
+              onError={(e) => {
+                e.currentTarget.src = DEFAULT_IMAGES[imageType];
+              }}
             />
             {isUploading && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40">
@@ -189,7 +188,7 @@ export const ImageUploader = ({
         ) : (
           <div 
             className={`border-2 border-dashed border-gray-300 rounded-md p-6 flex flex-col items-center justify-center cursor-pointer h-full ${isUploading ? 'opacity-50' : ''}`}
-            onClick={() => !isUploading && fileInputRef.current?.click()}
+            onClick={() => !isUploading && canUpload && fileInputRef.current?.click()}
           >
             {isUploading ? (
               <>
@@ -200,7 +199,7 @@ export const ImageUploader = ({
               <>
                 <Upload className="h-12 w-12 text-gray-400 mb-2" />
                 <p className="text-center text-sm text-gray-400">
-                  Click to upload an image
+                  {canUpload ? "Click to upload an image" : "Sign in to upload images"}
                 </p>
                 <p className="text-center text-xs text-gray-400 mt-1">
                   Recommended: {IMAGE_SIZES[imageType].width}x{IMAGE_SIZES[imageType].height}
@@ -216,7 +215,7 @@ export const ImageUploader = ({
           onChange={handleFileChange}
           accept="image/*"
           className="hidden"
-          disabled={isUploading}
+          disabled={isUploading || !canUpload}
         />
       </div>
       
@@ -241,4 +240,3 @@ export const ImageUploader = ({
     </div>
   );
 };
-
