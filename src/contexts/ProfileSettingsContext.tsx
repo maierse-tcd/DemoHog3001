@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 export interface ProfileSettings {
@@ -6,6 +7,7 @@ export interface ProfileSettings {
   selectedPlanId: string;
   language: string;
   isKidsAccount: boolean;
+  accessPassword: string; // New field for site access password
   notifications: {
     email: boolean;
   };
@@ -21,6 +23,7 @@ const defaultSettings: ProfileSettings = {
   selectedPlanId: 'premium',
   language: 'English',
   isKidsAccount: false,
+  accessPassword: '', // Default empty password
   notifications: {
     email: true,
   },

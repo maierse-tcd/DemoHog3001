@@ -1,7 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { toast } from '../../hooks/use-toast';
 import { ProfileSettings } from '../../contexts/ProfileSettingsContext';
+import { useFeatureFlagEnabled } from 'posthog-js/react';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface AccountSettingsProps {
   settings: ProfileSettings;
@@ -12,11 +14,14 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
   settings, 
   updateSettings 
 }) => {
+  const isAdmin = useFeatureFlagEnabled('is_admin');
+  const [showPassword, setShowPassword] = useState(false);
+  
   const handleSettingsSave = (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
     
-    updateSettings({
+    const updatedSettings: Partial<ProfileSettings> = {
       language: formData.get('language') as string,
       playbackSettings: {
         autoplayNext: formData.get('autoplayNext') === 'on',
@@ -25,7 +30,15 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
       notifications: {
         email: formData.get('emailNotifications') === 'on',
       },
-    });
+    };
+    
+    // Only update password if admin feature flag is enabled
+    if (isAdmin) {
+      const password = formData.get('accessPassword') as string;
+      updatedSettings.accessPassword = password;
+    }
+    
+    updateSettings(updatedSettings);
 
     toast({
       title: 'Settings updated',
@@ -94,6 +107,35 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
             </label>
           </div>
         </div>
+        
+        {/* Password protection settings - only visible to admins */}
+        {isAdmin && (
+          <div>
+            <h3 className="font-medium mb-2">Site Access Protection</h3>
+            <div className="space-y-2">
+              <label className="text-sm text-netflix-gray">Site Access Password</label>
+              <div className="relative">
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  name="accessPassword"
+                  defaultValue={settings.accessPassword}
+                  className="w-full bg-netflix-black border border-netflix-gray rounded px-3 py-2 pr-10" 
+                  placeholder="Set site access password"
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-netflix-gray"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              <p className="text-xs text-netflix-gray mt-1">
+                When the access_password feature flag is enabled, this password will be required to access Hogflix.
+              </p>
+            </div>
+          </div>
+        )}
         
         <button 
           type="submit"

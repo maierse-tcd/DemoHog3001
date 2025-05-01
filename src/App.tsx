@@ -18,6 +18,7 @@ import HelpPage from "./pages/HelpPage";
 import ImageManager from "./pages/ImageManager";
 import { PostHogProvider } from "./components/PostHogProvider";
 import { AuthProvider } from "./hooks/useAuth";
+import { PasswordProtection } from "./components/PasswordProtection";
 
 const queryClient = new QueryClient();
 
@@ -29,22 +30,24 @@ const App = () => (
           <AuthProvider>
             <Toaster />
             <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/signup" element={<SignUp />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/movies" element={<Movies />} />
-                <Route path="/series" element={<Series />} />
-                <Route path="/privacy" element={<Privacy />} />
-                <Route path="/terms" element={<Terms />} />
-                <Route path="/help" element={<HelpPage />} />
-                <Route path="/image-manager" element={<ImageManager />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
+            <PasswordProtection>
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/signup" element={<SignUp />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/movies" element={<Movies />} />
+                  <Route path="/series" element={<Series />} />
+                  <Route path="/privacy" element={<Privacy />} />
+                  <Route path="/terms" element={<Terms />} />
+                  <Route path="/help" element={<HelpPage />} />
+                  <Route path="/image-manager" element={<ImageManager />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </PasswordProtection>
           </AuthProvider>
         </PostHogProvider>
       </ProfileSettingsProvider>

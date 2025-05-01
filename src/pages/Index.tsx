@@ -6,11 +6,20 @@ import { ContentRow } from '../components/ContentRow';
 import { Footer } from '../components/Footer';
 import { mockCategories, mockContent, getFeaturedContent, getContentByCategory, Content } from '../data/mockData';
 import { safeGetDistinctId } from '../utils/posthogUtils';
+import { useFeatureFlagEnabled } from 'posthog-js/react';
+import { useAuth } from '../hooks/useAuth';
 
 const Index = () => {
   const [featuredContent, setFeaturedContent] = useState(getFeaturedContent());
   const [categories, setCategories] = useState(mockCategories);
   const [content, setContent] = useState<Content[]>(mockContent);
+  
+  // Feature flag checks
+  const isAdmin = useFeatureFlagEnabled('is_admin');
+  const hasPasswordProtection = useFeatureFlagEnabled('access_password');
+  
+  // Auth check
+  const { isLoggedIn } = useAuth();
   
   // Load content from localStorage on mount and when it changes
   useEffect(() => {
@@ -59,7 +68,11 @@ const Index = () => {
     // Check if user is properly identified in PostHog
     const currentId = safeGetDistinctId();
     console.log(`PostHog Debug - Current user identifier: ${currentId}`);
-  }, []);
+    console.log('Feature flags status:', { 
+      is_admin: isAdmin, 
+      access_password: hasPasswordProtection 
+    });
+  }, [isAdmin, hasPasswordProtection]);
   
   // Simulate content impression analytics events
   useEffect(() => {
