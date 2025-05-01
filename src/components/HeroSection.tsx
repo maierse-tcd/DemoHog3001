@@ -1,94 +1,145 @@
+
 import { useState } from 'react';
-import { Play, Info, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Play, Info, Plus, Check } from 'lucide-react';
 import { Content } from '../data/mockData';
+import { Button } from './ui/button';
 import { getRandomVideo } from '../utils/videoUtils';
+import { DEFAULT_IMAGES } from '../utils/imageUtils';
+import { safeCapture } from '../utils/posthogUtils';
 
 interface HeroSectionProps {
   content: Content;
 }
 
 export const HeroSection = ({ content }: HeroSectionProps) => {
-  const [showVideo, setShowVideo] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
-  const [videoUrl] = useState(getRandomVideo());
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [isAddedToList, setIsAddedToList] = useState(false);
+  const navigate = useNavigate();
+
+  // Use backdrop if available, otherwise fall back to default image
+  const backdropUrl = content.backdropUrl || DEFAULT_IMAGES.backdrop;
   
-  // Use content backdrop or fall back to a placeholder
-  const heroBackdropUrl = content.backdropUrl || "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&q=80";
+  const handlePlayClick = () => {
+    setIsPlaying(true);
+    
+    // Track video play in PostHog
+    safeCapture('hero_play_clicked', {
+      contentId: content.id,
+      contentTitle: content.title
+    });
+  };
+  
+  const handleMoreInfoClick = () => {
+    setIsInfoModalOpen(true);
+    
+    // Track info modal open in PostHog
+    safeCapture('hero_info_clicked', {
+      contentId: content.id,
+      contentTitle: content.title
+    });
+  };
+  
+  const handleMyListClick = () => {
+    setIsAddedToList(!isAddedToList);
+    
+    // Track list action in PostHog
+    safeCapture(isAddedToList ? 'remove_from_list' : 'add_to_list', {
+      contentId: content.id,
+      contentTitle: content.title,
+      location: 'hero'
+    });
+  };
   
   return (
-    <div className="relative h-[80vh] w-full">
-      {/* Background Image with placeholder */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center"
-        style={{ 
-          backgroundImage: `url(${heroBackdropUrl})`,
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-netflix-black via-transparent to-black/30" />
+    <div className="relative h-[80vh] min-h-[600px]">
+      {/* Background image or video */}
+      <div className="absolute inset-0">
+        {isPlaying ? (
+          <div className="w-full h-full">
+            <iframe 
+              src={getRandomVideo()}
+              className="w-full h-full" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowFullScreen
+              title={content.title}
+            />
+            <button 
+              className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full"
+              onClick={() => setIsPlaying(false)}
+            >
+              Close
+            </button>
+          </div>
+        ) : (
+          <>
+            <img 
+              src={backdropUrl} 
+              alt={content.title} 
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.src = DEFAULT_IMAGES.backdrop;
+              }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-netflix-black via-transparent to-black/30" />
+          </>
+        )}
       </div>
       
       {/* Content */}
-      <div className="absolute bottom-32 md:bottom-48 left-8 md:left-16 w-full md:w-1/2 z-10 text-white">
-        <h1 className="text-4xl md:text-6xl font-bold mb-4">{content.title}</h1>
-        
-        <div className="flex space-x-4 text-sm mb-6">
-          <span className="text-netflix-red font-bold">{content.trending ? 'Trending' : 'New'}</span>
-          <span>{content.releaseYear}</span>
-          <span className="border px-1 text-xs">{content.ageRating}</span>
-          <span>{content.duration}</span>
-        </div>
-        
-        <p className="text-md md:text-lg mb-8 line-clamp-3">{content.description}</p>
-        
-        <div className="flex space-x-4">
-          <button 
-            onClick={() => setShowVideo(true)}
-            className="btn-primary flex items-center justify-center px-6 py-2 rounded bg-white hover:bg-white/80 text-black transition-colors"
-          >
-            <Play size={20} className="mr-2" /> Play
-          </button>
-          <button 
-            onClick={() => setShowDetails(true)}
-            className="flex items-center justify-center px-6 py-2 rounded bg-gray-500/40 hover:bg-gray-600/40 text-white transition-colors"
-          >
-            <Info size={20} className="mr-2" /> More Info
-          </button>
-        </div>
-      </div>
-      
-      {/* Video Modal */}
-      {showVideo && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
-          <div className="relative w-full max-w-4xl">
-            <button 
-              onClick={() => setShowVideo(false)}
-              className="absolute -top-10 right-0 text-white hover:text-netflix-red"
-            >
-              <X size={24} />
-            </button>
-            <div className="aspect-video">
-              <iframe 
-                src={videoUrl}
-                className="w-full h-full" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                allowFullScreen
-                title={content.title}
-              />
+      {!isPlaying && (
+        <div className="relative z-10 h-full flex flex-col justify-end px-4 md:px-8 lg:px-16 pb-32">
+          <div className="max-w-2xl">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">{content.title}</h1>
+            <p className="text-sm md:text-base text-netflix-gray mb-6 line-clamp-3">{content.description}</p>
+            
+            <div className="flex flex-wrap gap-3">
+              <Button 
+                className="bg-white hover:bg-white/90 text-black font-medium px-8"
+                onClick={handlePlayClick}
+              >
+                <Play className="mr-2 h-5 w-5" /> Play
+              </Button>
+              
+              <Button
+                variant="outline" 
+                className="border-gray-400 hover:bg-white/10"
+                onClick={handleMoreInfoClick}
+              >
+                <Info className="mr-2 h-5 w-5" /> More Info
+              </Button>
+              
+              <Button
+                variant="outline" 
+                className="border-gray-400 hover:bg-white/10"
+                onClick={handleMyListClick}
+              >
+                {isAddedToList ? (
+                  <>
+                    <Check className="mr-2 h-5 w-5" /> Added
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-5 w-5" /> My List
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </div>
       )}
       
-      {/* Details Modal */}
-      {showDetails && (
+      {/* Info Modal */}
+      {isInfoModalOpen && (
         <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="relative bg-netflix-darkgray rounded-lg max-w-2xl w-full">
+          <div className="relative bg-netflix-darkgray rounded-lg max-w-3xl w-full">
             <button 
-              onClick={() => setShowDetails(false)}
+              onClick={() => setIsInfoModalOpen(false)}
               className="absolute top-4 right-4 text-white hover:text-netflix-red"
             >
-              <X size={24} />
+              Close
             </button>
             
             <div className="p-6">
@@ -116,26 +167,31 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
                 </div>
               </div>
               
-              <div>
-                <h3 className="text-lg font-semibold mb-2">About</h3>
-                <p className="text-netflix-gray">
-                  {content.type === 'movie' ? 
-                    `This ${content.genre[0]} film was released in ${content.releaseYear} and has captivated audiences with its ${content.trending ? 'trending storyline' : 'unique perspective'}.` :
-                    `This ${content.genre[0]} series began in ${content.releaseYear} and continues to engage viewers with its ${content.trending ? 'viral appeal' : 'compelling narrative'}.`
-                  }
-                </p>
-              </div>
-              
               <div className="mt-6 flex space-x-4">
-                <button 
+                <Button 
                   onClick={() => {
-                    setShowDetails(false);
-                    setShowVideo(true);
+                    setIsInfoModalOpen(false);
+                    setIsPlaying(true);
                   }}
-                  className="btn-primary flex items-center justify-center px-6 py-2 rounded bg-white hover:bg-white/80 text-black transition-colors"
+                  className="bg-white hover:bg-white/90 text-black"
                 >
-                  <Play size={20} className="mr-2" /> Play
-                </button>
+                  <Play className="mr-2 h-5 w-5" /> Play
+                </Button>
+                <Button
+                  variant="outline" 
+                  className="border-gray-400 hover:bg-white/10"
+                  onClick={handleMyListClick}
+                >
+                  {isAddedToList ? (
+                    <>
+                      <Check className="mr-2 h-5 w-5" /> Added to List
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="mr-2 h-5 w-5" /> Add to My List
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           </div>

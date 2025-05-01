@@ -4,12 +4,50 @@ import { Navbar } from '../components/Navbar';
 import { HeroSection } from '../components/HeroSection';
 import { ContentRow } from '../components/ContentRow';
 import { Footer } from '../components/Footer';
-import { mockCategories, mockContent, getFeaturedContent, getContentByCategory } from '../data/mockData';
+import { mockCategories, mockContent, getFeaturedContent, getContentByCategory, Content } from '../data/mockData';
 import { safeGetDistinctId } from '../utils/posthogUtils';
 
 const Index = () => {
   const [featuredContent, setFeaturedContent] = useState(getFeaturedContent());
   const [categories, setCategories] = useState(mockCategories);
+  const [content, setContent] = useState<Content[]>(mockContent);
+  
+  // Load content from localStorage on mount and when it changes
+  useEffect(() => {
+    const loadContent = () => {
+      const savedContent = localStorage.getItem('hogflix_content');
+      if (savedContent) {
+        try {
+          const parsedContent = JSON.parse(savedContent);
+          if (Array.isArray(parsedContent) && parsedContent.length > 0) {
+            setContent(parsedContent);
+            
+            // Also update featured content if it exists in the saved content
+            const featured = parsedContent.find(item => item.id === featuredContent.id);
+            if (featured) {
+              setFeaturedContent(featured);
+            }
+          }
+        } catch (e) {
+          console.error("Error parsing saved content:", e);
+        }
+      }
+    };
+    
+    // Initial load
+    loadContent();
+    
+    // Listen for changes in other tabs/windows
+    window.addEventListener('storage', loadContent);
+    
+    // Custom event for this tab
+    window.addEventListener('content-updated', loadContent);
+    
+    return () => {
+      window.removeEventListener('storage', loadContent);
+      window.removeEventListener('content-updated', loadContent);
+    };
+  }, [featuredContent.id]);
   
   // Simulate page view analytics event
   useEffect(() => {
@@ -39,6 +77,34 @@ const Index = () => {
     });
   }, [featuredContent, categories]);
 
+  // Create a custom version of getContentByCategory that uses our updated content
+  const getContentByCategoryFromState = (categoryId: string) => {
+    if (categoryId === 'trending') {
+      return content.filter(item => item.trending);
+    }
+    
+    // Match based on genre
+    const genreMap: Record<string, string[]> = {
+      'tech': ['Technology', 'Science', 'Data'],
+      'comedies': ['Comedy'],
+      'dramas': ['Drama'],
+      'action': ['Action', 'Adventure'],
+      'fantasy': ['Fantasy'],
+      'documentaries': ['Documentary'],
+      'nature': ['Nature']
+    };
+    
+    const genres = genreMap[categoryId] || [];
+    if (genres.length > 0) {
+      return content.filter(item => 
+        item.genre.some(g => genres.includes(g))
+      );
+    }
+    
+    // Default implementation for other categories
+    return content.slice(0, 10);
+  };
+
   return (
     <div className="bg-netflix-black min-h-screen">
       <Navbar />
@@ -51,7 +117,7 @@ const Index = () => {
             <ContentRow 
               key={category.id} 
               title={category.name} 
-              contentList={getContentByCategory(category.id)} 
+              contentList={getContentByCategoryFromState(category.id)} 
             />
           ))}
         </div>
