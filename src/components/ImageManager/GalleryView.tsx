@@ -27,6 +27,11 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
     // Log the filtered images for debugging
     console.log('GalleryView - Original images count:', uploadedImages.length);
     console.log('GalleryView - Filtered images count:', filteredImages.length);
+    
+    // If we have few images after filtering, log them all for debugging
+    if (filteredImages.length < 5) {
+      console.log('GalleryView - Filtered images:', filteredImages);
+    }
   }, [uploadedImages, filteredImages]);
   
   return (

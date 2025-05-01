@@ -32,6 +32,11 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
     console.log('MediaGallery - Available images count:', availableImages.length);
     console.log('MediaGallery - Filtered images count:', filteredImages.length);
     console.log('MediaGallery - Selected image URL:', selectedImageUrl);
+    
+    // If we have few images after filtering, log them all for debugging
+    if (filteredImages.length < 5) {
+      console.log('MediaGallery - Filtered images:', filteredImages);
+    }
   }, [filteredImages, selectedImageUrl, availableImages]);
   
   if (isLoadingImages) {

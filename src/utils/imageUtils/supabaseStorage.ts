@@ -80,6 +80,20 @@ export const saveImageMetadata = async (
     // First get the current user
     const { data: userData } = await supabase.auth.getUser();
     
+    // Extract just the path portion if it's a full URL
+    let imagePath = imageUrl;
+    if (imageUrl.startsWith('http')) {
+      // Try to extract just the filename
+      const urlObj = new URL(imageUrl);
+      const pathname = urlObj.pathname;
+      const mediaIndex = pathname.indexOf('/media/');
+      if (mediaIndex >= 0) {
+        imagePath = pathname.substring(mediaIndex + 7); // +7 to skip '/media/'
+      }
+    }
+    
+    console.log('Saving image metadata with path:', imagePath);
+    
     if (!userData?.user?.id) {
       // Check if the user has a PostHog email address
       const userEmail = userData?.user?.email;
@@ -93,7 +107,7 @@ export const saveImageMetadata = async (
           .from('content_images')
           .insert({
             content_id: contentId,
-            image_path: imageUrl,
+            image_path: imagePath,
             image_type: imageType,
             width,
             height,
@@ -117,7 +131,7 @@ export const saveImageMetadata = async (
       .from('content_images')
       .insert({
         content_id: contentId,
-        image_path: imageUrl,
+        image_path: imagePath,
         image_type: imageType,
         width,
         height,
