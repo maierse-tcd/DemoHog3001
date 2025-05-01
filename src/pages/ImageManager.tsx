@@ -15,7 +15,7 @@ import { DEFAULT_IMAGES } from '../utils/imageUtils';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { ContentLibrary } from '../components/ImageManager/ContentLibrary';
 import { GalleryView } from '../components/ImageManager/GalleryView';
-import { extractFilenameFromUrl } from '../utils/imageUtils/urlUtils';
+import { extractFilenameFromUrl, loadImagesFromStorage } from '../utils/imageUtils/urlUtils';
 
 const ImageManager = () => {
   // Use the official hook for the is_admin feature flag
@@ -40,28 +40,8 @@ const ImageManager = () => {
     
     setIsLoadingImages(true);
     try {
-      const { data: imageFiles, error } = await supabase.storage
-        .from('media')
-        .list('', {
-          limit: 100,
-          sortBy: { column: 'created_at', order: 'desc' }
-        });
-        
-      if (error) {
-        throw error;
-      }
-      
-      if (imageFiles) {
-        // Get public URLs for each file
-        const urls = imageFiles.map(file => {
-          const { data } = supabase.storage
-            .from('media')
-            .getPublicUrl(file.name);
-          return data.publicUrl;
-        });
-        
-        setUploadedImages(urls);
-      }
+      const urls = await loadImagesFromStorage();
+      setUploadedImages(urls);
     } catch (error) {
       console.error("Error loading images:", error);
       toast({

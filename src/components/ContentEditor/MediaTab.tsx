@@ -1,11 +1,13 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Label } from '../ui/label';
 import { ImageIcon, RefreshCcw, X } from 'lucide-react';
 import { Button } from '../ui/button';
 import { ImageUploader } from '../ImageUploader';
 import { MediaGallery } from './MediaGallery';
 import { DEFAULT_IMAGES } from '../../utils/imageUtils';
+import { loadImagesFromStorage, filterUniqueImages } from '../../utils/imageUtils/urlUtils';
+import { toast } from '../../hooks/use-toast';
 
 interface MediaTabProps {
   backdropUrl: string;
@@ -30,6 +32,9 @@ export const MediaTab: React.FC<MediaTabProps> = ({
   onImageDelete,
   isDeleting
 }) => {
+  // Filter to only show actual uploaded images
+  const filteredImages = filterUniqueImages(availableImages);
+
   return (
     <div className="space-y-6">
       <div>
@@ -97,7 +102,7 @@ export const MediaTab: React.FC<MediaTabProps> = ({
           <Label className="block mb-2">Choose from existing images</Label>
           <MediaGallery
             isLoadingImages={isLoadingImages}
-            availableImages={availableImages}
+            availableImages={filteredImages}
             selectedImageUrl={backdropUrl}
             onImageSelect={(url) => onBackdropChange(url)}
             onImageDelete={onImageDelete}

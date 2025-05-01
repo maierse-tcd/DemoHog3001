@@ -1,8 +1,9 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollArea } from '../ui/scroll-area';
 import { Loader2, CheckCircle, Trash2, ImageIcon } from 'lucide-react';
 import { DEFAULT_IMAGES } from '../../utils/imageUtils';
+import { filterUniqueImages } from '../../utils/imageUtils/urlUtils';
 
 interface MediaGalleryProps {
   isLoadingImages: boolean;
@@ -23,6 +24,9 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
   isDeleting,
   compact = false
 }) => {
+  // Filter to only show actual uploaded images
+  const filteredImages = filterUniqueImages(availableImages);
+  
   if (isLoadingImages) {
     return (
       <div className="flex justify-center py-8">
@@ -31,7 +35,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
     );
   }
 
-  if (availableImages.length === 0) {
+  if (filteredImages.length === 0) {
     return (
       <div className="text-center py-8 text-netflix-gray border border-dashed border-netflix-gray/30 rounded-md">
         <p>No images available. Upload a new image using the uploader above.</p>
@@ -42,7 +46,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
   return (
     <ScrollArea className={compact ? "max-h-40" : "max-h-60"}>
       <div className={`grid ${compact ? "grid-cols-3 md:grid-cols-4 lg:grid-cols-6" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"} gap-2 p-1`}>
-        {availableImages.map((url, index) => (
+        {filteredImages.map((url, index) => (
           <div 
             key={index}
             className={`${compact ? "aspect-video" : "aspect-video"} cursor-pointer relative group overflow-hidden rounded-md ${
