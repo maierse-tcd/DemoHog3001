@@ -16,11 +16,16 @@ interface PostHog {
   featureFlags: PostHogFeatureFlags;
   onFeatureFlags: (callback: () => void, timeout?: boolean) => void;
   group: (groupType: string, groupKey: string, groupProperties?: Record<string, any>) => void;
+  // Adding additional properties for initialization script
+  __SV?: number;
+  _i?: any[];
+  init?: Function;
+  people?: any;
 }
 
 declare global {
   interface Window {
-    posthog?: PostHog;
+    posthog?: PostHog | any[];
   }
 }
 
