@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useFeatureFlagEnabled } from 'posthog-js/react';
 
 /**

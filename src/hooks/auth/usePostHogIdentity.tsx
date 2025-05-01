@@ -4,13 +4,13 @@ import { safeIdentify, safeCapture } from '../../utils/posthogUtils';
 
 export const usePostHogIdentity = () => {
   const identifyUserInPostHog = useCallback((userId: string, userEmail: string, displayName: string) => {
-    if (!userEmail) {
+    if (!userId) {
       return;
     }
     
     try {
-      // Use email as primary identifier
-      safeIdentify(userEmail, {
+      // Use user ID as primary identifier (more reliable than email)
+      safeIdentify(userId, {
         email: userEmail,
         name: displayName,
         id: userId
