@@ -41,6 +41,7 @@ const ImageManager = () => {
     setIsLoadingImages(true);
     try {
       const urls = await loadImagesFromStorage();
+      console.log('ImageManager - Loaded images:', urls.length);
       setUploadedImages(urls);
     } catch (error) {
       console.error("Error loading images:", error);

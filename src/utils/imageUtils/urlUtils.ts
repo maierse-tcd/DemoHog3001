@@ -51,7 +51,8 @@ export const isSupabaseStorageUrl = (url: string): boolean => {
 
   try {
     const urlObj = new URL(url);
-    // Check domain is from supabase and if the URL contains storage/v1/object and media in the path
+    
+    // Check if the URL contains 'supabase' and storage path patterns
     const isSupabaseURL = urlObj.hostname.includes('supabase.co');
     const isStoragePath = urlObj.pathname.includes('/storage/v1/object');
     const isMediaPath = urlObj.pathname.includes('/media/');

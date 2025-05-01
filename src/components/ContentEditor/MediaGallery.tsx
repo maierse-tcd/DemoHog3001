@@ -54,7 +54,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
       <div className={`grid ${compact ? "grid-cols-3 md:grid-cols-4 lg:grid-cols-6" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"} gap-2 p-1`}>
         {filteredImages.map((url, index) => (
           <div 
-            key={index}
+            key={`supabase-image-${index}`}
             className={`${compact ? "aspect-video" : "aspect-video"} cursor-pointer relative group overflow-hidden rounded-md ${
               selectedImageUrl === url ? 'ring-2 ring-netflix-red' : 'hover:ring-1 hover:ring-netflix-gray/50'
             }`}

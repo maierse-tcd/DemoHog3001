@@ -32,6 +32,12 @@ export const MediaTab: React.FC<MediaTabProps> = ({
   onImageDelete,
   isDeleting
 }) => {
+  // Handle clearing the backdrop image
+  const clearBackdrop = () => {
+    console.log('Removing selected image');
+    onBackdropChange('');
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -67,10 +73,7 @@ export const MediaTab: React.FC<MediaTabProps> = ({
                     }}
                   />
                   <button
-                    onClick={() => {
-                      console.log('Removing selected image');
-                      onBackdropChange('');
-                    }}
+                    onClick={clearBackdrop}
                     className="absolute top-2 right-2 bg-black/70 p-1.5 rounded-full hover:bg-black"
                     aria-label="Remove image"
                   >
@@ -95,6 +98,12 @@ export const MediaTab: React.FC<MediaTabProps> = ({
                 console.log('Image uploaded with URL:', url);
                 onBackdropChange(url);
                 onImageUploaded(url);
+                
+                // Show confirmation toast
+                toast({
+                  title: "Image uploaded",
+                  description: "Your new image has been uploaded and selected."
+                });
               }}
             />
           </div>
@@ -110,6 +119,12 @@ export const MediaTab: React.FC<MediaTabProps> = ({
             onImageSelect={(url) => {
               console.log('Selected image URL from gallery:', url);
               onBackdropChange(url);
+              
+              // Show confirmation toast
+              toast({
+                title: "Image selected",
+                description: "Your image selection has been updated."
+              });
             }}
             onImageDelete={onImageDelete}
             isDeleting={isDeleting}
