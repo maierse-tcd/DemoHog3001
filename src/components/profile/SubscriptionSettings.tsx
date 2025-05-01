@@ -1,7 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { toast } from '../../hooks/use-toast';
 import { Plan, SubscriptionPlan } from '../SubscriptionPlan';
+import { supabase } from '../../integrations/supabase/client';
+import { useAuthContext } from '../../hooks/auth/useAuthContext';
 
 interface SubscriptionSettingsProps {
   selectedPlanId: string;
@@ -12,6 +14,9 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
   selectedPlanId, 
   updateSelectedPlan
 }) => {
+  const { isLoggedIn } = useAuthContext();
+  const [isLoading, setIsLoading] = useState(false);
+  
   const availablePlans: Plan[] = [
     {
       id: 'free',
@@ -64,11 +69,42 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
     });
   };
 
-  const handleSaveChanges = () => {
-    toast({
-      title: 'Changes saved',
-      description: `Your subscription plan has been updated to ${availablePlans.find(plan => plan.id === selectedPlanId)?.name}`,
-    });
+  const handleSaveChanges = async () => {
+    if (!isLoggedIn) {
+      toast({
+        title: 'Authentication required',
+        description: 'You must be logged in to update your subscription plan',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      // Update user metadata with the selected plan
+      const { error } = await supabase.auth.updateUser({
+        data: { 
+          selectedPlanId: selectedPlanId
+        }
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Changes saved',
+        description: `Your subscription plan has been updated to ${availablePlans.find(plan => plan.id === selectedPlanId)?.name}`,
+      });
+    } catch (error: any) {
+      console.error("Error saving plan:", error);
+      toast({
+        title: 'Error saving changes',
+        description: error.message || 'Failed to save your subscription plan',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -89,8 +125,12 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
         ))}
       </div>
       
-      <button onClick={handleSaveChanges} className="bg-netflix-red hover:bg-red-700 text-white px-6 py-3 rounded font-medium transition-colors">
-        Save Changes
+      <button 
+        onClick={handleSaveChanges} 
+        className="bg-netflix-red hover:bg-red-700 text-white px-6 py-3 rounded font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled={isLoading}
+      >
+        {isLoading ? 'Saving...' : 'Save Changes'}
       </button>
     </div>
   );

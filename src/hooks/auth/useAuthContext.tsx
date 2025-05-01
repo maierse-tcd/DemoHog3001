@@ -9,6 +9,7 @@ export interface AuthState {
   avatarUrl: string;
   userEmail: string;
   isLoading: boolean;
+  userMetadata?: Record<string, any>; // Add user metadata field
 }
 
 interface AuthContextType extends AuthState {
@@ -22,6 +23,7 @@ const initialAuthState: AuthState = {
   avatarUrl: '',
   userEmail: '',
   isLoading: true,
+  userMetadata: {},
 };
 
 // Create context
@@ -44,6 +46,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log("Fetching profile for user:", userId);
     
     try {
+      // Get user info with metadata
+      const { data: userData } = await supabase.auth.getUser();
+      const userMetadata = userData?.user?.user_metadata || {};
+      
       // Query the profiles table
       const { data: profileData, error } = await supabase
         .from('profiles')
@@ -57,17 +63,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateAuthState({
           userName: profileData.name || 'User',
           avatarUrl: profileData.avatar_url || '',
+          userMetadata: userMetadata,
           isLoading: false
         });
       } else {
         // Get user info to create a default profile
-        const { data: userData } = await supabase.auth.getUser();
         if (userData?.user) {
           const email = userData.user.email || '';
           const name = userData.user.user_metadata?.name || email.split('@')[0];
           
           updateAuthState({
             userName: name,
+            userMetadata: userMetadata,
             isLoading: false
           });
         }
@@ -112,6 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           updateAuthState({
             isLoggedIn: true,
             userEmail: user.email || '',
+            userMetadata: user.user_metadata || {},
             isLoading: false
           });
           
@@ -147,6 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           updateAuthState({
             isLoggedIn: true,
             userEmail: user.email || '',
+            userMetadata: user.user_metadata || {},
             isLoading: false
           });
           
@@ -158,6 +167,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             userName: '',
             avatarUrl: '',
             userEmail: '',
+            userMetadata: {},
             isLoading: false
           });
         }

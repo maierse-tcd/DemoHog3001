@@ -65,6 +65,10 @@ const Profile = () => {
           return;
         }
         
+        // Get user metadata which contains selectedPlanId
+        const { data: userData } = await supabase.auth.getUser();
+        const userMetadata = userData?.user?.user_metadata || {};
+        
         const { data: profileData, error } = await supabase
           .from('profiles')
           .select('*')
@@ -74,10 +78,6 @@ const Profile = () => {
         if (error) {
           console.error('Error fetching profile:', error);
         } else if (profileData) {
-          // Get user metadata to supplement profile data
-          const { data: { user } } = await supabase.auth.getUser();
-          const userMetadata = user?.user_metadata || {};
-          
           // Safe access with proper type handling
           const displayName = profileData?.name || userEmail.split('@')[0];
           
@@ -85,7 +85,7 @@ const Profile = () => {
           updateSettings({
             name: displayName,
             email: profileData?.email || userEmail,
-            // Use metadata for fields not in the profiles table
+            // Use plan ID from metadata if available, otherwise use the one from context
             selectedPlanId: userMetadata.selectedPlanId || settings.selectedPlanId,
             isKidsAccount: userMetadata.isKidsAccount || settings.isKidsAccount,
             // Keep other settings from context

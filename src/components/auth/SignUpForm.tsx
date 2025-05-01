@@ -1,118 +1,93 @@
-
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useForm, SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 import { Button } from '../ui/button';
-import { useToast } from '../../hooks/use-toast';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { supabase } from '../../integrations/supabase/client';
-import { useProfileSettings } from '../../contexts/ProfileSettingsContext';
-import { safeCapture } from '../../utils/posthogUtils';
+import { useToast } from '../../hooks/use-toast';
+
+// Define the schema for the form
+const formSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email address." }),
+  password: z.string().min(8, { message: "Password must be at least 8 characters." }),
+  confirmPassword: z.string(),
+});
 
 interface SignUpFormProps {
   selectedPlanId: string | null;
-  setSelectedPlanId: (planId: string) => void;
+  setSelectedPlanId: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
-export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProps) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [isKidsAccount, setIsKidsAccount] = useState(false);
+export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelectedPlanId }) => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { updateSettings } = useProfileSettings();
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Initialize react-hook-form
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
+  });
+
+  // Function to handle form submission
+  const onSubmit: SubmitHandler<z.infer<typeof formSchema>> = async (values) => {
     setIsLoading(true);
     
-    try {
-      // Basic validation only to ensure fields are filled
-      if (!email || !password || !name || !selectedPlanId) {
-        toast({
-          title: "Missing information",
-          description: "Please fill out all fields and select a plan",
-          variant: "destructive"
-        });
-        setIsLoading(false);
-        return;
-      }
-      
-      console.log("Starting signup process - simplified without email verification");
-      
-      // Create account directly - no email verification
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { 
-            name,
-            selectedPlanId, 
-            isKidsAccount 
-          }
-        }
+    if (!selectedPlanId) {
+      toast({
+        title: "Plan not selected",
+        description: "Please select a subscription plan before signing up.",
+        variant: "destructive",
       });
-      
-      if (error) throw error;
-      
-      if (data?.user) {
-        console.log("User created successfully:", data.user.id);
-        
-        try {
-          // Create a profile entry with user ID
-          await supabase
-            .from('profiles')
-            .upsert({
-              id: data.user.id,
-              email,
-              name,
-              updated_at: new Date().toISOString(),
-              created_at: new Date().toISOString()
-            });
-            
-          // Sign in the user immediately
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email,
-            password
-          });
-          
-          if (signInError) {
-            throw signInError;
-          }
-          
-          // Save the user preferences in context
-          updateSettings({
-            name,
-            email,
-            notifications: { email: true },
-            language: 'English',
-            selectedPlanId: selectedPlanId || 'premium',
-            isKidsAccount
-          });
-          
-          // PostHog identification is now centralized in PostHogProvider
-          safeCapture('user_signup_complete');
-          
-          toast({
-            title: "Sign up successful!",
-            description: "Welcome to Hogflix!",
-          });
-          
-          // Redirect to home page
-          navigate('/');
-          
-        } catch (profileError) {
-          console.error("Error creating profile:", profileError);
-          throw profileError;
-        }
+      setIsLoading(false);
+      return;
+    }
+
+    if (values.password !== values.confirmPassword) {
+      toast({
+        title: "Passwords do not match",
+        description: "Please make sure the passwords match.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          data: {
+            selectedPlanId: selectedPlanId,
+          },
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message);
       }
+
+      // If sign up is successful, navigate to profile page
+      navigate('/profile');
+
+      toast({
+        title: "Sign up successful",
+        description: "You have successfully signed up. Redirecting to your profile...",
+      });
     } catch (error: any) {
-      console.error("Sign up error:", error);
       toast({
         title: "Sign up failed",
-        description: error.message || "An error occurred during sign up",
-        variant: "destructive"
+        description: error.message || "An error occurred during sign up.",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -120,59 +95,51 @@ export const SignUpForm = ({ selectedPlanId, setSelectedPlanId }: SignUpFormProp
   };
 
   return (
-    <form onSubmit={handleSignUp} className="space-y-4">
-      <div>
-        <label className="block text-sm mb-1">Full Name</label>
-        <Input 
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="bg-black/40 border-netflix-gray/40 text-white"
-          placeholder="Enter your name"
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter your email" {...field} type="email" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
-      <div>
-        <label className="block text-sm mb-1">Email</label>
-        <Input 
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="bg-black/40 border-netflix-gray/40 text-white"
-          placeholder="Enter your email"
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter your password" {...field} type="password" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
-      <div>
-        <label className="block text-sm mb-1">Password</label>
-        <Input 
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="bg-black/40 border-netflix-gray/40 text-white"
-          placeholder="Create a password (min 6 characters)"
+        <FormField
+          control={form.control}
+          name="confirmPassword"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Confirm Password</FormLabel>
+              <FormControl>
+                <Input placeholder="Confirm your password" {...field} type="password" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
-      <div className="flex items-center space-x-2 pt-2">
-        <input
-          type="checkbox"
-          id="kidsAccount"
-          checked={isKidsAccount}
-          onChange={(e) => setIsKidsAccount(e.target.checked)}
-          className="rounded border-netflix-gray/40 bg-black/40"
-        />
-        <label htmlFor="kidsAccount" className="cursor-pointer">
-          This is a kids account
-        </label>
-      </div>
-      
-      <div className="pt-4">
-        <Button
-          type="submit"
-          className="w-full bg-netflix-red hover:bg-netflix-red/80 text-white"
-          disabled={isLoading || !selectedPlanId}
-        >
-          {isLoading ? 'Creating account...' : 'Complete Sign Up'}
+        <Button type="submit" disabled={isLoading} className="w-full">
+          {isLoading ? "Signing Up..." : "Sign Up"}
         </Button>
-      </div>
-    </form>
+      </form>
+    </Form>
   );
 };
