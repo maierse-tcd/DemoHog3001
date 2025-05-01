@@ -3,11 +3,11 @@ import { supabase } from "../integrations/supabase/client";
 import { v4 as uuidv4 } from 'uuid';
 import { safeCapture } from "./posthogUtils";
 
-// Image size configurations
+// Image size configurations - updated to prefer landscape format
 export const IMAGE_SIZES = {
-  poster: { width: 600, height: 900 },
-  backdrop: { width: 1920, height: 1080 },
-  thumbnail: { width: 480, height: 320 }
+  poster: { width: 600, height: 900 },  // Only used when explicitly needed
+  backdrop: { width: 1280, height: 720 }, // 16:9 aspect ratio
+  thumbnail: { width: 480, height: 270 }  // 16:9 aspect ratio
 };
 
 // Function to resize an image client-side before upload
@@ -72,13 +72,14 @@ export const resizeImage = async (
 // Function to upload an image to Supabase storage
 export const uploadImageToSupabase = async (
   file: File,
-  imageType: 'poster' | 'backdrop' | 'thumbnail',
+  imageType: 'poster' | 'backdrop' | 'thumbnail' = 'backdrop',
   contentId?: string
 ): Promise<string> => {
   try {
-    // Generate a unique filename
+    // Generate a unique filename with timestamp to prevent cache issues
     const fileExt = file.name.split('.').pop();
-    const fileName = `${uuidv4()}.${fileExt}`;
+    const timestamp = new Date().getTime();
+    const fileName = `${uuidv4()}_${timestamp}.${fileExt}`;
     const filePath = contentId 
       ? `${imageType}/${contentId}/${fileName}` 
       : `${imageType}/${fileName}`;
@@ -86,8 +87,13 @@ export const uploadImageToSupabase = async (
     // Get target dimensions
     const { width: targetWidth, height: targetHeight } = IMAGE_SIZES[imageType];
     
+    // Console log for debugging
+    console.log(`Resizing image to ${targetWidth}x${targetHeight} for ${imageType}`);
+    
     // Resize image before upload
     const resizedImage = await resizeImage(file, targetWidth, targetHeight);
+    
+    console.log(`Uploading image to ${filePath}, size: ${resizedImage.size} bytes`);
     
     // Upload to Supabase
     const { data, error } = await supabase.storage
@@ -102,10 +108,12 @@ export const uploadImageToSupabase = async (
       throw error;
     }
     
+    console.log('Upload successful:', data);
+    
     // Track successful upload
     safeCapture('image_uploaded', {
       imageType,
-      contentId,
+      contentId: contentId || 'none',
       size: resizedImage.size
     });
     
@@ -113,6 +121,8 @@ export const uploadImageToSupabase = async (
     const { data: urlData } = supabase.storage
       .from('media')
       .getPublicUrl(filePath);
+    
+    console.log('Image public URL:', urlData.publicUrl);
     
     return urlData.publicUrl;
   } catch (error) {
@@ -204,6 +214,6 @@ export const getImagePublicUrl = (path: string): string => {
 // Default placeholder images when no image is available
 export const DEFAULT_IMAGES = {
   poster: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&q=80&w=600&h=900",
-  backdrop: "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&q=80&w=1920&h=1080",
-  thumbnail: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=480&h=320"
+  backdrop: "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&q=80&w=1280&h=720",
+  thumbnail: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=480&h=270"
 };

@@ -5,7 +5,7 @@ import { useToast } from '../hooks/use-toast';
 import { safeCapture } from '../utils/posthogUtils';
 import { uploadImageToSupabase, IMAGE_SIZES } from '../utils/imageUtils';
 import { Button } from './ui/button';
-import { useAuth } from '../hooks/useAuth'; // Fixed import path
+import { useAuth } from '../hooks/useAuth';
 import { DEFAULT_IMAGES } from '../utils/imageUtils';
 
 interface ImageUploaderProps {
@@ -19,9 +19,9 @@ interface ImageUploaderProps {
 export const ImageUploader = ({ 
   onImageUploaded, 
   contentId, 
-  imageType = 'poster',
+  imageType = 'backdrop',
   className = '',
-  aspectRatio = 'portrait'
+  aspectRatio = 'landscape'
 }: ImageUploaderProps) => {
   const [preview, setPreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -38,13 +38,13 @@ export const ImageUploader = ({
   // Determine aspect ratio CSS classes
   const getAspectRatioClass = () => {
     switch (aspectRatio) {
-      case 'landscape':
-        return 'aspect-video';
+      case 'portrait':
+        return 'aspect-[2/3]';
       case 'square':
         return 'aspect-square';
-      case 'portrait':
+      case 'landscape':
       default:
-        return 'aspect-[2/3]';
+        return 'aspect-video';
     }
   };
   
@@ -56,6 +56,27 @@ export const ImageUploader = ({
       toast({
         title: "Authentication required",
         description: "Please sign in to upload images.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select an image file (JPEG, PNG, etc.).",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      toast({
+        title: "File too large",
+        description: "Please select an image smaller than 5MB.",
         variant: "destructive"
       });
       return;
@@ -153,7 +174,7 @@ export const ImageUploader = ({
   
   return (
     <div className={`flex flex-col items-center ${className}`}>
-      <div className={`w-full max-w-md relative ${getAspectRatioClass()}`}>
+      <div className={`w-full relative ${getAspectRatioClass()}`}>
         {preview ? (
           <div className="relative h-full">
             <img 
@@ -200,6 +221,9 @@ export const ImageUploader = ({
                 <Upload className="h-8 w-8 text-gray-400 mb-2" />
                 <p className="text-center text-sm text-gray-400">
                   {canUpload ? "Click to upload" : "Sign in to upload"}
+                </p>
+                <p className="text-center text-xs text-gray-500 mt-1">
+                  Landscape format recommended
                 </p>
               </>
             )}

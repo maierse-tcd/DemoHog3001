@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '../hooks/use-toast';
 import { mockContent, Content } from '../data/mockData';
 import { Input } from '../components/ui/input';
-import { Search, Pencil, Trash2, Plus, RefreshCcw } from 'lucide-react';
+import { Search, Pencil, Trash2, Plus, RefreshCcw, ImageIcon } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { useFeatureFlagEnabled } from '../hooks/usePostHogFeatures';
 import { useAuth } from '../hooks/useAuth';
@@ -33,6 +33,7 @@ const ImageManager = () => {
   const [showContentEditor, setShowContentEditor] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isLoadingImages, setIsLoadingImages] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   
   // Define loadUploadedImages BEFORE it's used in useEffect
@@ -211,6 +212,8 @@ const ImageManager = () => {
   
   const handleDeleteImage = async (imageUrl: string) => {
     try {
+      setIsDeleting(true);
+      
       // Extract the file name from the URL
       const fileName = imageUrl.split('/').pop();
       
@@ -219,16 +222,40 @@ const ImageManager = () => {
       }
       
       // Delete the file from Supabase storage
+      console.log("Deleting image:", fileName);
       const { error } = await supabase.storage
         .from('media')
         .remove([fileName]);
       
       if (error) {
+        console.error("Supabase delete error:", error);
         throw error;
       }
       
+      console.log("Image deleted successfully");
+      
       // Remove from the local state
       setUploadedImages(prev => prev.filter(url => url !== imageUrl));
+      
+      // Also check if any content was using this image and update it
+      const contentToUpdate = updatedContentList.filter(item => 
+        item.posterUrl === imageUrl || item.backdropUrl === imageUrl
+      );
+      
+      if (contentToUpdate.length > 0) {
+        const updatedList = updatedContentList.map(item => {
+          if (item.posterUrl === imageUrl) {
+            return { ...item, posterUrl: '' };
+          }
+          if (item.backdropUrl === imageUrl) {
+            return { ...item, backdropUrl: '' };
+          }
+          return item;
+        });
+        
+        setUpdatedContentList(updatedList);
+        localStorage.setItem('hogflix_content', JSON.stringify(updatedList));
+      }
       
       // Track in PostHog
       posthog?.capture('image_deleted', {
@@ -248,6 +275,8 @@ const ImageManager = () => {
         description: "There was a problem removing the image. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
   
@@ -318,19 +347,19 @@ const ImageManager = () => {
                 key={item.id} 
                 className="bg-netflix-darkgray border-netflix-gray/20 overflow-hidden hover:border-netflix-red transition-colors"
               >
-                <div className="aspect-[2/3] relative">
-                  {item.posterUrl ? (
+                <div className="aspect-video relative">
+                  {item.backdropUrl ? (
                     <img 
-                      src={item.posterUrl} 
+                      src={item.backdropUrl} 
                       alt={item.title} 
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        e.currentTarget.src = DEFAULT_IMAGES.poster;
+                        e.currentTarget.src = DEFAULT_IMAGES.backdrop;
                       }}
                     />
                   ) : (
                     <div className="w-full h-full bg-black/50 flex items-center justify-center text-netflix-gray">
-                      No Image
+                      <ImageIcon className="h-8 w-8 text-netflix-gray/50" />
                     </div>
                   )}
                   <div className="absolute top-2 right-2 flex space-x-1">
@@ -407,9 +436,9 @@ const ImageManager = () => {
                 <img 
                   src={url} 
                   alt={`Uploaded ${index + 1}`} 
-                  className="rounded-md w-full h-40 object-cover"
+                  className="rounded-md w-full aspect-video object-cover"
                   onError={(e) => {
-                    e.currentTarget.src = DEFAULT_IMAGES.thumbnail;
+                    e.currentTarget.src = DEFAULT_IMAGES.backdrop;
                   }}
                 />
                 <div className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -417,9 +446,14 @@ const ImageManager = () => {
                     variant="destructive"
                     size="sm"
                     onClick={() => handleDeleteImage(url)}
+                    disabled={isDeleting}
                     title="Delete image"
                   >
-                    <Trash2 className="h-4 w-4 mr-1" />
+                    {isDeleting ? (
+                      <RefreshCcw className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4 mr-1" />
+                    )}
                     Delete
                   </Button>
                 </div>
