@@ -261,6 +261,9 @@ const ImageManager = () => {
         setUpdatedContentList(updatedList);
         localStorage.setItem('hogflix_content', JSON.stringify(updatedList));
         
+        // Dispatch a custom event to notify other components about the change
+        window.dispatchEvent(new Event('content-updated'));
+        
         // Notify user that content was updated
         toast({
           title: "Content updated",

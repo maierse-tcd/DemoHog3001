@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Content } from '../data/mockData';
 import { Play, Plus, ThumbsUp, ChevronDown, X, Info } from 'lucide-react';
 import { getRandomVideo } from '../utils/videoUtils';
+import { DEFAULT_IMAGES } from '../utils/imageUtils';
 
 interface ContentCardProps {
   content: Content;
@@ -14,6 +15,9 @@ export const ContentCard = ({ content }: ContentCardProps) => {
   const [showDetails, setShowDetails] = useState(false);
   const [videoUrl] = useState(getRandomVideo());
   
+  // Use backdrop image if available, otherwise fallback to poster, then default image
+  const displayImage = content.backdropUrl || content.posterUrl || DEFAULT_IMAGES.backdrop;
+  
   return (
     <>
       <div 
@@ -22,9 +26,12 @@ export const ContentCard = ({ content }: ContentCardProps) => {
         onMouseLeave={() => setIsHovered(false)}
       >
         <img 
-          src={content.posterUrl}
+          src={displayImage}
           alt={content.title}
           className="w-full h-full object-cover rounded-md"
+          onError={(e) => {
+            e.currentTarget.src = DEFAULT_IMAGES.backdrop;
+          }}
         />
         
         {/* Always visible title overlay */}

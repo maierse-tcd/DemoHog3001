@@ -231,6 +231,9 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
       // Save back to local storage
       localStorage.setItem('hogflix_content', JSON.stringify(existingContent));
       
+      // Dispatch a custom event to notify other components about the change
+      window.dispatchEvent(new Event('content-updated'));
+      
       // Track in PostHog
       safeCapture(isEdit ? 'content_updated' : 'content_created', {
         contentId: updatedContent.id,

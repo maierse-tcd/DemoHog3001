@@ -3,16 +3,68 @@ import { useState, useEffect } from 'react';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { ContentRow } from '../components/ContentRow';
-import { mockContent } from '../data/mockData';
+import { Content } from '../data/mockData';
 
 const Movies = () => {
-  const [movieContent, setMovieContent] = useState(() => {
-    // Filter the content for movies only
-    return mockContent.filter(item => item.type === 'movie');
+  const [movieContent, setMovieContent] = useState<Content[]>(() => {
+    // Load content from localStorage if available, otherwise use empty array
+    const savedContent = localStorage.getItem('hogflix_content');
+    if (savedContent) {
+      try {
+        const parsedContent = JSON.parse(savedContent);
+        // Ensure we return an array of Content items filtered for movies
+        return Array.isArray(parsedContent) 
+          ? parsedContent.filter((item: Content) => item.type === 'movie')
+          : [];
+      } catch (e) {
+        console.error("Error parsing saved content:", e);
+        return [];
+      }
+    }
+    return [];
   });
   
+  // Refresh content when localStorage changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const savedContent = localStorage.getItem('hogflix_content');
+      if (savedContent) {
+        try {
+          const parsedContent = JSON.parse(savedContent);
+          // Ensure we're setting an array
+          if (Array.isArray(parsedContent)) {
+            setMovieContent(parsedContent.filter((item: Content) => item.type === 'movie'));
+          } else {
+            console.error("Content in localStorage is not an array:", parsedContent);
+            setMovieContent([]);
+          }
+        } catch (e) {
+          console.error("Error parsing saved content:", e);
+          setMovieContent([]);
+        }
+      } else {
+        // If content is removed from localStorage, set to empty array
+        setMovieContent([]);
+      }
+    };
+    
+    // Initial load
+    handleStorageChange();
+    
+    // Listen for changes in other tabs/windows
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Custom event for this tab
+    window.addEventListener('content-updated', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('content-updated', handleStorageChange);
+    };
+  }, []);
+  
   // Group movies by genre
-  const moviesByGenre = movieContent.reduce((acc: {[key: string]: typeof movieContent}, movie) => {
+  const moviesByGenre = movieContent.reduce((acc: {[key: string]: Content[]}, movie) => {
     movie.genre.forEach(genre => {
       if (!acc[genre]) acc[genre] = [];
       acc[genre].push(movie);
