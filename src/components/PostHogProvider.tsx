@@ -2,14 +2,7 @@
 import { PostHogProvider as OriginalPostHogProvider } from 'posthog-js/react';
 import { useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
-import { 
-  safeIdentify, 
-  safeReset, 
-  safeReloadFeatureFlags, 
-  safeCapture, 
-  safeMergeIdentity, 
-  safeGetDistinctId 
-} from '../utils/posthogUtils';
+import { safeIdentify, safeReset, safeCapture } from '../utils/posthogUtils';
 
 // PostHog configuration
 const POSTHOG_KEY = 'phc_O1OL4R6b4MUWUsu8iYorqWfQoGSorFLHLOustqbVB0U';
@@ -27,9 +20,6 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     autocapture: true,
     loaded: (posthog: any) => {
       console.log('PostHog loaded successfully');
-      // Log current distinct ID for debugging
-      const currentId = safeGetDistinctId();
-      console.log(`PostHog initial distinct ID: ${currentId}`);
     }
   };
 
@@ -51,34 +41,15 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
         
         console.log(`Identifying user in PostHog using email: ${userEmail}`);
         
-        // Get the current distinct ID before we do anything
-        const currentAnonymousId = safeGetDistinctId();
-        console.log(`Current anonymous ID before identification: ${currentAnonymousId}`);
+        // Identify the user with their email as the primary identifier
+        safeIdentify(userEmail, {
+          email: userEmail,
+          name: session.user.user_metadata?.name || userEmail?.split('@')[0],
+          supabase_id: session.user.id
+        });
         
-        // IMPORTANT: First merge the anonymous ID with the user email
-        // This links all previous anonymous activity to the identified user
-        setTimeout(() => {
-          // First merge identities to connect anonymous activity with the user
-          safeMergeIdentity(userEmail);
-          
-          // Then identify the user with their email as the primary identifier
-          setTimeout(() => {
-            safeIdentify(userEmail, {
-              email: userEmail,
-              name: session.user.user_metadata?.name || userEmail?.split('@')[0],
-              supabase_id: session.user.id
-            });
-            
-            // Reload feature flags after identification
-            setTimeout(() => {
-              safeReloadFeatureFlags().then(() => {
-                // Verify the identity after everything is done
-                const finalId = safeGetDistinctId();
-                console.log(`Final distinct ID after complete identification flow: ${finalId}`);
-              });
-            }, 100);
-          }, 100);
-        }, 100);
+        // Capture login event
+        safeCapture('user_logged_in');
       } 
       else if (event === 'SIGNED_OUT') {
         // Capture logout event before resetting
@@ -87,11 +58,6 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
         // Reset PostHog identity when user signs out
         console.log('User signed out, resetting PostHog identity');
         safeReset();
-        
-        // Reload feature flags with anonymous identity
-        setTimeout(() => {
-          safeReloadFeatureFlags();
-        }, 100);
       }
     });
     

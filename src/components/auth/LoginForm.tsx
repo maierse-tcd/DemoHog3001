@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '../ui/input';
@@ -102,8 +101,7 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
   const handleSuccessfulLogin = async (userId: string, userEmail: string) => {
     console.log('Login success, user ID:', userId);
     
-    // PostHog identification is now centralized in PostHogProvider
-    
+    // PostHog identification is centralized in PostHogProvider
     safeCapture('user_login_success');
     
     // Fetch user profile data
