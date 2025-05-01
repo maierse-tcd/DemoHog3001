@@ -107,7 +107,7 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     posthog?.init('phc_O1OL4R6b4MUWUsu8iYorqWfQoGSorFLHLOustqbVB0U', {
       api_host: 'https://eu-ph.livehog.com',
       ui_host: 'https://eu.i.posthog.com',
-      persistence: 'localStorage',
+      persistence: 'cookie', // Changed from localStorage to cookie for better persistence management
       persistence_name: 'ph_hogflix_user',
       capture_pageview: false,
       autocapture: false,
@@ -167,10 +167,22 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
           
           if (event === 'SIGNED_OUT') {
             try {
-              // Reset identity after sign out and clear feature flags
+              // First reset identity
               safeReset();
-              safeRemoveFeatureFlags();
-              console.log("PostHog: User signed out, identity reset and feature flags cleared");
+              console.log("PostHog: User signed out, identity reset");
+              
+              // Add a small delay to ensure the reset is processed before removing flags
+              setTimeout(() => {
+                // Then remove feature flags
+                safeRemoveFeatureFlags();
+                
+                // Explicitly reload with the anonymous identity
+                setTimeout(() => {
+                  safeReloadFeatureFlags();
+                  console.log("Feature flags reloaded after logout with anonymous identity");
+                }, 100);
+              }, 200);
+              
               processedAuthEvents.current.clear(); // Clear processed events on sign out
             } catch (err) {
               console.error("PostHog event error:", err);

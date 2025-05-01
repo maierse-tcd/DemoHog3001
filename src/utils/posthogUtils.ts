@@ -65,7 +65,9 @@ export const safeReset = (): void => {
   if (typeof window !== 'undefined' && window.posthog) {
     try {
       if (isPostHogInstance(window.posthog)) {
+        // Reset completely clears the identity and all associated data
         window.posthog.reset();
+        console.log("PostHog identity reset complete");
       }
     } catch (err) {
       console.error("PostHog reset error:", err);
@@ -97,6 +99,7 @@ export const safeReloadFeatureFlags = async (): Promise<void> => {
     try {
       if (isPostHogInstance(window.posthog)) {
         await window.posthog.reloadFeatureFlags();
+        console.log("Feature flags reloaded successfully");
       }
     } catch (err) {
       console.error("Error reloading feature flags:", err);
@@ -112,21 +115,26 @@ export const safeRemoveFeatureFlags = (): void => {
   if (typeof window !== 'undefined' && window.posthog) {
     try {
       if (isPostHogInstance(window.posthog) && window.posthog.featureFlags) {
-        // Override with empty values since clear() method doesn't exist
+        // The most reliable way to clear feature flags is to override them all to false
         if (typeof window.posthog.featureFlags.override === 'function') {
-          // Get all currently active flags
-          if (window.posthog.featureFlags.currentFlags) {
-            const currentFlags = Object.keys(window.posthog.featureFlags.currentFlags);
-            
+          const currentFlags = window.posthog.featureFlags.getFlags();
+          
+          if (currentFlags) {
             // Create an object with all flags set to false
             const resetFlags: Record<string, boolean> = {};
-            currentFlags.forEach(flag => {
+            Object.keys(currentFlags).forEach(flag => {
               resetFlags[flag] = false;
             });
             
             // Override all flags to false
             window.posthog.featureFlags.override(resetFlags);
+            console.log("All feature flags overridden to false");
           }
+        }
+        
+        // Additionally attempt to clear the feature flag cache if method exists
+        if (typeof window.posthog.featureFlags._refresh === 'function') {
+          window.posthog.featureFlags._refresh();
         }
         
         console.log("Feature flags cleared");
