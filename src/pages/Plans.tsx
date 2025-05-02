@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
@@ -8,7 +7,7 @@ import { SubscriptionPlansGrid } from '../components/plans/SubscriptionPlansGrid
 import { supabase } from '../integrations/supabase/client';
 import { useToast } from '../hooks/use-toast';
 import { Plan } from '../components/SubscriptionPlan';
-import { safeCapture } from '../utils/posthogUtils';
+import { safeCapture } from '../utils/posthog';
 
 const Plans = () => {
   const [plans, setPlans] = useState<Plan[]>([]);

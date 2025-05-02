@@ -7,7 +7,7 @@ import {
   useActiveFeatureFlags
 } from 'posthog-js/react';
 import { useCallback, useEffect } from 'react';
-import { safeGroupIdentify, safeCaptureWithGroup } from '../utils/posthogUtils';
+import { safeGroupIdentify, safeCaptureWithGroup } from '../utils/posthog';
 
 // Re-export all official hooks for consistency in our app
 export { 

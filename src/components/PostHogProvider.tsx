@@ -1,4 +1,3 @@
-
 import { PostHogProvider as OriginalPostHogProvider } from 'posthog-js/react';
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../integrations/supabase/client';
@@ -10,7 +9,7 @@ import {
   getLastIdentifiedGroup,
   safeCaptureWithGroup,
   clearStoredGroups
-} from '../utils/posthogUtils';
+} from '../utils/posthog';
 import posthog from 'posthog-js';
 
 // PostHog configuration

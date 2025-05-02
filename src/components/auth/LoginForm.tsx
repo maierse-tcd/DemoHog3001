@@ -4,7 +4,7 @@ import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { useToast } from '../../hooks/use-toast';
 import { supabase } from '../../integrations/supabase/client';
-import { safeCapture } from '../../utils/posthogUtils';
+import { safeCapture } from '../../utils/posthog';
 
 interface LoginFormProps {
   fetchUserProfile: (userId: string) => Promise<void>;

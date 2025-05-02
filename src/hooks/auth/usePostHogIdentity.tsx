@@ -1,6 +1,5 @@
-
 import { useCallback } from 'react';
-import { safeIdentify, safeCapture, safeGroupIdentify } from '../../utils/posthogUtils';
+import { safeIdentify, safeCapture, safeGroupIdentify } from '../../utils/posthog';
 
 export const usePostHogIdentity = () => {
   const identifyUserInPostHog = useCallback((userId: string, userEmail: string, displayName: string) => {

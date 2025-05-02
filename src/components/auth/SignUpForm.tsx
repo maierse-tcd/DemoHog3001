@@ -10,7 +10,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { supabase } from '../../integrations/supabase/client';
 import { useToast } from '../../hooks/use-toast';
 import { Checkbox } from '../ui/checkbox';
-import { safeCapture, safeGroupIdentify, safeCaptureWithGroup } from '../../utils/posthogUtils';
+import { safeCapture, safeGroupIdentify, safeCaptureWithGroup } from '../../utils/posthog';
 import { usePostHog } from 'posthog-js/react';
 import { usePostHogSubscription } from '../../hooks/usePostHogFeatures';
 

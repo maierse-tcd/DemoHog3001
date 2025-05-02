@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { toast } from '../../hooks/use-toast';
 import { Plan, SubscriptionPlan } from '../SubscriptionPlan';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuthContext } from '../../hooks/auth/useAuthContext';
 import { Skeleton } from '../ui/skeleton';
-import { safeCapture } from '../../utils/posthogUtils';
+import { safeCapture } from '../../utils/posthog';
 import { usePostHog } from 'posthog-js/react';
 import { usePostHogSubscription } from '../../hooks/usePostHogFeatures';
 
