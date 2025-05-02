@@ -19,7 +19,7 @@ export const SubscriptionPlansGrid: React.FC<SubscriptionPlansGridProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 my-8">
         {[1, 2, 3].map((_, index) => (
           <div key={index} className="rounded-lg overflow-hidden">
-            <Skeleton className="h-[450px] w-full bg-netflix-darkgray/50" />
+            <Skeleton className="h-[450px] w-full bg-[#1A1F2C]/50" />
           </div>
         ))}
       </div>
@@ -28,7 +28,7 @@ export const SubscriptionPlansGrid: React.FC<SubscriptionPlansGridProps> = ({
 
   if (plans.length === 0) {
     return (
-      <div className="text-center py-12 text-netflix-gray">
+      <div className="text-center py-12 text-[#8E9196]">
         <p>No subscription plans available.</p>
       </div>
     );

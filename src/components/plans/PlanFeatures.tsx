@@ -1,39 +1,47 @@
 
 import React from 'react';
-import { Check } from 'lucide-react';
+import { Package, Badge, Gift } from 'lucide-react';
 
 export const PlanFeatures: React.FC = () => {
   const features = [
     {
-      title: "Watch anywhere",
-      description: "Stream on smart TVs, tablets, phones, laptops, and more.",
-      icon: "layout-grid",
+      title: "Hedgehog Everywhere",
+      description: "Watch your favorite spiky friends on any device, anytime.",
+      icon: "device",
     },
     {
-      title: "Cancel anytime",
-      description: "No contracts, no commitments. Change or cancel your plan whenever you want.",
+      title: "Cancel Anytime",
+      description: "No prickly contracts, no commitments. Change your plan whenever you want.",
       icon: "check",
     },
     {
-      title: "Unlimited movies",
-      description: "Enjoy unlimited access to our growing library of movies and series.",
+      title: "Unlimited Hog Content",
+      description: "Enjoy unlimited access to our growing collection of hedgehog movies and series.",
       icon: "list",
     }
   ];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12 mt-8">
-      {features.map((feature, index) => (
-        <div key={index} className="flex items-start p-6 bg-netflix-darkgray rounded-lg">
-          <div className="mr-4 bg-netflix-red rounded-full p-2">
-            <Check className="h-6 w-6 text-white" />
+      {features.map((feature, index) => {
+        // Choose icon based on index
+        let IconComponent;
+        if (index === 0) IconComponent = Package;
+        else if (index === 1) IconComponent = Badge;
+        else IconComponent = Gift;
+        
+        return (
+          <div key={index} className="flex items-start p-6 bg-[#1A1F2C] rounded-lg shadow-lg hover:shadow-xl transition-all">
+            <div className="mr-4 bg-[#9b87f5] rounded-full p-2">
+              <IconComponent className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-2 text-white">{feature.title}</h3>
+              <p className="text-[#F1F0FB]">{feature.description}</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
-            <p className="text-netflix-gray">{feature.description}</p>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };

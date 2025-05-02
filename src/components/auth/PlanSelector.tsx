@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { SubscriptionPlan, Plan } from '../SubscriptionPlan';
 import { supabase } from '../../integrations/supabase/client';
 import { Skeleton } from '../ui/skeleton';
+import { useSearchParams } from 'react-router-dom';
 
 interface PlanSelectorProps {
   plans?: Plan[];
@@ -16,6 +18,15 @@ export const PlanSelector: React.FC<PlanSelectorProps> = ({
 }) => {
   const [plans, setPlans] = useState<Plan[]>(providedPlans || []);
   const [isLoading, setIsLoading] = useState(!providedPlans);
+  const [searchParams] = useSearchParams();
+  
+  // Get plan parameter from URL if available
+  useEffect(() => {
+    const planFromUrl = searchParams.get('plan');
+    if (planFromUrl && !selectedPlanId) {
+      onPlanSelect(planFromUrl);
+    }
+  }, [searchParams, onPlanSelect, selectedPlanId]);
 
   useEffect(() => {
     // If plans are provided via props, use them
@@ -66,10 +77,10 @@ export const PlanSelector: React.FC<PlanSelectorProps> = ({
     return (
       <div>
         <h3 className="text-xl font-medium mb-4">Choose your plan</h3>
-        <p className="text-netflix-gray mb-4">Select the subscription plan that works for you.</p>
+        <p className="text-[#8E9196] mb-4">Select the subscription plan that works for you.</p>
         <div className="space-y-4">
           {[1, 2, 3].map(index => (
-            <Skeleton key={index} className="h-[200px] w-full bg-netflix-darkgray/50" />
+            <Skeleton key={index} className="h-[200px] w-full bg-[#1A1F2C]/50" />
           ))}
         </div>
       </div>
@@ -79,7 +90,7 @@ export const PlanSelector: React.FC<PlanSelectorProps> = ({
   return (
     <div>
       <h3 className="text-xl font-medium mb-4">Choose your plan</h3>
-      <p className="text-netflix-gray mb-4">Select the subscription plan that works for you.</p>
+      <p className="text-[#8E9196] mb-4">Select the subscription plan that works for your hedgehog needs!</p>
       <div className="space-y-4">
         {plans.map(plan => (
           <SubscriptionPlan

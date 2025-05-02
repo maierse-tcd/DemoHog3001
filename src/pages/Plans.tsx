@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { PlanFeatures } from '../components/plans/PlanFeatures';
@@ -12,6 +13,7 @@ const Plans = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -55,22 +57,27 @@ const Plans = () => {
     fetchPlans();
   }, [toast]);
 
+  // Handle plan selection - redirect to signup with selected plan
+  const handleSelectPlan = (planId: string) => {
+    navigate(`/signup?plan=${planId}`);
+  };
+
   return (
-    <div className="min-h-screen bg-netflix-black">
+    <div className="min-h-screen bg-[#1A1F2C]">
       <Navbar />
       <main className="pt-24 pb-12 px-4 md:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Choose Your Perfect Plan</h1>
-            <p className="text-xl text-netflix-gray max-w-3xl mx-auto">
-              Unlock the full potential of Hogflix with our flexible subscription options. 
-              Find the perfect plan for your entertainment needs.
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">Choose Your Perfect Hog Plan</h1>
+            <p className="text-xl text-[#F1F0FB] max-w-3xl mx-auto">
+              Unlock the full potential of HogFlix with our flexible subscription options. 
+              Find the perfect plan for your hedgehog entertainment needs.
             </p>
           </div>
 
           <PlanFeatures />
           
-          <SubscriptionPlansGrid plans={plans} isLoading={isLoading} />
+          <SubscriptionPlansGrid plans={plans} isLoading={isLoading} onSelectPlan={handleSelectPlan} />
         </div>
       </main>
       <Footer />
