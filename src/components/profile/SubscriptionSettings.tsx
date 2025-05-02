@@ -6,6 +6,7 @@ import { supabase } from '../../integrations/supabase/client';
 import { useAuthContext } from '../../hooks/auth/useAuthContext';
 import { Skeleton } from '../ui/skeleton';
 import { safeCapture, safeGroupIdentify, safeCaptureWithGroup } from '../../utils/posthogUtils';
+import { usePostHog } from 'posthog-js/react';
 
 interface SubscriptionSettingsProps {
   selectedPlanId: string;
@@ -21,6 +22,7 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
   const [currentPlanId, setCurrentPlanId] = useState(initialPlanId);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
+  const posthog = usePostHog();
   
   // Use effect to sync with any external changes to the plan
   useEffect(() => {
@@ -85,6 +87,60 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
     });
   };
 
+  // Function to explicitly identify user with a subscription group
+  const identifyUserWithSubscriptionGroup = (planName: string, planId: string, planPrice: string) => {
+    try {
+      // 1. Prepare group properties with name being MANDATORY for PostHog UI visibility
+      const groupProperties = {
+        name: planName, // REQUIRED: This is critical for group to show in PostHog UI
+        plan_id: planId,
+        plan_cost: extractPriceValue(planPrice),
+        features_count: plans.find(p => p.id === planId)?.features.length || 0,
+        last_updated: new Date().toISOString()
+      };
+      
+      console.log('Identifying with subscription group:', planName, groupProperties);
+      
+      // 2. Use direct PostHog instance if available (most reliable method)
+      if (posthog) {
+        // Method 1: Use group method
+        posthog.group('subscription', planName, groupProperties);
+        
+        // Method 2: Send explicit $groupidentify event (essential for UI visibility)
+        posthog.capture('$groupidentify', {
+          $group_type: 'subscription',
+          $group_key: planName,
+          $group_set: groupProperties
+        });
+        
+        // Method 3: Also associate event with the group
+        posthog.capture('subscription_associated', {
+          plan_name: planName,
+          plan_id: planId,
+          $groups: {
+            subscription: planName
+          }
+        });
+        
+        console.log(`PostHog Direct: User associated with subscription group: ${planName}`);
+      }
+      
+      // 3. Use safe utility methods as backup approach
+      safeGroupIdentify('subscription', planName, groupProperties);
+      
+      // 4. Send explicit event with group context
+      safeCaptureWithGroup('subscription_group_set', 'subscription', planName, {
+        plan_id: planId,
+        plan_price: extractPriceValue(planPrice),
+        set_method: 'enhanced_direct',
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('Error identifying subscription group:', error);
+    }
+  };
+
   const handleSaveChanges = async () => {
     if (!isLoggedIn) {
       toast({
@@ -101,6 +157,10 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
       // Find the selected plan to get its details
       const selectedPlan = plans.find(plan => plan.id === currentPlanId);
       
+      if (!selectedPlan) {
+        throw new Error('Selected plan not found');
+      }
+      
       // Update user metadata with the selected plan
       const { error } = await supabase.auth.updateUser({
         data: { 
@@ -115,39 +175,24 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
       updateSelectedPlan(currentPlanId);
       
       // Track plan change in PostHog
-      if (selectedPlan) {
-        // Capture regular event for plan change
-        safeCapture('plan_changed', {
-          plan_id: currentPlanId,
-          plan_type: selectedPlan.name,
-          plan_cost: extractPriceValue(selectedPlan.price),
-          previous_plan_id: initialPlanId,
-          last_plan_change: new Date().toISOString()
-        });
-        
-        // Identify user with new subscription group - explicitly ensuring name property
-        safeGroupIdentify('subscription', selectedPlan.name, {
-          name: selectedPlan.name, // Explicitly include name property for UI visibility
-          plan_id: selectedPlan.id,
-          plan_cost: extractPriceValue(selectedPlan.price),
-          features_count: selectedPlan.features.length,
-          last_updated: new Date().toISOString()
-        });
-        
-        // Also capture an event with group context to reinforce the association
-        safeCaptureWithGroup('subscription_updated', 'subscription', selectedPlan.name, {
-          plan_id: currentPlanId,
-          plan_cost: extractPriceValue(selectedPlan.price),
-          previous_plan_id: initialPlanId,
-          update_timestamp: new Date().toISOString()
-        });
-        
-        console.log(`PostHog: User associated with subscription group: ${selectedPlan.name}`);
-      }
+      safeCapture('plan_changed', {
+        plan_id: currentPlanId,
+        plan_type: selectedPlan.name,
+        plan_cost: extractPriceValue(selectedPlan.price),
+        previous_plan_id: initialPlanId,
+        last_plan_change: new Date().toISOString()
+      });
+      
+      // Call enhanced subscription group identification
+      identifyUserWithSubscriptionGroup(
+        selectedPlan.name,
+        selectedPlan.id, 
+        selectedPlan.price
+      );
       
       toast({
         title: 'Changes saved',
-        description: `Your subscription plan has been updated to ${plans.find(plan => plan.id === currentPlanId)?.name}`,
+        description: `Your subscription plan has been updated to ${selectedPlan.name}`,
       });
     } catch (error: any) {
       console.error("Error saving plan:", error);

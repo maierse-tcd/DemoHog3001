@@ -12,6 +12,7 @@ import { supabase } from '../../integrations/supabase/client';
 import { useToast } from '../../hooks/use-toast';
 import { Checkbox } from '../ui/checkbox';
 import { safeGroupIdentify, safeCapture, safeCaptureWithGroup } from '../../utils/posthogUtils';
+import { usePostHog } from 'posthog-js/react';
 
 // Define the schema for the form
 const formSchema = z.object({
@@ -30,6 +31,7 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelec
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const posthog = usePostHog();
 
   // Initialize react-hook-form
   const form = useForm<z.infer<typeof formSchema>>({
@@ -59,6 +61,60 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelec
     } catch (error) {
       console.error("Error fetching plan price:", error);
       return 0;
+    }
+  };
+
+  // Enhanced function to identify user with subscription group
+  const identifyUserWithSubscriptionGroup = (planName: string, planId: string, planCost: number) => {
+    try {
+      // 1. Prepare group properties - name is MANDATORY for PostHog UI visibility
+      const groupProperties = {
+        name: planName, // REQUIRED for UI visibility
+        plan_id: planId,
+        plan_cost: planCost,
+        features_count: 0,
+        last_updated: new Date().toISOString()
+      };
+      
+      console.log('Identifying new user with subscription group:', planName, groupProperties);
+      
+      // 2. Use direct PostHog instance if available (most reliable method)
+      if (posthog) {
+        // Step 1: Use group method to directly associate
+        posthog.group('subscription', planName, groupProperties);
+        
+        // Step 2: Send explicit $groupidentify event (critical for UI visibility)
+        posthog.capture('$groupidentify', {
+          $group_type: 'subscription',
+          $group_key: planName,
+          $group_set: groupProperties
+        });
+        
+        // Step 3: Also capture an event with the group context
+        posthog.capture('signup_subscription_selected', {
+          plan_name: planName,
+          plan_id: planId,
+          $groups: {
+            subscription: planName
+          }
+        });
+        
+        console.log(`PostHog Direct: New user associated with subscription group: ${planName}`);
+      }
+      
+      // 3. Use safe utility methods as backup
+      safeGroupIdentify('subscription', planName, groupProperties);
+      
+      // 4. Send explicit event with group context
+      safeCaptureWithGroup('subscription_group_set_signup', 'subscription', planName, {
+        plan_id: planId,
+        plan_cost: planCost,
+        set_method: 'enhanced_signup',
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('Error identifying subscription group at signup:', error);
     }
   };
 
@@ -127,23 +183,8 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelec
         subscription_plan: selectedPlanId
       });
       
-      // Create PostHog group for subscription tier - explicitly ensuring name property
-      safeGroupIdentify('subscription', planName, {
-        name: planName, // Explicitly set name for UI visibility
-        plan_id: selectedPlanId,
-        plan_cost: planCost,
-        features_count: 0, 
-        last_updated: signupDate
-      });
-      
-      // Also capture an event with group context to reinforce the association
-      safeCaptureWithGroup('subscription_selected', 'subscription', planName, {
-        plan_id: selectedPlanId,
-        plan_cost: planCost,
-        selection_timestamp: signupDate
-      });
-      
-      console.log(`PostHog: User associated with subscription group: ${planName}`);
+      // Call enhanced subscription group identification 
+      identifyUserWithSubscriptionGroup(planName, selectedPlanId, planCost);
       
       // Track signup event with plan details
       safeCapture('user_signup', {

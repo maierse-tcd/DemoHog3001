@@ -21,7 +21,7 @@ export {
 // Alias for backward compatibility with existing components
 export const useFeatureFlag = useFeatureFlagEnabled;
 
-// Hook for group operations
+// Enhanced hook for group operations
 export const usePostHogGroups = () => {
   const posthog = usePostHog();
   
@@ -29,20 +29,32 @@ export const usePostHogGroups = () => {
     if (!posthog) return;
     
     try {
-      // Ensure the name property is always present
+      // Ensure the name property is always present - CRITICAL for UI visibility
       const groupProps = {
-        name: groupKey,
+        name: groupKey, // This is mandatory for the group to appear in the UI
         ...(properties || {})
       };
       
-      // Method 1: Use the direct group method
+      console.log(`Identifying PostHog group: ${groupType}:${groupKey}`, groupProps);
+      
+      // Step 1: Use the direct group method
       posthog.group(groupType, groupKey, groupProps);
       
-      // Method 2: Send an explicit group identify event (critical for UI visibility)
+      // Step 2: Send an explicit group identify event (critical for UI visibility)
       posthog.capture('$groupidentify', {
         $group_type: groupType,
         $group_key: groupKey,
         $group_set: groupProps
+      });
+      
+      // Step 3: Capture an event with group context to reinforce the association
+      posthog.capture('group_association_reinforced', {
+        group_type: groupType,
+        group_key: groupKey,
+        timestamp: new Date().toISOString(),
+        $groups: {
+          [groupType]: groupKey
+        }
       });
       
       console.log(`PostHog: Group identified: ${groupType}:${groupKey}`);
