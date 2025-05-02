@@ -11,7 +11,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { supabase } from '../../integrations/supabase/client';
 import { useToast } from '../../hooks/use-toast';
 import { Checkbox } from '../ui/checkbox';
-import { safeGroupIdentify, safeCapture } from '../../utils/posthogUtils';
+import { safeGroupIdentify, safeCapture, safeCaptureWithGroup } from '../../utils/posthogUtils';
 
 // Define the schema for the form
 const formSchema = z.object({
@@ -122,19 +122,28 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelec
       // Create PostHog group for user type
       const userType = values.isKidsAccount ? 'Kid' : 'Adult';
       safeGroupIdentify('user_type', userType, {
-        name: userType,
+        name: userType, // Explicitly set name for UI visibility
         date_joined: signupDate,
         subscription_plan: selectedPlanId
       });
       
-      // Create PostHog group for subscription tier
+      // Create PostHog group for subscription tier - explicitly ensuring name property
       safeGroupIdentify('subscription', planName, {
-        name: planName,
+        name: planName, // Explicitly set name for UI visibility
         plan_id: selectedPlanId,
         plan_cost: planCost,
         features_count: 0, 
         last_updated: signupDate
       });
+      
+      // Also capture an event with group context to reinforce the association
+      safeCaptureWithGroup('subscription_selected', 'subscription', planName, {
+        plan_id: selectedPlanId,
+        plan_cost: planCost,
+        selection_timestamp: signupDate
+      });
+      
+      console.log(`PostHog: User associated with subscription group: ${planName}`);
       
       // Track signup event with plan details
       safeCapture('user_signup', {

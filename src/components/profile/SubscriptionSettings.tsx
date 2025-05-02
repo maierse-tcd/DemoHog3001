@@ -5,14 +5,14 @@ import { Plan, SubscriptionPlan } from '../SubscriptionPlan';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuthContext } from '../../hooks/auth/useAuthContext';
 import { Skeleton } from '../ui/skeleton';
-import { safeCapture, safeGroupIdentify } from '../../utils/posthogUtils';
+import { safeCapture, safeGroupIdentify, safeCaptureWithGroup } from '../../utils/posthogUtils';
 
 interface SubscriptionSettingsProps {
   selectedPlanId: string;
   updateSelectedPlan: (planId: string) => void;
 }
 
-export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({ 
+export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
   selectedPlanId: initialPlanId, 
   updateSelectedPlan 
 }) => {
@@ -116,6 +116,7 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
       
       // Track plan change in PostHog
       if (selectedPlan) {
+        // Capture regular event for plan change
         safeCapture('plan_changed', {
           plan_id: currentPlanId,
           plan_type: selectedPlan.name,
@@ -124,13 +125,24 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
           last_plan_change: new Date().toISOString()
         });
         
-        // Update group attributes with new plan info
+        // Identify user with new subscription group - explicitly ensuring name property
         safeGroupIdentify('subscription', selectedPlan.name, {
+          name: selectedPlan.name, // Explicitly include name property for UI visibility
           plan_id: selectedPlan.id,
           plan_cost: extractPriceValue(selectedPlan.price),
           features_count: selectedPlan.features.length,
           last_updated: new Date().toISOString()
         });
+        
+        // Also capture an event with group context to reinforce the association
+        safeCaptureWithGroup('subscription_updated', 'subscription', selectedPlan.name, {
+          plan_id: currentPlanId,
+          plan_cost: extractPriceValue(selectedPlan.price),
+          previous_plan_id: initialPlanId,
+          update_timestamp: new Date().toISOString()
+        });
+        
+        console.log(`PostHog: User associated with subscription group: ${selectedPlan.name}`);
       }
       
       toast({
