@@ -33,7 +33,7 @@ export const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
       particleCount: 100,
       spread: 70,
       origin: { y: 0.6 },
-      colors: ['#9b87f5', '#7E69AB', '#FFDEE2', '#F1F0FB']
+      colors: ['#ea384c', '#ef7a85', '#FFDEE2', '#F1F0FB']
     });
   };
   
@@ -41,8 +41,8 @@ export const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
     <div 
       className={`border rounded-lg p-5 transition-all relative overflow-hidden ${
         isSelected 
-          ? 'border-[#9b87f5] bg-[#1A1F2C]/50 shadow-lg' 
-          : 'border-[#8E9196]/20 hover:border-[#9b87f5]/40'
+          ? 'border-[#ea384c] bg-[#1A1F2C]/50 shadow-lg' 
+          : 'border-[#8E9196]/20 hover:border-[#ea384c]/40'
       }`}
     >
       {plan.imageUrl && (
@@ -57,7 +57,7 @@ export const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
       
       {plan.recommended && (
         <div className="absolute top-0 right-0">
-          <div className="bg-[#9b87f5] text-white px-4 py-1 text-xs font-medium transform translate-x-5 translate-y-2 rotate-45">
+          <div className="bg-[#ea384c] text-white px-4 py-1 text-xs font-medium transform translate-x-5 translate-y-2 rotate-45">
             HOG CHOICE
           </div>
         </div>
@@ -71,7 +71,7 @@ export const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
       <ul className="mb-6 space-y-2">
         {plan.features.map((feature, index) => (
           <li key={index} className="text-sm flex items-start">
-            <span className="text-[#9b87f5] mr-2">✓</span>
+            <span className="text-[#ea384c] mr-2">✓</span>
             <span>{feature}</span>
           </li>
         ))}
@@ -81,8 +81,8 @@ export const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
         onClick={handleSelect}
         className={`w-full py-2 px-4 rounded font-medium transition-colors ${
           isSelected 
-            ? 'bg-[#9b87f5] text-white' 
-            : 'bg-[#1A1F2C] text-white hover:bg-[#9b87f5]'
+            ? 'bg-[#ea384c] text-white' 
+            : 'bg-[#1A1F2C] text-white hover:bg-[#ea384c]'
         }`}
       >
         {isSelected ? 'Selected' : 'Choose Plan'}

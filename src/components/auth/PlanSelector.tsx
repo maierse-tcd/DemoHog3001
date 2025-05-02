@@ -4,6 +4,7 @@ import { SubscriptionPlan, Plan } from '../SubscriptionPlan';
 import { supabase } from '../../integrations/supabase/client';
 import { Skeleton } from '../ui/skeleton';
 import { useSearchParams } from 'react-router-dom';
+import { safeCapture } from '../../utils/posthogUtils';
 
 interface PlanSelectorProps {
   plans?: Plan[];
@@ -24,7 +25,14 @@ export const PlanSelector: React.FC<PlanSelectorProps> = ({
   useEffect(() => {
     const planFromUrl = searchParams.get('plan');
     if (planFromUrl && !selectedPlanId) {
+      console.log(`Pre-selecting plan from URL: ${planFromUrl}`);
       onPlanSelect(planFromUrl);
+      
+      // Track plan pre-selection from URL
+      safeCapture('plan_preselected_from_url', {
+        plan_id: planFromUrl,
+        source: 'url_parameter'
+      });
     }
   }, [searchParams, onPlanSelect, selectedPlanId]);
 
@@ -73,6 +81,27 @@ export const PlanSelector: React.FC<PlanSelectorProps> = ({
     fetchPlans();
   }, [providedPlans]);
 
+  // Extract numeric price value for analytics
+  const extractPriceValue = (priceString: string): number => {
+    const numericValue = priceString.replace(/[^\d.]/g, '');
+    return parseFloat(numericValue) || 0;
+  };
+
+  const handlePlanSelect = (planId: string) => {
+    onPlanSelect(planId);
+    
+    // Find selected plan for analytics
+    const selectedPlan = plans.find(plan => plan.id === planId);
+    if (selectedPlan) {
+      safeCapture('plan_selected_in_signup', {
+        plan_id: planId,
+        plan_type: selectedPlan.name,
+        plan_cost: extractPriceValue(selectedPlan.price),
+        is_recommended: selectedPlan.recommended || false
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div>
@@ -97,7 +126,7 @@ export const PlanSelector: React.FC<PlanSelectorProps> = ({
             key={plan.id}
             plan={plan}
             selectedPlanId={selectedPlanId}
-            onSelect={onPlanSelect}
+            onSelect={handlePlanSelect}
           />
         ))}
       </div>

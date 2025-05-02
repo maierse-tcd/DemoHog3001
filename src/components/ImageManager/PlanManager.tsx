@@ -13,6 +13,7 @@ import { Check, Edit, Plus, Trash } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Switch } from '../ui/switch';
 import { Plan } from '../SubscriptionPlan';
+import { safeCapture } from '../../utils/posthogUtils';
 
 export interface SubscriptionPlanData {
   id: string;
@@ -158,6 +159,7 @@ export const PlanManager: React.FC = () => {
       
       // Check if this is an update or create
       const existingPlan = plans.find(p => p.id === currentPlan.id);
+      const isNewPlan = !existingPlan;
       
       if (existingPlan) {
         // Update existing plan
@@ -175,6 +177,16 @@ export const PlanManager: React.FC = () => {
       const { error } = await operation;
       
       if (error) throw error;
+      
+      // Track event in PostHog
+      safeCapture(isNewPlan ? 'plan_created' : 'plan_updated', {
+        plan_id: currentPlan.id,
+        plan_name: currentPlan.name,
+        plan_price: currentPlan.price,
+        features_count: currentPlan.features.length,
+        has_image: !!currentPlan.image_url,
+        is_recommended: currentPlan.recommended
+      });
       
       toast({
         title: existingPlan ? 'Plan Updated' : 'Plan Created',
@@ -204,12 +216,24 @@ export const PlanManager: React.FC = () => {
     }
     
     try {
+      // Find plan before deleting for analytics
+      const planToDelete = plans.find(p => p.id === planId);
+      
       const { error } = await supabase
         .from('subscription_plans')
         .delete()
         .eq('id', planId);
         
       if (error) throw error;
+      
+      // Track plan deletion in PostHog
+      if (planToDelete) {
+        safeCapture('plan_deleted', {
+          plan_id: planId,
+          plan_name: planToDelete.name,
+          plan_price: planToDelete.price
+        });
+      }
       
       toast({
         title: 'Plan Deleted',
@@ -256,7 +280,7 @@ export const PlanManager: React.FC = () => {
             <CardTitle>Subscription Plans</CardTitle>
             <CardDescription>Manage your subscription plans</CardDescription>
           </div>
-          <Button onClick={handleCreate} size="sm">
+          <Button onClick={handleCreate} size="sm" className="bg-[#ea384c] hover:bg-red-700">
             <Plus size={16} className="mr-2" />
             Add Plan
           </Button>
@@ -278,7 +302,7 @@ export const PlanManager: React.FC = () => {
                   <div className="flex justify-between items-center">
                     <CardTitle>{plan.name}</CardTitle>
                     {plan.recommended && (
-                      <span className="bg-netflix-red text-white text-xs px-2 py-1 rounded-full">
+                      <span className="bg-[#ea384c] text-white text-xs px-2 py-1 rounded-full">
                         Popular
                       </span>
                     )}
@@ -456,7 +480,7 @@ export const PlanManager: React.FC = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
-            <Button onClick={handleSave}>Save Plan</Button>
+            <Button onClick={handleSave} className="bg-[#ea384c] hover:bg-red-700">Save Plan</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

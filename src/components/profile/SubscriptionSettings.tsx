@@ -5,6 +5,7 @@ import { Plan, SubscriptionPlan } from '../SubscriptionPlan';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuthContext } from '../../hooks/auth/useAuthContext';
 import { Skeleton } from '../ui/skeleton';
+import { safeCapture, safeGroupIdentify } from '../../utils/posthogUtils';
 
 interface SubscriptionSettingsProps {
   selectedPlanId: string;
@@ -26,6 +27,12 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
     setCurrentPlanId(initialPlanId);
   }, [initialPlanId]);
   
+  // Extract numeric price value for analytics
+  const extractPriceValue = (priceString: string): number => {
+    const numericValue = priceString.replace(/[^\d.]/g, '');
+    return parseFloat(numericValue) || 0;
+  };
+
   // Load plans from Supabase
   useEffect(() => {
     const fetchPlans = async () => {
@@ -91,10 +98,14 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
     setIsLoading(true);
     
     try {
+      // Find the selected plan to get its details
+      const selectedPlan = plans.find(plan => plan.id === currentPlanId);
+      
       // Update user metadata with the selected plan
       const { error } = await supabase.auth.updateUser({
         data: { 
-          selectedPlanId: currentPlanId
+          selectedPlanId: currentPlanId,
+          lastPlanChange: new Date().toISOString()
         }
       });
       
@@ -102,6 +113,25 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
       
       // Update the context only after successful DB update
       updateSelectedPlan(currentPlanId);
+      
+      // Track plan change in PostHog
+      if (selectedPlan) {
+        safeCapture('plan_changed', {
+          plan_id: currentPlanId,
+          plan_type: selectedPlan.name,
+          plan_cost: extractPriceValue(selectedPlan.price),
+          previous_plan_id: initialPlanId,
+          last_plan_change: new Date().toISOString()
+        });
+        
+        // Update group attributes with new plan info
+        safeGroupIdentify('subscription', selectedPlan.name, {
+          plan_id: selectedPlan.id,
+          plan_cost: extractPriceValue(selectedPlan.price),
+          features_count: selectedPlan.features.length,
+          last_updated: new Date().toISOString()
+        });
+      }
       
       toast({
         title: 'Changes saved',

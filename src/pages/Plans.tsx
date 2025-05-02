@@ -8,6 +8,7 @@ import { SubscriptionPlansGrid } from '../components/plans/SubscriptionPlansGrid
 import { supabase } from '../integrations/supabase/client';
 import { useToast } from '../hooks/use-toast';
 import { Plan } from '../components/SubscriptionPlan';
+import { safeCapture } from '../utils/posthogUtils';
 
 const Plans = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -57,13 +58,37 @@ const Plans = () => {
     fetchPlans();
   }, [toast]);
 
+  // Extract numeric price value for analytics
+  const extractPriceValue = (priceString: string): number => {
+    const numericValue = priceString.replace(/[^\d.]/g, '');
+    return parseFloat(numericValue) || 0;
+  };
+
   // Handle plan selection - redirect to signup with selected plan
   const handleSelectPlan = (planId: string) => {
-    navigate(`/signup?plan=${planId}`);
+    // Find the selected plan to get its details
+    const selectedPlan = plans.find(plan => plan.id === planId);
+    
+    if (selectedPlan) {
+      // Track plan selection in PostHog with detailed properties
+      safeCapture('plan_selected', {
+        plan_id: planId,
+        plan_type: selectedPlan.name,
+        plan_cost: extractPriceValue(selectedPlan.price),
+        plan_features_count: selectedPlan.features.length,
+        is_recommended: selectedPlan.recommended || false,
+        selection_timestamp: new Date().toISOString()
+      });
+      
+      // Navigate to signup with plan ID
+      navigate(`/signup?plan=${planId}`);
+    } else {
+      navigate(`/signup?plan=${planId}`);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#1A1F2C]">
+    <div className="min-h-screen bg-[#141414]">
       <Navbar />
       <main className="pt-24 pb-12 px-4 md:px-8">
         <div className="max-w-7xl mx-auto">
