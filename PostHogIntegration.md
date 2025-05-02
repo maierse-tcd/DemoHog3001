@@ -1,4 +1,5 @@
 
+
 # PostHog Integration Guide for HogFlix
 
 This document provides a technical overview of how PostHog is integrated into the HogFlix demo environment, including feature flags, group analytics, and event tracking.
@@ -84,9 +85,16 @@ Group analytics are implemented throughout the application for categorizing user
 
 ### Group Types
 
-The primary group type used is `user_type` with possible values:
-- `Kid` - For child users
-- `Adult` - For adult users
+The application uses two primary group types:
+
+1. **user_type**: Categorizes users by their account type
+   - `Kid` - For child users
+   - `Adult` - For adult users
+
+2. **subscription**: Categorizes users by their subscription plan
+   - `Basic` - Basic plan members
+   - `Premium` - Premium plan members
+   - `Ultimate` - Ultimate plan members
 
 ### Implementation Locations
 
@@ -94,7 +102,11 @@ The primary group type used is `user_type` with possible values:
    - Set in `PostHogProvider.tsx` during authentication
    - Updates when profile type changes
 
-2. **Group Identification**:
+2. **Subscription Groups**:
+   - Set during signup in `SignUpForm.tsx`
+   - Updated when changing plans in `SubscriptionSettings.tsx`
+
+3. **Group Identification**:
    ```tsx
    import { safeGroupIdentify } from '../utils/posthogUtils';
    
@@ -103,9 +115,18 @@ The primary group type used is `user_type` with possible values:
      name: 'Adult', // Name property is required for UI visibility
      joined_date: new Date().toISOString()
    });
+   
+   // Identify a user's subscription plan
+   safeGroupIdentify('subscription', 'Premium', {
+     name: 'Premium',
+     plan_id: 'premium123',
+     plan_cost: 9.99,
+     features_count: 5,
+     last_updated: new Date().toISOString()
+   });
    ```
 
-3. **Group Events**:
+4. **Group Events**:
    ```tsx
    import { safeCaptureWithGroup } from '../utils/posthogUtils';
    
@@ -113,6 +134,12 @@ The primary group type used is `user_type` with possible values:
    safeCaptureWithGroup('content_viewed', 'user_type', 'Adult', {
      content_id: '123',
      content_type: 'movie'
+   });
+   
+   // Capture an event associated with a subscription plan
+   safeCaptureWithGroup('premium_feature_used', 'subscription', 'Premium', {
+     feature_name: 'ad_free',
+     usage_time: new Date().toISOString()
    });
    ```
 
@@ -179,6 +206,19 @@ safeCapture('plan_selected', {
   is_recommended: selectedPlan.recommended || false,
   selection_timestamp: new Date().toISOString(),
   last_plan_change: new Date().toISOString()
+});
+```
+
+### Subscription Groups
+
+When users change their subscription plan in `src/components/profile/SubscriptionSettings.tsx`:
+
+```tsx
+safeGroupIdentify('subscription', selectedPlan.name, {
+  plan_id: selectedPlan.id,
+  plan_cost: extractPriceValue(selectedPlan.price),
+  features_count: selectedPlan.features.length,
+  last_updated: new Date().toISOString()
 });
 ```
 
@@ -261,3 +301,4 @@ To add new analytics:
 ---
 
 For further questions about this implementation, please contact the HogFlix development team.
+

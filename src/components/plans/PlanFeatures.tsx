@@ -31,7 +31,7 @@ export const PlanFeatures: React.FC = () => {
         else IconComponent = Gift;
         
         return (
-          <div key={index} className="flex items-start p-6 bg-[#1A1F2C] rounded-lg shadow-lg hover:shadow-xl transition-all">
+          <div key={index} className="flex items-start p-6 bg-netflix-darkgray rounded-lg shadow-lg hover:shadow-xl transition-all">
             <div className="mr-4 bg-[#ea384c] rounded-full p-2">
               <IconComponent className="h-6 w-6 text-white" />
             </div>
