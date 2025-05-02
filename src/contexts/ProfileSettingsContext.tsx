@@ -1,8 +1,8 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { useAuth } from '../hooks/useAuth';
 import { toast } from '../hooks/use-toast';
+import { safeGroupIdentify } from '../utils/posthogUtils';
 
 export interface ProfileSettings {
   name: string;
@@ -85,12 +85,19 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
                 ...prev,
                 name: profileData.name || prev.name,
                 email: profileData.email || prev.email,
+                isKidsAccount: !!profileData.is_kids, // Add this line to load is_kids flag
                 // Keep local settings that aren't stored in the database
                 language: prev.language,
-                isKidsAccount: prev.isKidsAccount,
                 playbackSettings: prev.playbackSettings,
                 notifications: prev.notifications,
               }));
+              
+              // Update PostHog group for user type (Kid or Adult)
+              const userType = profileData.is_kids ? 'Kid' : 'Adult';
+              safeGroupIdentify('user_type', userType, {
+                name: userType,
+                date_joined: profileData.created_at || new Date().toISOString()
+              });
             }
           }
         } else {
@@ -121,6 +128,11 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
         // For site-wide access password, update it in the database
         if (newSettings.accessPassword !== undefined) {
           updateSiteAccessPassword(newSettings.accessPassword);
+        }
+        
+        // If kids account status is being updated, update it in the database and PostHog
+        if (newSettings.isKidsAccount !== undefined && newSettings.isKidsAccount !== prev.isKidsAccount) {
+          updateIsKidsAccount(newSettings.isKidsAccount);
         }
         
         // Update other user-specific settings
@@ -157,6 +169,42 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
     }
   };
 
+  // Update is_kids flag in the database and PostHog group
+  const updateIsKidsAccount = async (isKids: boolean) => {
+    try {
+      if (!isLoggedIn || !user?.id) return;
+      
+      // Update the is_kids flag in the user's profile
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_kids: isKids })
+        .eq('id', user.id);
+      
+      if (error) {
+        console.error('Error updating is_kids status:', error);
+        toast({
+          title: "Error saving kids account status",
+          description: "There was a problem updating your account type.",
+          variant: "destructive"
+        });
+      } else {
+        // Update PostHog group for user type
+        const userType = isKids ? 'Kid' : 'Adult';
+        safeGroupIdentify('user_type', userType, {
+          name: userType,
+          update_time: new Date().toISOString()
+        });
+        
+        toast({
+          title: "Account type updated",
+          description: `Your account is now set as a ${isKids ? 'kids' : 'adult'} account.`,
+        });
+      }
+    } catch (error) {
+      console.error('Error in updateIsKidsAccount:', error);
+    }
+  };
+
   // Update user profile in the database
   const updateUserProfile = async (updatedSettings: ProfileSettings) => {
     try {
@@ -168,7 +216,7 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
         .update({
           name: updatedSettings.name,
           email: updatedSettings.email,
-          // Note: We don't update access_password here as it's handled separately
+          // Note: We don't update is_kids here as it's handled separately
         })
         .eq('id', user.id);
       

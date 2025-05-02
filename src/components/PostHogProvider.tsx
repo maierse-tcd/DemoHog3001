@@ -2,7 +2,7 @@
 import { PostHogProvider as OriginalPostHogProvider } from 'posthog-js/react';
 import { useEffect, useRef } from 'react';
 import { supabase } from '../integrations/supabase/client';
-import { safeIdentify, safeReset, safeCapture } from '../utils/posthogUtils';
+import { safeIdentify, safeReset, safeCapture, safeGroupIdentify } from '../utils/posthogUtils';
 import posthog from 'posthog-js';
 
 // PostHog configuration
@@ -33,8 +33,8 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     }
   };
 
-  // Function to identify the current user in PostHog
-  const identifyUser = (email: string, userId: string, metadata?: any) => {
+  // Function to identify the current user in PostHog and set group
+  const identifyUser = async (email: string, userId: string, metadata?: any) => {
     if (!posthogLoadedRef.current) {
       console.warn('PostHog not loaded yet, will identify when loaded');
       return;
@@ -57,8 +57,42 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
         $set_once: { first_seen: new Date().toISOString() }
       });
       
-      // Capture login event
-      posthog.capture('user_identified');
+      // Set user subscription plan as a property
+      const selectedPlan = metadata?.selectedPlanId || 'unknown';
+      
+      // Fetch user profile to get is_kids status
+      try {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('is_kids')
+          .eq('id', userId)
+          .maybeSingle();
+        
+        // Get date joined from metadata or profile created_at
+        const dateJoined = profileData?.created_at || new Date().toISOString();
+        
+        // Determine user type (Kid or Adult)
+        const isKid = profileData?.is_kids === true;
+        const userType = isKid ? 'Kid' : 'Adult';
+        
+        // Identify group
+        safeGroupIdentify('user_type', userType, {
+          name: userType,
+          date_joined: dateJoined,
+          subscription_plan: selectedPlan
+        });
+        
+        // Capture login event
+        posthog.capture('user_identified', {
+          $groups: {
+            user_type: userType
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching profile for group identification:', error);
+        // Fallback to just user identification
+        posthog.capture('user_identified');
+      }
       
       console.log(`PostHog: User identified with email: ${email}`);
       

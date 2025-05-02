@@ -4,6 +4,7 @@ import { toast } from '../../hooks/use-toast';
 import { ProfileSettings } from '../../contexts/ProfileSettingsContext';
 import { supabase } from '../../integrations/supabase/client';
 import { safeIdentify } from '../../utils/posthogUtils';
+import { Checkbox } from '../ui/checkbox';
 
 interface ProfileInfoProps {
   settings: ProfileSettings;
@@ -21,6 +22,7 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
       const formData = new FormData(e.target as HTMLFormElement);
       const name = formData.get('name') as string;
       const email = formData.get('email') as string;
+      const isKidsAccount = formData.get('isKidsAccount') === 'on';
 
       // Get current user to get the ID
       const { data: { user } } = await supabase.auth.getUser();
@@ -35,6 +37,7 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
         .update({
           name,
           email,
+          is_kids: isKidsAccount,
           updated_at: new Date().toISOString()
         })
         .eq('email', email);
@@ -49,7 +52,8 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
       // Update the context
       updateSettings({
         name,
-        email
+        email,
+        isKidsAccount
       });
 
       toast({
@@ -100,6 +104,23 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
           />
           <p className="text-sm text-netflix-gray mt-1">To change your password, use the "Reset Password" option</p>
         </div>
+        
+        {/* Kids Account Toggle */}
+        <div className="flex items-center space-x-3">
+          <Checkbox 
+            id="isKidsAccount" 
+            name="isKidsAccount" 
+            defaultChecked={settings.isKidsAccount}
+            className="h-5 w-5 border border-netflix-gray" 
+          />
+          <label htmlFor="isKidsAccount" className="text-sm font-medium text-netflix-gray">
+            This is a kids account
+          </label>
+        </div>
+        <p className="text-sm text-netflix-gray mt-1">
+          Kids accounts have restricted content and simplified controls
+        </p>
+        
         <div className="flex space-x-4">
           <button 
             type="submit" 

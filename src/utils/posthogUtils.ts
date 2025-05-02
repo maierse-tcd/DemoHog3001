@@ -85,6 +85,37 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
 };
 
 /**
+ * Safely associate a user with a group in PostHog
+ * @param groupType The type of group (e.g., 'company', 'team', 'user_type')
+ * @param groupKey The unique identifier for the group
+ * @param properties Optional properties to set for the group
+ */
+export const safeGroupIdentify = (groupType: string, groupKey: string, properties?: Record<string, any>): void => {
+  if (isPostHogAvailable()) {
+    try {
+      // Associate user with group and set properties
+      posthog.group(groupType, groupKey, properties);
+      console.log(`PostHog: User associated with ${groupType} group: ${groupKey}`);
+    } catch (err) {
+      console.error(`PostHog group identify error for ${groupType}:`, err);
+    }
+  } else if (typeof window !== 'undefined' && window.posthog) {
+    try {
+      if (isPostHogInstance(window.posthog) && typeof window.posthog.group === 'function') {
+        window.posthog.group(groupType, groupKey, properties);
+        console.log(`PostHog: User associated with ${groupType} group: ${groupKey}`);
+      } else {
+        console.warn("PostHog group function not available");
+      }
+    } catch (err) {
+      console.error(`PostHog group identify error for ${groupType}:`, err);
+    }
+  } else {
+    console.warn("PostHog not available, group identification skipped");
+  }
+};
+
+/**
  * Get the current anonymous ID from PostHog
  */
 export const safeGetDistinctId = (): string | null => {

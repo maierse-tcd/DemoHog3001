@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, SubmitHandler } from 'react-hook-form';
@@ -9,12 +10,15 @@ import { Button } from '../ui/button';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { supabase } from '../../integrations/supabase/client';
 import { useToast } from '../../hooks/use-toast';
+import { Checkbox } from '../ui/checkbox';
+import { safeGroupIdentify } from '../../utils/posthogUtils';
 
 // Define the schema for the form
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
   confirmPassword: z.string(),
+  isKidsAccount: z.boolean().optional()
 });
 
 interface SignUpFormProps {
@@ -34,6 +38,7 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelec
       email: "",
       password: "",
       confirmPassword: "",
+      isKidsAccount: false
     },
   });
 
@@ -68,6 +73,8 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelec
         options: {
           data: {
             selectedPlanId: selectedPlanId,
+            isKidsAccount: values.isKidsAccount || false,
+            signupDate: new Date().toISOString()
           },
         },
       });
@@ -75,6 +82,14 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelec
       if (error) {
         throw new Error(error.message);
       }
+
+      // Create PostHog group for user type
+      const userType = values.isKidsAccount ? 'Kid' : 'Adult';
+      safeGroupIdentify('user_type', userType, {
+        name: userType,
+        date_joined: new Date().toISOString(),
+        subscription_plan: selectedPlanId
+      });
 
       // If sign up is successful, navigate to profile page
       navigate('/profile');
@@ -136,6 +151,32 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelec
             </FormItem>
           )}
         />
+        
+        {/* Kids Account Checkbox */}
+        <FormField
+          control={form.control}
+          name="isKidsAccount"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md p-4 border border-netflix-gray/30">
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  id="isKidsAccount"
+                />
+              </FormControl>
+              <div className="space-y-1 leading-none">
+                <FormLabel htmlFor="isKidsAccount">
+                  This is a kids account
+                </FormLabel>
+                <FormDescription>
+                  Kids accounts have restricted content and simplified controls.
+                </FormDescription>
+              </div>
+            </FormItem>
+          )}
+        />
+        
         <Button type="submit" disabled={isLoading} className="w-full">
           {isLoading ? "Signing Up..." : "Sign Up"}
         </Button>
