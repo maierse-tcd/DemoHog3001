@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { useToast } from '../../hooks/use-toast';
 import { safeCapture } from '../../utils/posthogUtils';
@@ -28,11 +27,11 @@ export const ImageUploader = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, userEmail } = useAuth();
   
   // Check if user has PostHog email
-  const userEmail = user?.email || '';
-  const isPostHogUser = userEmail?.endsWith('@posthog.com') || false;
+  const userEmailValue = userEmail || '';
+  const isPostHogUser = userEmailValue?.endsWith('@posthog.com') || false;
   const canUpload = isPostHogUser || !!user?.id;
   
   // Determine aspect ratio CSS classes
