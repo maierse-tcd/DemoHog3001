@@ -32,7 +32,7 @@ export const isPostHogAvailable = (): boolean => {
  */
 export const getPostHogInstance = (): PostHog | null => {
   if (isPostHogAvailable()) {
-    return posthog;
+    return posthog as unknown as PostHog;
   } else if (typeof window !== 'undefined' && window.posthog && isPostHogInstance(window.posthog)) {
     return window.posthog;
   }

@@ -6,6 +6,9 @@
 import { getPostHogInstance, isPostHogAvailable } from './core';
 import posthog from 'posthog-js';
 
+// Local storage keys for caching
+const LAST_GROUPS_STORAGE_KEY = 'posthog_last_groups';
+
 /**
  * Safely identify a user in PostHog
  * Uses email as the primary identifier for consistent cross-platform identification
@@ -97,6 +100,3 @@ export const clearStoredGroups = (): void => {
     console.error("Error clearing stored groups:", err);
   }
 };
-
-// Local storage keys for caching
-const LAST_GROUPS_STORAGE_KEY = 'posthog_last_groups';

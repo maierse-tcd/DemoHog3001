@@ -5,7 +5,7 @@ import { HeroSection } from '../components/HeroSection';
 import { ContentRow } from '../components/ContentRow';
 import { Footer } from '../components/Footer';
 import { mockCategories, mockContent, getFeaturedContent, Content } from '../data/mockData';
-import { safeGetDistinctId } from '../utils/posthogUtils';
+import { safeGetDistinctId } from '../utils/posthog';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
 import { useAuth } from '../hooks/useAuth';
 import { loadContentFromSupabase, initializeContentDatabase } from '../utils/contentUtils';

@@ -20,7 +20,7 @@ export interface PostHog {
   identify: (distinctId: string, properties?: Record<string, any>) => void;
   alias: (alias: string, distinctId?: string) => void;
   reset: () => void;
-  reloadFeatureFlags: () => Promise<void>;
+  reloadFeatureFlags: () => Promise<void> | void; // Updated to accept both Promise<void> and void
   isFeatureEnabled: (flag: string) => boolean;
   getFeatureFlag: (flag: string) => boolean | string | undefined;
   featureFlags: PostHogFeatureFlags;
