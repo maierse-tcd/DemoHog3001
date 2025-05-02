@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, SubmitHandler } from 'react-hook-form';
@@ -11,8 +10,9 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { supabase } from '../../integrations/supabase/client';
 import { useToast } from '../../hooks/use-toast';
 import { Checkbox } from '../ui/checkbox';
-import { safeGroupIdentify, safeCapture, safeCaptureWithGroup } from '../../utils/posthogUtils';
+import { safeCapture, safeGroupIdentify, safeCaptureWithGroup } from '../../utils/posthogUtils';
 import { usePostHog } from 'posthog-js/react';
+import { usePostHogSubscription } from '../../hooks/usePostHogFeatures';
 
 // Define the schema for the form
 const formSchema = z.object({
@@ -32,6 +32,7 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelec
   const navigate = useNavigate();
   const { toast } = useToast();
   const posthog = usePostHog();
+  const { updateSubscription } = usePostHogSubscription();
 
   // Initialize react-hook-form
   const form = useForm<z.infer<typeof formSchema>>({
@@ -61,60 +62,6 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelec
     } catch (error) {
       console.error("Error fetching plan price:", error);
       return 0;
-    }
-  };
-
-  // Enhanced function to identify user with subscription group
-  const identifyUserWithSubscriptionGroup = (planName: string, planId: string, planCost: number) => {
-    try {
-      // 1. Prepare group properties - name is MANDATORY for PostHog UI visibility
-      const groupProperties = {
-        name: planName, // REQUIRED for UI visibility
-        plan_id: planId,
-        plan_cost: planCost,
-        features_count: 0,
-        last_updated: new Date().toISOString()
-      };
-      
-      console.log('Identifying new user with subscription group:', planName, groupProperties);
-      
-      // 2. Use direct PostHog instance if available (most reliable method)
-      if (posthog) {
-        // Step 1: Use group method to directly associate
-        posthog.group('subscription', planName, groupProperties);
-        
-        // Step 2: Send explicit $groupidentify event (critical for UI visibility)
-        posthog.capture('$groupidentify', {
-          $group_type: 'subscription',
-          $group_key: planName,
-          $group_set: groupProperties
-        });
-        
-        // Step 3: Also capture an event with the group context
-        posthog.capture('signup_subscription_selected', {
-          plan_name: planName,
-          plan_id: planId,
-          $groups: {
-            subscription: planName
-          }
-        });
-        
-        console.log(`PostHog Direct: New user associated with subscription group: ${planName}`);
-      }
-      
-      // 3. Use safe utility methods as backup
-      safeGroupIdentify('subscription', planName, groupProperties);
-      
-      // 4. Send explicit event with group context
-      safeCaptureWithGroup('subscription_group_set_signup', 'subscription', planName, {
-        plan_id: planId,
-        plan_cost: planCost,
-        set_method: 'enhanced_signup',
-        timestamp: new Date().toISOString()
-      });
-      
-    } catch (error) {
-      console.error('Error identifying subscription group at signup:', error);
     }
   };
 
@@ -183,8 +130,47 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelec
         subscription_plan: selectedPlanId
       });
       
-      // Call enhanced subscription group identification 
-      identifyUserWithSubscriptionGroup(planName, selectedPlanId, planCost);
+      // Use the centralized subscription update method
+      console.log(`Registering new user with subscription: ${planName}`);
+      updateSubscription(planName, selectedPlanId, planCost.toString());
+      
+      // Direct PostHog reinforcement for maximum reliability
+      if (posthog) {
+        console.log(`Direct PostHog subscription identification for new user: ${planName}`);
+        
+        // Prepare group properties with name
+        const groupProps = {
+          name: planName, // REQUIRED for UI visibility
+          plan_id: selectedPlanId,
+          plan_cost: planCost,
+          signup_date: signupDate
+        };
+        
+        try {
+          // Step 1: Direct group method
+          posthog.group('subscription', planName, groupProps);
+          
+          // Step 2: Explicit $groupidentify event
+          posthog.capture('$groupidentify', {
+            $group_type: 'subscription',
+            $group_key: planName,
+            $group_set: groupProps
+          });
+          
+          // Step 3: Reinforcement event with group context
+          posthog.capture('signup_with_subscription', {
+            plan_name: planName,
+            plan_id: selectedPlanId,
+            $groups: {
+              subscription: planName
+            }
+          });
+          
+          console.log(`PostHog: New user associated with subscription: ${planName}`);
+        } catch (err) {
+          console.error("PostHog direct subscription identify error at signup:", err);
+        }
+      }
       
       // Track signup event with plan details
       safeCapture('user_signup', {
@@ -193,6 +179,14 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelec
         plan_cost: planCost,
         is_kids_account: values.isKidsAccount || false,
         signup_date: signupDate
+      });
+      
+      // Additional reinforcement with safe utilities
+      safeCaptureWithGroup('signup_with_subscription_event', 'subscription', planName, {
+        plan_id: selectedPlanId,
+        plan_cost: planCost,
+        set_method: 'signup_process',
+        timestamp: signupDate
       });
 
       // If sign up is successful, navigate to profile page
@@ -213,6 +207,7 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelec
     }
   };
 
+  
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

@@ -6,7 +6,7 @@ import {
   useFeatureFlagVariantKey,
   useActiveFeatureFlags
 } from 'posthog-js/react';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { safeGroupIdentify, safeCaptureWithGroup } from '../utils/posthogUtils';
 
 // Re-export all official hooks for consistency in our app
@@ -121,4 +121,73 @@ export const usePostHogIdentity = () => {
   }, [posthog]);
   
   return { identifyUser };
+};
+
+// New hook specifically for subscription management
+export const usePostHogSubscription = () => {
+  const posthog = usePostHog();
+  
+  // Access the centrally managed subscription update method
+  const updateSubscription = useCallback((planName: string, planId: string, planPrice: string) => {
+    if (!posthog) return;
+    
+    try {
+      // Check if window.__posthogMethods exists (our central methods)
+      if (typeof window !== 'undefined' && (window as any).__posthogMethods?.updateSubscription) {
+        // Use the centralized method
+        (window as any).__posthogMethods.updateSubscription(planId);
+        return;
+      }
+      
+      // Fallback to direct implementation
+      console.log(`Directly identifying subscription group: ${planName}`);
+      
+      // Extract numeric price value
+      const extractPriceValue = (priceString: string): number => {
+        const numericValue = priceString.replace(/[^\d.]/g, '');
+        return parseFloat(numericValue) || 0;
+      };
+      
+      // CRITICAL: Ensure name property is included
+      const groupProps = {
+        name: planName, // REQUIRED for UI visibility
+        plan_id: planId,
+        plan_cost: extractPriceValue(planPrice),
+        last_updated: new Date().toISOString()
+      };
+      
+      // Direct PostHog calls
+      posthog.group('subscription', planName, groupProps);
+      
+      posthog.capture('$groupidentify', {
+        $group_type: 'subscription',
+        $group_key: planName,
+        $group_set: groupProps
+      });
+      
+      // Explicit event with group association
+      posthog.capture('subscription_updated', {
+        plan_name: planName,
+        plan_id: planId,
+        $groups: {
+          subscription: planName
+        }
+      });
+      
+      // Backup through utilities
+      safeGroupIdentify('subscription', planName, groupProps);
+      safeCaptureWithGroup('subscription_fallback_set', 'subscription', planName, {
+        plan_id: planId,
+        plan_price: extractPriceValue(planPrice),
+        method: 'direct_hook',
+        timestamp: new Date().toISOString()
+      });
+      
+      console.log(`PostHog: Subscription identified: ${planName}`);
+    } catch (err) {
+      console.error("PostHog subscription group error:", err);
+    }
+  }, [posthog]);
+
+  return { updateSubscription };
 };
