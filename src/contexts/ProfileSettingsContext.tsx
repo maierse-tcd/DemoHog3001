@@ -92,6 +92,10 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
               
               console.log(`Loading profile from database, isKidsAccount: ${!!profileData.is_kids}`);
               
+              // Get userMetadata from auth if available
+              const { data: userData } = await supabase.auth.getUser();
+              const userMetadata = userData?.user?.user_metadata || {};
+              
               // Update settings with data from database
               setSettings(prev => ({
                 ...prev,
@@ -103,7 +107,7 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
                 playbackSettings: prev.playbackSettings,
                 notifications: prev.notifications,
                 // Use the selectedPlanId from metadata if it exists, or keep the existing one
-                selectedPlanId: user.user_metadata?.selectedPlanId || prev.selectedPlanId,
+                selectedPlanId: userMetadata?.selectedPlanId || prev.selectedPlanId,
               }));
               
               // Check if we need to update the PostHog group
