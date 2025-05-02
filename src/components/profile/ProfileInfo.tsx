@@ -34,6 +34,28 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
     setIsKidsAccount(checked);
   };
 
+  // Update PostHog group when the kids account status changes
+  useEffect(() => {
+    // Skip on initial render to prevent unnecessary API calls
+    if (initialRenderRef.current) {
+      return;
+    }
+    
+    // Only update PostHog if the value differs from settings
+    if (isKidsAccount !== settings.isKidsAccount) {
+      console.log(`Updating PostHog with new kids account status: ${isKidsAccount}`);
+      
+      // Call the PostHog methods if available
+      if (window && (window as any).__posthogMethods) {
+        try {
+          (window as any).__posthogMethods.updateUserType(isKidsAccount);
+        } catch (err) {
+          console.error('Error updating PostHog user type:', err);
+        }
+      }
+    }
+  }, [isKidsAccount, settings.isKidsAccount]);
+
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -80,6 +102,8 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
         console.log(`Kids account changed from ${settings.isKidsAccount} to ${isKidsAccount}`);
         changes.is_kids = isKidsAccount;
         hasChanges = true;
+      } else {
+        console.log('Kids account status unchanged, skipping update');
       }
 
       // Skip database update if nothing changed
@@ -120,6 +144,15 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
       if (isKidsAccount !== settings.isKidsAccount) {
         settingsChanges.isKidsAccount = isKidsAccount;
         hasSettingsChanges = true;
+        
+        // Also update PostHog if we have direct access to the method
+        if (window && (window as any).__posthogMethods) {
+          try {
+            (window as any).__posthogMethods.updateUserType(isKidsAccount);
+          } catch (err) {
+            console.error('Error updating PostHog user type:', err);
+          }
+        }
       }
 
       // Only update settings if something actually changed

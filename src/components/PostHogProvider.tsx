@@ -2,7 +2,14 @@
 import { PostHogProvider as OriginalPostHogProvider } from 'posthog-js/react';
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../integrations/supabase/client';
-import { safeIdentify, safeReset, safeCapture, safeGroupIdentify, getLastIdentifiedGroup } from '../utils/posthogUtils';
+import { 
+  safeIdentify, 
+  safeReset, 
+  safeCapture, 
+  safeGroupIdentify, 
+  getLastIdentifiedGroup,
+  safeCaptureWithGroup
+} from '../utils/posthogUtils';
 import posthog from 'posthog-js';
 
 // PostHog configuration
@@ -74,7 +81,7 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
       try {
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('is_kids, created_at')
+          .select('is_kids, created_at, subscription_plan')
           .eq('id', userId)
           .maybeSingle();
         
@@ -84,6 +91,9 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
         // Determine user type (Kid or Adult)
         const isKid = profileData?.is_kids === true;
         const userType = isKid ? 'Kid' : 'Adult';
+        
+        // Get subscription plan
+        const subscriptionPlan = profileData?.subscription_plan || 'basic';
         
         // Wait for any pending debounce
         if (debounceTimerRef.current) {
@@ -98,8 +108,15 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
           
           // Identify group with debounce
           identifyUserGroup(userType, {
-            name: userType,
-            date_joined: dateJoined
+            name: userType, // REQUIRED: Name property is essential for group to appear in UI
+            date_joined: dateJoined,
+            subscription_plan: subscriptionPlan
+          });
+          
+          // Also capture an event with the group context to help establish the connection
+          safeCaptureWithGroup('user_group_identified', 'user_type', userType, {
+            method: 'initial_identification',
+            user_email: email
           });
           
           console.log(`PostHog: User identified as ${userType}`);
@@ -124,8 +141,15 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     }
     
     debounceTimerRef.current = setTimeout(() => {
-      safeGroupIdentify('user_type', userType, properties);
+      // Make sure the name property is always present (required for groups to be visible in PostHog UI)
+      const groupProperties = {
+        name: userType,
+        ...(properties || {})
+      };
+      
+      safeGroupIdentify('user_type', userType, groupProperties);
       debounceTimerRef.current = null;
+      
       // After successful group identification, update state
       setCurrentUserType(userType);
     }, 300);
@@ -214,9 +238,37 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     }
     
     console.log(`Updating user type to: ${newUserType}`);
-    identifyUserGroup(newUserType, {
-      name: newUserType,
-      update_time: new Date().toISOString()
+    
+    // Get user info from Supabase to include in group properties
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) {
+        const userId = data.user.id;
+        
+        // Fetch subscription info
+        supabase
+          .from('profiles')
+          .select('subscription_plan, created_at')
+          .eq('id', userId)
+          .maybeSingle()
+          .then(({ data: profileData }) => {
+            const subscriptionPlan = profileData?.subscription_plan || 'basic';
+            const dateJoined = profileData?.created_at || new Date().toISOString();
+            
+            // Identify the group with relevant properties
+            identifyUserGroup(newUserType, {
+              name: newUserType, // REQUIRED for UI visibility
+              update_time: new Date().toISOString(),
+              subscription_plan: subscriptionPlan,
+              date_joined: dateJoined
+            });
+            
+            // Also capture an event with the new group
+            safeCaptureWithGroup('user_type_changed', 'user_type', newUserType, {
+              previous_type: currentUserType,
+              changed_at: new Date().toISOString()
+            });
+          });
+      }
     });
   };
 

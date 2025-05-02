@@ -154,23 +154,30 @@ export const safeGroupIdentify = (groupType: string, groupKey: string, propertie
     return;
   }
 
+  // Ensure essential properties are included
+  const groupProperties = {
+    name: groupKey, // Essential for group to appear in UI
+    ...(properties || {})
+  };
+
   if (isPostHogAvailable()) {
     try {
-      // Associate user with group and set properties
-      posthog.group(groupType, groupKey, properties);
+      // Step 1: Use group method to associate user with group
+      posthog.group(groupType, groupKey, groupProperties);
       console.log(`PostHog: User associated with ${groupType} group: ${groupKey}`);
+      
+      // Step 2: Send explicit $groupidentify event with $group_set
+      // This is REQUIRED for groups to appear in the PostHog UI
+      posthog.capture('$groupidentify', {
+        $group_type: groupType,
+        $group_key: groupKey,
+        $group_set: groupProperties
+      });
+      
+      console.log(`PostHog: Group identify event sent for ${groupType}:${groupKey}`);
       
       // Update the stored group
       setLastGroup(groupType, groupKey);
-      
-      // Also capture an event with the group information for better tracking
-      posthog.capture('group_identified', {
-        $groups: {
-          [groupType]: groupKey
-        },
-        group_type: groupType,
-        group_key: groupKey
-      });
       
     } catch (err) {
       console.error(`PostHog group identify error for ${groupType}:`, err);
@@ -178,20 +185,21 @@ export const safeGroupIdentify = (groupType: string, groupKey: string, propertie
   } else if (typeof window !== 'undefined' && window.posthog) {
     try {
       if (isPostHogInstance(window.posthog) && typeof window.posthog.group === 'function') {
-        window.posthog.group(groupType, groupKey, properties);
+        // Step 1: Use group method to associate user with group
+        window.posthog.group(groupType, groupKey, groupProperties);
         console.log(`PostHog: User associated with ${groupType} group: ${groupKey}`);
+        
+        // Step 2: Send explicit $groupidentify event with $group_set
+        window.posthog.capture('$groupidentify', {
+          $group_type: groupType,
+          $group_key: groupKey,
+          $group_set: groupProperties
+        });
+        
+        console.log(`PostHog: Group identify event sent for ${groupType}:${groupKey}`);
         
         // Update the stored group
         setLastGroup(groupType, groupKey);
-        
-        // Also capture an event with the group information for better tracking
-        window.posthog.capture('group_identified', {
-          $groups: {
-            [groupType]: groupKey
-          },
-          group_type: groupType,
-          group_key: groupKey
-        });
       } else {
         console.warn("PostHog group function not available");
       }
@@ -201,6 +209,35 @@ export const safeGroupIdentify = (groupType: string, groupKey: string, propertie
   } else {
     console.warn("PostHog not available, group identification skipped");
   }
+};
+
+/**
+ * Helper function to capture events with group context
+ * @param eventName The name of the event to capture
+ * @param groupType The type of group to associate this event with
+ * @param groupKey The identifier for the specific group
+ * @param properties Additional event properties
+ */
+export const safeCaptureWithGroup = (
+  eventName: string, 
+  groupType: string, 
+  groupKey: string, 
+  properties?: Record<string, any>
+): void => {
+  if (!eventName || !groupType || !groupKey) {
+    console.warn("Missing required parameters for captureWithGroup");
+    return;
+  }
+
+  // Merge properties with group information
+  const eventProperties = {
+    ...properties,
+    $groups: {
+      [groupType]: groupKey
+    }
+  };
+
+  safeCapture(eventName, eventProperties);
 };
 
 /**

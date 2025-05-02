@@ -6,6 +6,8 @@ import {
   useFeatureFlagVariantKey,
   useActiveFeatureFlags
 } from 'posthog-js/react';
+import { useCallback } from 'react';
+import { safeGroupIdentify, safeCaptureWithGroup } from '../utils/posthogUtils';
 
 // Re-export all official hooks for consistency in our app
 export { 
@@ -19,11 +21,44 @@ export {
 // Alias for backward compatibility with existing components
 export const useFeatureFlag = useFeatureFlagEnabled;
 
+// Hook for group operations
+export const usePostHogGroups = () => {
+  const posthog = usePostHog();
+  
+  const identifyGroup = useCallback((groupType: string, groupKey: string, properties?: Record<string, any>) => {
+    if (!posthog) return;
+    
+    try {
+      // Ensure the name property is always present
+      const groupProps = {
+        name: groupKey,
+        ...(properties || {})
+      };
+      
+      // Method 1: Use the direct group method
+      posthog.group(groupType, groupKey, groupProps);
+      
+      // Method 2: Send an explicit group identify event (critical for UI visibility)
+      posthog.capture('$groupidentify', {
+        $group_type: groupType,
+        $group_key: groupKey,
+        $group_set: groupProps
+      });
+      
+      console.log(`PostHog: Group identified: ${groupType}:${groupKey}`);
+    } catch (err) {
+      console.error("PostHog group identify error:", err);
+    }
+  }, [posthog]);
+  
+  return { identifyGroup };
+};
+
 // Helper function for capturing events
 export const usePostHogEvent = () => {
   const posthog = usePostHog();
   
-  return (eventName: string, properties?: Record<string, any>) => {
+  const captureEvent = useCallback((eventName: string, properties?: Record<string, any>) => {
     if (!posthog) return;
     
     try {
@@ -31,14 +66,39 @@ export const usePostHogEvent = () => {
     } catch (err) {
       console.error("PostHog event error:", err);
     }
-  };
+  }, [posthog]);
+  
+  const captureGroupEvent = useCallback((
+    eventName: string, 
+    groupType: string, 
+    groupKey: string, 
+    properties?: Record<string, any>
+  ) => {
+    if (!posthog) return;
+    
+    try {
+      // Include the group property in the event
+      const eventProps = {
+        ...properties,
+        $groups: {
+          [groupType]: groupKey
+        }
+      };
+      
+      posthog.capture(eventName, eventProps);
+    } catch (err) {
+      console.error("PostHog group event error:", err);
+    }
+  }, [posthog]);
+  
+  return { captureEvent, captureGroupEvent };
 };
 
 // Helper for identity management
 export const usePostHogIdentity = () => {
   const posthog = usePostHog();
   
-  const identifyUser = (userId: string, properties?: Record<string, any>) => {
+  const identifyUser = useCallback((userId: string, properties?: Record<string, any>) => {
     if (!posthog) return;
     
     try {
@@ -46,7 +106,7 @@ export const usePostHogIdentity = () => {
     } catch (err) {
       console.error("PostHog identify error:", err);
     }
-  };
+  }, [posthog]);
   
   return { identifyUser };
 };
