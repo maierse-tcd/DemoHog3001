@@ -3,7 +3,7 @@
  * PostHog identity management utilities
  */
 
-import { getPostHogInstance, isPostHogAvailable } from './core';
+import { getPostHogInstance, isPostHogAvailable, isPostHogInstance } from './core';
 import posthog from 'posthog-js';
 
 // Local storage keys for caching
@@ -33,7 +33,8 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
   } else if (typeof window !== 'undefined' && window.posthog) {
     try {
       const instance = window.posthog;
-      if (instance && typeof instance.get_distinct_id === 'function' && typeof instance.identify === 'function') {
+      // Add proper type guard to check if posthog is an instance with required methods
+      if (isPostHogInstance(instance)) {
         // Get current distinct ID to check if we need to identify
         const currentId = instance.get_distinct_id?.();
         
@@ -45,6 +46,8 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
         // Identify the user
         instance.identify(distinctId, properties);
         console.log(`PostHog: User identified with ID: ${distinctId}`);
+      } else {
+        console.warn("PostHog instance does not have required methods");
       }
     } catch (err) {
       console.error("PostHog identify error:", err);

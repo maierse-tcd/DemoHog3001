@@ -3,7 +3,7 @@
  * PostHog group management utilities
  */
 
-import { getPostHogInstance, isPostHogAvailable } from './core';
+import { getPostHogInstance, isPostHogAvailable, isPostHogInstance } from './core';
 import posthog from 'posthog-js';
 
 // Local storage key for caching groups
@@ -88,7 +88,8 @@ export const safeGroupIdentify = (groupType: string, groupKey: string, propertie
   } else if (typeof window !== 'undefined' && window.posthog) {
     try {
       const instance = window.posthog;
-      if (instance && typeof instance.group === 'function' && typeof instance.capture === 'function') {
+      // Check if posthog is an instance with the required methods
+      if (isPostHogInstance(instance)) {
         // Step 1: Use group method to associate user with group
         instance.group(groupType, groupKey, groupProperties);
         console.log(`PostHog: User associated with ${groupType} group: ${groupKey}`);
