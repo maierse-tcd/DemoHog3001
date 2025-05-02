@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { useAuth } from '../hooks/useAuth';
@@ -52,6 +53,9 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
   // Safely destructure auth to avoid errors if auth is not fully initialized
   const isLoggedIn = auth?.isLoggedIn || false;
   const user = auth?.user || null;
+  
+  // Track last known kids account status to prevent unnecessary updates
+  const lastKidsAccountStatus = React.useRef<boolean | null>(null);
 
   // Load settings from database when authenticated or localStorage as fallback
   useEffect(() => {
@@ -131,12 +135,21 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
         }
         
         // If kids account status is being updated, update it in the database and PostHog
-        if (newSettings.isKidsAccount !== undefined && newSettings.isKidsAccount !== prev.isKidsAccount) {
+        if (newSettings.isKidsAccount !== undefined && 
+            newSettings.isKidsAccount !== prev.isKidsAccount &&
+            newSettings.isKidsAccount !== lastKidsAccountStatus.current) {
+          
+          // Update the ref to prevent multiple redundant calls
+          lastKidsAccountStatus.current = newSettings.isKidsAccount;
+          
+          // Update in database and PostHog
           updateIsKidsAccount(newSettings.isKidsAccount);
         }
         
         // Update other user-specific settings
-        updateUserProfile(updated);
+        if (newSettings.name !== undefined || newSettings.email !== undefined) {
+          updateUserProfile(updated);
+        }
       }
       
       return updated;
@@ -193,6 +206,9 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
           description: "There was a problem updating your account type.",
           variant: "destructive"
         });
+        
+        // Reset the ref on error
+        lastKidsAccountStatus.current = null;
       } else {
         // Update PostHog group for user type
         const userType = isKids ? 'Kid' : 'Adult';
@@ -208,6 +224,8 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
       }
     } catch (error) {
       console.error('Error in updateIsKidsAccount:', error);
+      // Reset the ref on error
+      lastKidsAccountStatus.current = null;
     }
   };
 

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { toast } from '../../hooks/use-toast';
 import { ProfileSettings } from '../../contexts/ProfileSettingsContext';
 import { supabase } from '../../integrations/supabase/client';
@@ -15,6 +15,16 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
   const [isLoading, setIsLoading] = useState(false);
   // Track the current state of isKidsAccount to prevent unnecessary updates
   const [currentIsKidsAccount, setCurrentIsKidsAccount] = useState<boolean>(settings.isKidsAccount);
+  // Use a ref to track if this is the initial render
+  const initialRenderRef = useRef(true);
+
+  // Sync local state with settings when they change
+  useEffect(() => {
+    if (!initialRenderRef.current) {
+      setCurrentIsKidsAccount(settings.isKidsAccount);
+    }
+    initialRenderRef.current = false;
+  }, [settings.isKidsAccount]);
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,38 +43,68 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
         throw new Error("No authenticated user found");
       }
 
-      // Update user's profile in the database - using ID for the query
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          name,
-          email,
-          is_kids: isKidsAccount,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
+      // Create an object to track what's changing
+      const changes: Record<string, any> = {};
+      let hasChanges = false;
 
-      if (error) throw error;
+      if (name !== settings.name) {
+        changes.name = name;
+        hasChanges = true;
+      }
+
+      if (email !== settings.email) {
+        changes.email = email;
+        hasChanges = true;
+      }
+
+      // Only include is_kids in the update if it actually changed
+      if (isKidsAccount !== currentIsKidsAccount) {
+        changes.is_kids = isKidsAccount;
+        hasChanges = true;
+      }
+
+      // Skip database update if nothing changed
+      if (hasChanges) {
+        // Set updated_at only when we're actually updating
+        changes.updated_at = new Date().toISOString();
+
+        // Update user's profile in the database using the changes object
+        const { error } = await supabase
+          .from('profiles')
+          .update(changes)
+          .eq('id', user.id);
+
+        if (error) throw error;
+      }
 
       // Store the name in PostHog for better identification
-      if (email) {
+      if (email && email !== settings.email) {
         safeIdentify(email, { name });
       }
 
       // Update the context only if something changed
-      if (name !== settings.name || 
-          email !== settings.email || 
-          isKidsAccount !== settings.isKidsAccount) {
-        
-        // Update local state to track current value
-        setCurrentIsKidsAccount(isKidsAccount);
-        
-        // Update the context
-        updateSettings({
-          name,
-          email,
-          isKidsAccount
-        });
+      const settingsChanges: Partial<ProfileSettings> = {};
+      let hasSettingsChanges = false;
+
+      if (name !== settings.name) {
+        settingsChanges.name = name;
+        hasSettingsChanges = true;
+      }
+      
+      if (email !== settings.email) {
+        settingsChanges.email = email;
+        hasSettingsChanges = true;
+      }
+      
+      if (isKidsAccount !== currentIsKidsAccount) {
+        settingsChanges.isKidsAccount = isKidsAccount;
+        setCurrentIsKidsAccount(isKidsAccount); // Update local state
+        hasSettingsChanges = true;
+      }
+
+      // Only update settings if something actually changed
+      if (hasSettingsChanges) {
+        updateSettings(settingsChanges);
       }
 
       toast({
