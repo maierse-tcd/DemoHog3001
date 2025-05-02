@@ -64,7 +64,7 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
       try {
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('is_kids')
+          .select('is_kids, created_at')
           .eq('id', userId)
           .maybeSingle();
         
