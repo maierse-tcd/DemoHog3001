@@ -1,8 +1,8 @@
 
 import { PostHogProvider as OriginalPostHogProvider } from 'posthog-js/react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../integrations/supabase/client';
-import { safeIdentify, safeReset, safeCapture, safeGroupIdentify } from '../utils/posthogUtils';
+import { safeIdentify, safeReset, safeCapture, safeGroupIdentify, getLastIdentifiedGroup } from '../utils/posthogUtils';
 import posthog from 'posthog-js';
 
 // PostHog configuration
@@ -18,7 +18,9 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
   // Track the current user to avoid duplicate identifications
   const currentUserRef = useRef<string | null>(null);
   // Track the current user type to avoid duplicate group identifications
-  const currentUserTypeRef = useRef<string | null>(null);
+  const [currentUserType, setCurrentUserType] = useState<string | null>(null);
+  // Debounce timer for group identification
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Configure PostHog with best practices
   const options = {
@@ -29,11 +31,20 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     loaded: (posthog: any) => {
       console.log('PostHog loaded successfully');
       posthogLoadedRef.current = true;
-      
+
       // Check if user is already logged in when PostHog loads
       checkAndIdentifyCurrentUser();
     }
   };
+
+  // Initialize currentUserType from localStorage on mount
+  useEffect(() => {
+    const savedUserType = getLastIdentifiedGroup('user_type');
+    if (savedUserType) {
+      console.log(`Restored user type from storage: ${savedUserType}`);
+      setCurrentUserType(savedUserType);
+    }
+  }, []);
 
   // Function to identify the current user in PostHog and set group
   const identifyUser = async (email: string, userId: string, metadata?: any) => {
@@ -59,9 +70,6 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
         $set_once: { first_seen: new Date().toISOString() }
       });
       
-      // Set user subscription plan as a property
-      const selectedPlan = metadata?.selectedPlanId || 'unknown';
-      
       // Fetch user profile to get is_kids status
       try {
         const { data: profileData } = await supabase
@@ -77,31 +85,27 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
         const isKid = profileData?.is_kids === true;
         const userType = isKid ? 'Kid' : 'Adult';
         
+        // Wait for any pending debounce
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+          debounceTimerRef.current = null;
+        }
+
         // Only identify group if the user type has changed
-        if (userType !== currentUserTypeRef.current) {
-          // Identify group
-          safeGroupIdentify('user_type', userType, {
+        if (userType !== currentUserType) {
+          // Update UI state first
+          setCurrentUserType(userType);
+          
+          // Identify group with debounce
+          identifyUserGroup(userType, {
             name: userType,
-            date_joined: dateJoined,
-            subscription_plan: selectedPlan
-          });
-          
-          // Update current user type reference
-          currentUserTypeRef.current = userType;
-          
-          // Capture user_identified event with group
-          posthog.capture('user_identified', {
-            $groups: {
-              user_type: userType
-            }
+            date_joined: dateJoined
           });
           
           console.log(`PostHog: User identified as ${userType}`);
         }
       } catch (error) {
         console.error('Error fetching profile for group identification:', error);
-        // Fallback to just user identification
-        posthog.capture('user_identified');
       }
       
       console.log(`PostHog: User identified with email: ${email}`);
@@ -111,6 +115,20 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     } else {
       console.error('PostHog is not properly initialized for identification');
     }
+  };
+
+  // Debounced group identification with persistent caching
+  const identifyUserGroup = (userType: string, properties?: Record<string, any>) => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    debounceTimerRef.current = setTimeout(() => {
+      safeGroupIdentify('user_type', userType, properties);
+      debounceTimerRef.current = null;
+      // After successful group identification, update state
+      setCurrentUserType(userType);
+    }, 300);
   };
 
   // Check if user is already logged in and identify them
@@ -138,10 +156,11 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     console.log('Setting up PostHog auth listener');
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log(`Auth state changed: ${event}`, session?.user?.email);
+      console.log(`Auth event: ${event} ${session?.user?.email}`);
+      console.log(`Auth state changed: ${event} ${session?.user?.email}`);
       
       // Handle sign in event
-      if (event === 'SIGNED_IN' && session?.user) {
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
         const userEmail = session.user.email;
         
         if (!userEmail) {
@@ -173,14 +192,46 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
           
           // Update current user reference
           currentUserRef.current = null;
-          // Reset current user type reference
-          currentUserTypeRef.current = null;
+          // Reset current user type
+          setCurrentUserType(null);
         }
       }
     });
     
     return () => {
       subscription.unsubscribe();
+    };
+  }, []);
+
+  // Method to update the user group from outside components
+  const updateUserType = (isKid: boolean) => {
+    const newUserType = isKid ? 'Kid' : 'Adult';
+    
+    // Skip if already the same
+    if (newUserType === currentUserType) {
+      console.log(`User type unchanged (${newUserType}), skipping update`);
+      return;
+    }
+    
+    console.log(`Updating user type to: ${newUserType}`);
+    identifyUserGroup(newUserType, {
+      name: newUserType,
+      update_time: new Date().toISOString()
+    });
+  };
+
+  // Expose the updateUserType method through a ref that can be accessed by other components
+  const posthogMethodsRef = useRef({ updateUserType });
+
+  // Attach the method to the window for debugging
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).__posthogMethods = posthogMethodsRef.current;
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        delete (window as any).__posthogMethods;
+      }
     };
   }, []);
 

@@ -1,9 +1,8 @@
-
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { useAuth } from '../hooks/useAuth';
 import { toast } from '../hooks/use-toast';
-import { safeGroupIdentify } from '../utils/posthogUtils';
+import { safeGroupIdentify, getLastIdentifiedGroup } from '../utils/posthogUtils';
 
 export interface ProfileSettings {
   name: string;
@@ -54,8 +53,12 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
   const isLoggedIn = auth?.isLoggedIn || false;
   const user = auth?.user || null;
   
-  // Track last known kids account status to prevent unnecessary updates
-  const lastKidsAccountStatus = React.useRef<boolean | null>(null);
+  // Track last known database kids account status
+  const dbKidsAccountRef = useRef<boolean | null>(null);
+  // Track if an update is in progress
+  const updateInProgressRef = useRef(false);
+  // Debounce timer for group updates
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load settings from database when authenticated or localStorage as fallback
   useEffect(() => {
@@ -84,24 +87,34 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
               .maybeSingle();
 
             if (!profileError && profileData) {
+              // Save the database kids account status in the ref
+              dbKidsAccountRef.current = !!profileData.is_kids;
+              
+              console.log(`Loading profile from database, isKidsAccount: ${!!profileData.is_kids}`);
+              
               // Update settings with data from database
               setSettings(prev => ({
                 ...prev,
                 name: profileData.name || prev.name,
                 email: profileData.email || prev.email,
-                isKidsAccount: !!profileData.is_kids, // Add this line to load is_kids flag
+                isKidsAccount: !!profileData.is_kids,
                 // Keep local settings that aren't stored in the database
                 language: prev.language,
                 playbackSettings: prev.playbackSettings,
                 notifications: prev.notifications,
               }));
               
-              // Update PostHog group for user type (Kid or Adult)
-              const userType = profileData.is_kids ? 'Kid' : 'Adult';
-              safeGroupIdentify('user_type', userType, {
-                name: userType,
-                date_joined: profileData.created_at || new Date().toISOString()
-              });
+              // Check if we need to update the PostHog group
+              const currentGroup = getLastIdentifiedGroup('user_type');
+              const newUserType = profileData.is_kids ? 'Kid' : 'Adult';
+              
+              // Only update if different from current group
+              if (!currentGroup || (currentGroup !== newUserType)) {
+                safeGroupIdentify('user_type', newUserType, {
+                  name: newUserType,
+                  date_joined: profileData.created_at || new Date().toISOString()
+                });
+              }
             }
           }
         } else {
@@ -121,39 +134,50 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
 
   // Save settings to both database (if authenticated) and localStorage
   const updateSettings = async (newSettings: Partial<ProfileSettings>) => {
-    setSettings(prev => {
-      const updated = { ...prev, ...newSettings };
-      
-      // Always update localStorage for immediate access
-      localStorage.setItem('profileSettings', JSON.stringify(updated));
-      
-      // If authenticated, also update database
-      if (isLoggedIn && user?.id) {
-        // For site-wide access password, update it in the database
-        if (newSettings.accessPassword !== undefined) {
-          updateSiteAccessPassword(newSettings.accessPassword);
+    // Prevent concurrent updates
+    if (updateInProgressRef.current) {
+      console.log('Settings update already in progress, skipping');
+      return;
+    }
+    
+    updateInProgressRef.current = true;
+    
+    try {
+      setSettings(prev => {
+        const updated = { ...prev, ...newSettings };
+        
+        // Always update localStorage for immediate access
+        localStorage.setItem('profileSettings', JSON.stringify(updated));
+        
+        // If authenticated and user has ID, also update database
+        if (isLoggedIn && user?.id) {
+          // For site-wide access password, update it in the database
+          if (newSettings.accessPassword !== undefined) {
+            updateSiteAccessPassword(newSettings.accessPassword);
+          }
+          
+          // If kids account status is being updated, handle specially
+          if (newSettings.isKidsAccount !== undefined && 
+              newSettings.isKidsAccount !== prev.isKidsAccount) {
+            
+            // Update in database and PostHog
+            updateIsKidsAccount(newSettings.isKidsAccount);
+          }
+          
+          // Update other user-specific settings
+          if (newSettings.name !== undefined || newSettings.email !== undefined) {
+            updateUserProfile(updated);
+          }
         }
         
-        // If kids account status is being updated, update it in the database and PostHog
-        if (newSettings.isKidsAccount !== undefined && 
-            newSettings.isKidsAccount !== prev.isKidsAccount &&
-            newSettings.isKidsAccount !== lastKidsAccountStatus.current) {
-          
-          // Update the ref to prevent multiple redundant calls
-          lastKidsAccountStatus.current = newSettings.isKidsAccount;
-          
-          // Update in database and PostHog
-          updateIsKidsAccount(newSettings.isKidsAccount);
-        }
-        
-        // Update other user-specific settings
-        if (newSettings.name !== undefined || newSettings.email !== undefined) {
-          updateUserProfile(updated);
-        }
-      }
-      
-      return updated;
-    });
+        return updated;
+      });
+    } finally {
+      // Clear update flag after a short delay to prevent bouncing
+      setTimeout(() => {
+        updateInProgressRef.current = false;
+      }, 500);
+    }
   };
 
   // Update the site-wide access password in the database
@@ -187,45 +211,58 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
     try {
       if (!isLoggedIn || !user?.id) return;
     
-      // Skip update if the value is the same as current
-      if (isKids === settings.isKidsAccount) {
+      // Skip update if the value is the same as database state
+      if (isKids === dbKidsAccountRef.current) {
         console.log('Kids account status unchanged, skipping update');
         return;
       }
     
-      // Update the is_kids flag in the user's profile
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_kids: isKids })
-        .eq('id', user.id);
-      
-      if (error) {
-        console.error('Error updating is_kids status:', error);
-        toast({
-          title: "Error saving kids account status",
-          description: "There was a problem updating your account type.",
-          variant: "destructive"
-        });
-        
-        // Reset the ref on error
-        lastKidsAccountStatus.current = null;
-      } else {
-        // Update PostHog group for user type
-        const userType = isKids ? 'Kid' : 'Adult';
-        safeGroupIdentify('user_type', userType, {
-          name: userType,
-          update_time: new Date().toISOString()
-        });
-        
-        toast({
-          title: "Account type updated",
-          description: `Your account is now set as a ${isKids ? 'kids' : 'adult'} account.`,
-        });
+      // Debounce the update to prevent rapid changes
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
       }
+      
+      dbKidsAccountRef.current = isKids; // Update ref immediately
+      
+      debounceTimerRef.current = setTimeout(async () => {
+        // Update the is_kids flag in the user's profile
+        const { error } = await supabase
+          .from('profiles')
+          .update({ is_kids: isKids })
+          .eq('id', user.id);
+        
+        if (error) {
+          console.error('Error updating is_kids status:', error);
+          toast({
+            title: "Error saving kids account status",
+            description: "There was a problem updating your account type.",
+            variant: "destructive"
+          });
+          
+          // Reset the ref on error
+          dbKidsAccountRef.current = null;
+        } else {
+          // Update PostHog group for user type
+          const userType = isKids ? 'Kid' : 'Adult';
+          safeGroupIdentify('user_type', userType, {
+            name: userType,
+            update_time: new Date().toISOString()
+          });
+          
+          toast({
+            title: "Account type updated",
+            description: `Your account is now set as a ${isKids ? 'kids' : 'adult'} account.`,
+          });
+        }
+        
+        // Clear debounce timer reference
+        debounceTimerRef.current = null;
+      }, 300);
+      
     } catch (error) {
       console.error('Error in updateIsKidsAccount:', error);
       // Reset the ref on error
-      lastKidsAccountStatus.current = null;
+      dbKidsAccountRef.current = null;
     }
   };
 

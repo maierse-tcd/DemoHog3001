@@ -13,28 +13,46 @@ interface ProfileInfoProps {
 
 export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettings }) => {
   const [isLoading, setIsLoading] = useState(false);
-  // Track the current state of isKidsAccount to prevent unnecessary updates
-  const [currentIsKidsAccount, setCurrentIsKidsAccount] = useState<boolean>(settings.isKidsAccount);
+  const [isKidsAccount, setIsKidsAccount] = useState<boolean>(settings.isKidsAccount);
   // Use a ref to track if this is the initial render
   const initialRenderRef = useRef(true);
+  // Track if an update is already in progress
+  const updateInProgressRef = useRef(false);
 
-  // Sync local state with settings when they change
+  // Sync local state with settings when they change from context
   useEffect(() => {
-    if (!initialRenderRef.current) {
-      setCurrentIsKidsAccount(settings.isKidsAccount);
+    if (!initialRenderRef.current || settings.isKidsAccount !== isKidsAccount) {
+      console.log(`Syncing kids account state from settings: ${settings.isKidsAccount}`);
+      setIsKidsAccount(settings.isKidsAccount);
     }
     initialRenderRef.current = false;
   }, [settings.isKidsAccount]);
 
+  // Handle checkbox change directly
+  const handleKidsAccountChange = (checked: boolean) => {
+    console.log(`Kids account checkbox changed to: ${checked}`);
+    setIsKidsAccount(checked);
+  };
+
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Prevent concurrent updates
+    if (updateInProgressRef.current) {
+      console.log('Update already in progress, skipping');
+      return;
+    }
+    
+    updateInProgressRef.current = true;
     setIsLoading(true);
 
     try {
       const formData = new FormData(e.target as HTMLFormElement);
       const name = formData.get('name') as string;
       const email = formData.get('email') as string;
-      const isKidsAccount = formData.get('isKidsAccount') === 'on';
+
+      // Use React state instead of form data for checkbox
+      // This ensures we always have the correct state
 
       // Get current user to get the ID
       const { data: { user } } = await supabase.auth.getUser();
@@ -58,7 +76,8 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
       }
 
       // Only include is_kids in the update if it actually changed
-      if (isKidsAccount !== currentIsKidsAccount) {
+      if (isKidsAccount !== settings.isKidsAccount) {
+        console.log(`Kids account changed from ${settings.isKidsAccount} to ${isKidsAccount}`);
         changes.is_kids = isKidsAccount;
         hasChanges = true;
       }
@@ -67,6 +86,8 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
       if (hasChanges) {
         // Set updated_at only when we're actually updating
         changes.updated_at = new Date().toISOString();
+
+        console.log('Updating profile with changes:', changes);
 
         // Update user's profile in the database using the changes object
         const { error } = await supabase
@@ -96,14 +117,14 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
         hasSettingsChanges = true;
       }
       
-      if (isKidsAccount !== currentIsKidsAccount) {
+      if (isKidsAccount !== settings.isKidsAccount) {
         settingsChanges.isKidsAccount = isKidsAccount;
-        setCurrentIsKidsAccount(isKidsAccount); // Update local state
         hasSettingsChanges = true;
       }
 
       // Only update settings if something actually changed
       if (hasSettingsChanges) {
+        console.log('Updating settings context with changes:', settingsChanges);
         updateSettings(settingsChanges);
       }
 
@@ -120,6 +141,7 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
       console.error('Error updating profile:', error);
     } finally {
       setIsLoading(false);
+      updateInProgressRef.current = false;
     }
   };
 
@@ -156,12 +178,13 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
           <p className="text-sm text-netflix-gray mt-1">To change your password, use the "Reset Password" option</p>
         </div>
         
-        {/* Kids Account Toggle */}
+        {/* Kids Account Toggle - Now controlled by React state */}
         <div className="flex items-center space-x-3">
           <Checkbox 
             id="isKidsAccount" 
             name="isKidsAccount" 
-            defaultChecked={currentIsKidsAccount}
+            checked={isKidsAccount}
+            onCheckedChange={handleKidsAccountChange}
             className="h-5 w-5 border border-netflix-gray" 
           />
           <label htmlFor="isKidsAccount" className="text-sm font-medium text-netflix-gray">

@@ -1,3 +1,4 @@
+
 /**
  * PostHog utility functions for safer and more consistent usage
  */
@@ -7,6 +8,9 @@ import posthog from 'posthog-js';
 
 // Consistent host configuration
 export const POSTHOG_HOST = 'https://ph.hogflix.dev';
+
+// Local storage keys for caching
+const LAST_GROUPS_STORAGE_KEY = 'posthog_last_groups';
 
 /**
  * Type guard to check if an object is a PostHog instance
@@ -24,6 +28,51 @@ export const isPostHogInstance = (obj: any): obj is PostHog => {
 export const isPostHogAvailable = (): boolean => {
   return typeof posthog !== 'undefined' && 
          typeof posthog.capture === 'function';
+};
+
+/**
+ * Get the stored last identified groups
+ */
+const getLastGroups = (): Record<string, string> => {
+  try {
+    const stored = localStorage.getItem(LAST_GROUPS_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch (err) {
+    console.error("Error reading stored groups:", err);
+    return {};
+  }
+};
+
+/**
+ * Store the last identified group
+ */
+const setLastGroup = (groupType: string, groupKey: string): void => {
+  try {
+    const groups = getLastGroups();
+    groups[groupType] = groupKey;
+    localStorage.setItem(LAST_GROUPS_STORAGE_KEY, JSON.stringify(groups));
+  } catch (err) {
+    console.error("Error storing group:", err);
+  }
+};
+
+/**
+ * Get the last identified group of a specific type
+ */
+export const getLastIdentifiedGroup = (groupType: string): string | null => {
+  const groups = getLastGroups();
+  return groups[groupType] || null;
+};
+
+/**
+ * Clear the stored groups (e.g., on logout)
+ */
+export const clearStoredGroups = (): void => {
+  try {
+    localStorage.removeItem(LAST_GROUPS_STORAGE_KEY);
+  } catch (err) {
+    console.error("Error clearing stored groups:", err);
+  }
 };
 
 /**
@@ -56,7 +105,11 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
     try {
       // Get current distinct ID to check if we need to identify
       const currentId = posthog.get_distinct_id?.();
-      console.log(`Current PostHog distinct ID: ${currentId}, identifying as: ${distinctId}`);
+      
+      // Only log if different
+      if (currentId !== distinctId) {
+        console.log(`Current PostHog distinct ID: ${currentId}, identifying as: ${distinctId}`);
+      }
       
       // Identify the user
       posthog.identify(distinctId, properties);
@@ -69,7 +122,11 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
       if (isPostHogInstance(window.posthog)) {
         // Get current distinct ID to check if we need to identify
         const currentId = window.posthog.get_distinct_id?.();
-        console.log(`Current PostHog distinct ID: ${currentId}, identifying as: ${distinctId}`);
+        
+        // Only log if different
+        if (currentId !== distinctId) {
+          console.log(`Current PostHog distinct ID: ${currentId}, identifying as: ${distinctId}`);
+        }
         
         // Identify the user
         window.posthog.identify(distinctId, properties);
@@ -83,9 +140,6 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
   }
 };
 
-// Track the last identified group to avoid duplicates
-const lastIdentifiedGroups: Record<string, string> = {};
-
 /**
  * Safely associate a user with a group in PostHog
  * @param groupType The type of group (e.g., 'company', 'team', 'user_type')
@@ -94,7 +148,8 @@ const lastIdentifiedGroups: Record<string, string> = {};
  */
 export const safeGroupIdentify = (groupType: string, groupKey: string, properties?: Record<string, any>): void => {
   // Skip if this is the same group as last time
-  if (lastIdentifiedGroups[groupType] === groupKey) {
+  const lastGroup = getLastIdentifiedGroup(groupType);
+  if (lastGroup === groupKey) {
     console.log(`PostHog: User already identified with ${groupType} group: ${groupKey}, skipping`);
     return;
   }
@@ -104,8 +159,19 @@ export const safeGroupIdentify = (groupType: string, groupKey: string, propertie
       // Associate user with group and set properties
       posthog.group(groupType, groupKey, properties);
       console.log(`PostHog: User associated with ${groupType} group: ${groupKey}`);
-      // Update the last identified group
-      lastIdentifiedGroups[groupType] = groupKey;
+      
+      // Update the stored group
+      setLastGroup(groupType, groupKey);
+      
+      // Also capture an event with the group information for better tracking
+      posthog.capture('group_identified', {
+        $groups: {
+          [groupType]: groupKey
+        },
+        group_type: groupType,
+        group_key: groupKey
+      });
+      
     } catch (err) {
       console.error(`PostHog group identify error for ${groupType}:`, err);
     }
@@ -114,8 +180,18 @@ export const safeGroupIdentify = (groupType: string, groupKey: string, propertie
       if (isPostHogInstance(window.posthog) && typeof window.posthog.group === 'function') {
         window.posthog.group(groupType, groupKey, properties);
         console.log(`PostHog: User associated with ${groupType} group: ${groupKey}`);
-        // Update the last identified group
-        lastIdentifiedGroups[groupType] = groupKey;
+        
+        // Update the stored group
+        setLastGroup(groupType, groupKey);
+        
+        // Also capture an event with the group information for better tracking
+        window.posthog.capture('group_identified', {
+          $groups: {
+            [groupType]: groupKey
+          },
+          group_type: groupType,
+          group_key: groupKey
+        });
       } else {
         console.warn("PostHog group function not available");
       }
@@ -134,7 +210,6 @@ export const safeGetDistinctId = (): string | null => {
   if (isPostHogAvailable()) {
     try {
       const currentId = posthog.get_distinct_id();
-      console.log(`PostHog: Current distinct ID: ${currentId}`);
       return currentId;
     } catch (err) {
       console.error("Error getting PostHog distinct ID:", err);
@@ -143,7 +218,6 @@ export const safeGetDistinctId = (): string | null => {
     try {
       if (isPostHogInstance(window.posthog) && typeof window.posthog.get_distinct_id === 'function') {
         const currentId = window.posthog.get_distinct_id();
-        console.log(`PostHog: Current distinct ID: ${currentId}`);
         return currentId;
       }
     } catch (err) {
@@ -161,6 +235,8 @@ export const safeReset = (): void => {
     try {
       console.log("PostHog: Resetting user identity");
       posthog.reset();
+      // Also clear stored groups
+      clearStoredGroups();
     } catch (err) {
       console.error("PostHog reset error:", err);
     }
@@ -169,6 +245,8 @@ export const safeReset = (): void => {
       if (isPostHogInstance(window.posthog)) {
         console.log("PostHog: Resetting user identity");
         window.posthog.reset();
+        // Also clear stored groups
+        clearStoredGroups();
       }
     } catch (err) {
       console.error("PostHog reset error:", err);
