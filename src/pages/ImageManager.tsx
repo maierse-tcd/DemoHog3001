@@ -4,6 +4,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { useToast } from '../hooks/use-toast';
 import { Content } from '../data/mockData';
 import { useFeatureFlagEnabled } from '../hooks/usePostHogFeatures';
@@ -15,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { ScrollArea } from '../components/ui/scroll-area';
 import { ContentLibrary } from '../components/ImageManager/ContentLibrary';
 import { GalleryView } from '../components/ImageManager/GalleryView';
+import { PlanManager } from '../components/ImageManager/PlanManager';
 import { 
   extractFilenameFromUrl, 
   loadImagesFromStorage, 
@@ -39,6 +41,7 @@ const ImageManager = () => {
   const [isLoadingImages, setIsLoadingImages] = useState(false);
   const [isLoadingContent, setIsLoadingContent] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [activeTab, setActiveTab] = useState('content');
   
   // Load uploaded images using recursive storage listing
   const loadUploadedImages = async () => {
@@ -322,7 +325,7 @@ const ImageManager = () => {
       <main className="pt-24 pb-12">
         <div className="px-4 md:px-8 lg:px-16 max-w-7xl mx-auto">
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold">Content Library</h1>
+            <h1 className="text-3xl md:text-4xl font-bold">Content Management</h1>
           </div>
           
           <Dialog open={showContentEditor} onOpenChange={setShowContentEditor}>
@@ -348,51 +351,70 @@ const ImageManager = () => {
             </DialogContent>
           </Dialog>
           
-          <div className="space-y-8">
-            <Card className="bg-netflix-darkgray border-netflix-gray/20">
-              <CardHeader>
-                <CardTitle>Content Library</CardTitle>
-                <CardDescription>Browse, edit and manage all movies and series</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoadingContent ? (
-                  <div className="flex justify-center py-8">
-                    <div className="animate-pulse flex flex-col items-center">
-                      <div className="h-8 w-32 bg-netflix-gray rounded mb-4"></div>
-                      <div className="text-netflix-gray">Loading content...</div>
-                    </div>
-                  </div>
-                ) : (
-                  <ContentLibrary 
-                    content={contentList}
-                    onEditContent={handleEditContent}
-                    onDeleteContent={handleDeleteContent}
-                    onAddNew={() => {
-                      setIsEditMode(false);
-                      setShowContentEditor(true);
-                      setSelectedContent(null);
-                    }}
-                  />
-                )}
-              </CardContent>
-            </Card>
+          <Tabs 
+            defaultValue="content" 
+            value={activeTab} 
+            onValueChange={setActiveTab}
+            className="space-y-8"
+          >
+            <TabsList className="grid w-full grid-cols-3 mb-8">
+              <TabsTrigger value="content">Content Library</TabsTrigger>
+              <TabsTrigger value="images">Image Gallery</TabsTrigger>
+              <TabsTrigger value="plans">Subscription Plans</TabsTrigger>
+            </TabsList>
             
-            <Card className="bg-netflix-darkgray border-netflix-gray/20">
-              <CardHeader>
-                <CardTitle>Image Gallery</CardTitle>
-                <CardDescription>Manage images used across your content</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <GalleryView 
-                  isLoadingImages={isLoadingImages}
-                  uploadedImages={uploadedImages}
-                  onRefreshImages={loadUploadedImages}
-                  onDeleteImage={handleDeleteImage}
-                  isDeleting={isDeleting}
-                />
-              </CardContent>
-            </Card>
-          </div>
+            <TabsContent value="content">
+              <Card className="bg-netflix-darkgray border-netflix-gray/20">
+                <CardHeader>
+                  <CardTitle>Content Library</CardTitle>
+                  <CardDescription>Browse, edit and manage all movies and series</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingContent ? (
+                    <div className="flex justify-center py-8">
+                      <div className="animate-pulse flex flex-col items-center">
+                        <div className="h-8 w-32 bg-netflix-gray rounded mb-4"></div>
+                        <div className="text-netflix-gray">Loading content...</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <ContentLibrary 
+                      content={contentList}
+                      onEditContent={handleEditContent}
+                      onDeleteContent={handleDeleteContent}
+                      onAddNew={() => {
+                        setIsEditMode(false);
+                        setShowContentEditor(true);
+                        setSelectedContent(null);
+                      }}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="images">
+              <Card className="bg-netflix-darkgray border-netflix-gray/20">
+                <CardHeader>
+                  <CardTitle>Image Gallery</CardTitle>
+                  <CardDescription>Manage images used across your content</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <GalleryView 
+                    isLoadingImages={isLoadingImages}
+                    uploadedImages={uploadedImages}
+                    onRefreshImages={loadUploadedImages}
+                    onDeleteImage={handleDeleteImage}
+                    isDeleting={isDeleting}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="plans">
+              <PlanManager />
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
       

@@ -106,6 +106,7 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          is_admin: boolean | null
           is_kids: boolean | null
           name: string | null
           updated_at: string
@@ -116,6 +117,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           id: string
+          is_admin?: boolean | null
           is_kids?: boolean | null
           name?: string | null
           updated_at?: string
@@ -126,8 +128,45 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          is_admin?: boolean | null
           is_kids?: boolean | null
           name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      subscription_plans: {
+        Row: {
+          created_at: string
+          description: string
+          features: string[]
+          id: string
+          image_url: string | null
+          name: string
+          price: string
+          recommended: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          features?: string[]
+          id: string
+          image_url?: string | null
+          name: string
+          price: string
+          recommended?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          features?: string[]
+          id?: string
+          image_url?: string | null
+          name?: string
+          price?: string
+          recommended?: boolean | null
           updated_at?: string
         }
         Relationships: []

@@ -4,6 +4,7 @@ import { toast } from '../../hooks/use-toast';
 import { Plan, SubscriptionPlan } from '../SubscriptionPlan';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuthContext } from '../../hooks/auth/useAuthContext';
+import { Skeleton } from '../ui/skeleton';
 
 interface SubscriptionSettingsProps {
   selectedPlanId: string;
@@ -17,62 +18,63 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
   const { isLoggedIn, userMetadata } = useAuthContext();
   const [isLoading, setIsLoading] = useState(false);
   const [currentPlanId, setCurrentPlanId] = useState(initialPlanId);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   
   // Use effect to sync with any external changes to the plan
   useEffect(() => {
     setCurrentPlanId(initialPlanId);
   }, [initialPlanId]);
   
-  const availablePlans: Plan[] = [
-    {
-      id: 'free',
-      name: 'Free Plan',
-      description: 'Enjoy a limited selection of movies and shows for free.',
-      price: '$0/month',
-      features: [
-        'Limited library of content',
-        'Standard definition streaming',
-        'Ad-supported viewing',
-        'Watch on one device at a time'
-      ]
-    },
-    {
-      id: 'premium',
-      name: 'Premium Plan',
-      description: 'Access to all movies and shows, including premium content.',
-      price: '$12.99/month',
-      features: [
-        'Full library access',
-        'HD streaming',
-        'Ad-free viewing',
-        'Watch on two devices at a time',
-        'Download content for offline viewing'
-      ],
-      recommended: true
-    },
-    {
-      id: 'maximal',
-      name: 'Max-imal Plan',
-      description: 'Get everything in Premium plus exclusive content and features.',
-      price: '$19.99/month',
-      features: [
-        'Full library access plus exclusive content',
-        '4K Ultra HD streaming',
-        'Ad-free viewing',
-        'Watch on four devices at a time',
-        'Download content for offline viewing',
-        'Early access to new releases',
-        'Exclusive hedgehog documentaries'
-      ]
-    }
-  ];
+  // Load plans from Supabase
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        setIsLoadingPlans(true);
+        const { data, error } = await supabase
+          .from('subscription_plans')
+          .select('*')
+          .order('price');
+        
+        if (error) {
+          throw error;
+        }
+
+        if (data) {
+          // Transform data to match Plan interface
+          const formattedPlans: Plan[] = data.map(plan => ({
+            id: plan.id,
+            name: plan.name,
+            description: plan.description,
+            price: plan.price,
+            features: plan.features || [],
+            recommended: plan.recommended || false,
+            imageUrl: plan.image_url
+          }));
+          
+          setPlans(formattedPlans);
+        }
+      } catch (error) {
+        console.error('Error fetching plans:', error);
+        toast({
+          title: "Error",
+          description: "Could not load subscription plans.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoadingPlans(false);
+      }
+    };
+
+    fetchPlans();
+  }, []);
 
   const handlePlanSelect = (planId: string) => {
     setCurrentPlanId(planId);
     
     toast({
       title: 'Plan selected',
-      description: `You've selected the ${availablePlans.find(plan => plan.id === planId)?.name}. Click "Save Changes" to confirm.`,
+      description: `You've selected the ${plans.find(plan => plan.id === planId)?.name}. Click "Save Changes" to confirm.`,
     });
   };
 
@@ -103,7 +105,7 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
       
       toast({
         title: 'Changes saved',
-        description: `Your subscription plan has been updated to ${availablePlans.find(plan => plan.id === currentPlanId)?.name}`,
+        description: `Your subscription plan has been updated to ${plans.find(plan => plan.id === currentPlanId)?.name}`,
       });
     } catch (error: any) {
       console.error("Error saving plan:", error);
@@ -119,6 +121,23 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
 
   const hasChanges = currentPlanId !== initialPlanId;
 
+  if (isLoadingPlans) {
+    return (
+      <div className="bg-netflix-darkgray rounded-lg p-6">
+        <h2 className="text-2xl font-bold mb-6">Subscription Plans</h2>
+        <p className="text-netflix-gray mb-6">
+          Choose the plan that's right for you. You can always change your plan later.
+        </p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          {[1, 2, 3].map((_, index) => (
+            <Skeleton key={index} className="h-[450px] w-full bg-netflix-gray/20" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-netflix-darkgray rounded-lg p-6">
       <h2 className="text-2xl font-bold mb-6">Subscription Plans</h2>
@@ -127,13 +146,24 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
       </p>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        {availablePlans.map(plan => (
-          <SubscriptionPlan
-            key={plan.id}
-            plan={plan}
-            selectedPlanId={currentPlanId}
-            onSelect={handlePlanSelect}
-          />
+        {plans.map(plan => (
+          <div key={plan.id} className="relative">
+            {plan.imageUrl && (
+              <div className="absolute inset-0 z-0 opacity-10 rounded-lg overflow-hidden">
+                <img
+                  src={plan.imageUrl}
+                  alt={plan.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            <SubscriptionPlan
+              key={plan.id}
+              plan={plan}
+              selectedPlanId={currentPlanId}
+              onSelect={handlePlanSelect}
+            />
+          </div>
         ))}
       </div>
       
@@ -142,7 +172,7 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
         className="bg-netflix-red hover:bg-red-700 text-white px-6 py-3 rounded font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         disabled={isLoading || !hasChanges}
       >
-        {isLoading ? 'Saving...' : hasChanges ? 'Save Changes' : 'No Changes to Save'}
+        {isLoading ? "Saving..." : hasChanges ? "Save Changes" : "No Changes to Save"}
       </button>
     </div>
   );

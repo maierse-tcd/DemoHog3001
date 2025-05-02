@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { SearchBar } from './SearchBar';
 import { ProfileDropdown } from './ProfileDropdown';
-import { Bell, Menu, X, Film, ListCheck } from 'lucide-react';
+import { Bell, Menu, X, Film, ListCheck, DollarSign } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { AdminNavItems } from './AdminNavItems';
 import { safeCapture } from '../utils/posthogUtils';
@@ -69,6 +69,10 @@ export const Navbar = () => {
             <ListCheck size={16} />
             <span>Series</span>
           </Link>
+          <Link to="/plans" className="navbar-link flex items-center gap-1">
+            <DollarSign size={16} />
+            <span>Plans</span>
+          </Link>
           {/* Admin navigation items - shown conditionally */}
           <AdminNavItems />
         </div>
@@ -98,6 +102,10 @@ export const Navbar = () => {
           <Link to="/series" className="navbar-link flex items-center gap-2">
             <ListCheck size={16} />
             <span>Series</span>
+          </Link>
+          <Link to="/plans" className="navbar-link flex items-center gap-2">
+            <DollarSign size={16} />
+            <span>Plans</span>
           </Link>
           {/* Admin navigation items in mobile menu - shown conditionally */}
           <AdminNavItems />

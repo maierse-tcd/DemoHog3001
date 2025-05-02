@@ -8,6 +8,7 @@ export interface Plan {
   price: string;
   features: string[];
   recommended?: boolean;
+  imageUrl?: string;
 }
 
 interface SubscriptionPlanProps {
@@ -25,12 +26,22 @@ export const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
   
   return (
     <div 
-      className={`border rounded-lg p-5 transition-all ${
+      className={`border rounded-lg p-5 transition-all relative overflow-hidden ${
         isSelected 
           ? 'border-netflix-red bg-netflix-darkgray/50 shadow-lg' 
           : 'border-netflix-gray/20 hover:border-netflix-gray/40'
-      } ${plan.recommended ? 'relative overflow-hidden' : ''}`}
+      }`}
     >
+      {plan.imageUrl && (
+        <div className="absolute inset-0 opacity-10 -z-10">
+          <img 
+            src={plan.imageUrl} 
+            alt={plan.name} 
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
+      
       {plan.recommended && (
         <div className="absolute top-0 right-0">
           <div className="bg-netflix-red text-white px-4 py-1 text-xs font-medium transform translate-x-5 translate-y-2 rotate-45">

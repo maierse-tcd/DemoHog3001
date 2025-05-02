@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import Movies from "./pages/Movies";
 import Series from "./pages/Series";
+import Plans from "./pages/Plans";
 import NotFound from "./pages/NotFound";
 import { ProfileSettingsProvider } from "./contexts/ProfileSettingsContext";
 import Privacy from "./pages/Privacy";
@@ -40,6 +41,7 @@ const App = () => (
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/movies" element={<Movies />} />
                   <Route path="/series" element={<Series />} />
+                  <Route path="/plans" element={<Plans />} />
                   <Route path="/privacy" element={<Privacy />} />
                   <Route path="/terms" element={<Terms />} />
                   <Route path="/help" element={<HelpPage />} />

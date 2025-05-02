@@ -4,52 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { AuthLayout } from '../components/auth/AuthLayout';
 import { SignUpForm } from '../components/auth/SignUpForm';
 import { PlanSelector } from '../components/auth/PlanSelector';
-import { Plan } from '../components/SubscriptionPlan';
 import { supabase } from '../integrations/supabase/client';
-
-const subscriptionPlans: Plan[] = [
-  {
-    id: 'free',
-    name: 'Free Plan',
-    description: 'Enjoy a limited selection of movies and shows for free.',
-    price: '$0.00',
-    features: [
-      'Access to free content',
-      'Watch on one device',
-      'SD quality',
-      'Ad-supported'
-    ]
-  },
-  {
-    id: 'premium',
-    name: 'Premium Plan',
-    description: 'Access to all movies and shows, including premium content.',
-    price: '$12.99/month',
-    features: [
-      'Full content library',
-      'Watch on two devices',
-      'HD quality',
-      'Ad-free experience',
-      'Download for offline viewing'
-    ],
-    recommended: true
-  },
-  {
-    id: 'maximal',
-    name: 'Max-imal Plan',
-    description: 'Get everything in Premium plus exclusive content and features.',
-    price: '$19.99/month',
-    features: [
-      'Full content library',
-      'Watch on up to four devices',
-      '4K Ultra HD quality',
-      'Ad-free experience',
-      'Download for offline viewing',
-      'Exclusive early access content',
-      'Member-only events'
-    ]
-  }
-];
 
 const SignUp = () => {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
@@ -95,7 +50,6 @@ const SignUp = () => {
             
             {/* Plan Selection Section */}
             <PlanSelector 
-              plans={subscriptionPlans}
               selectedPlanId={selectedPlanId}
               onPlanSelect={handlePlanSelect}
             />
