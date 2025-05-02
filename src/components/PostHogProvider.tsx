@@ -79,47 +79,54 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
       
       // Fetch user profile to get is_kids status
       try {
-        const { data: profileData } = await supabase
+        // Check if data exists before trying to access properties
+        const { data: profileData, error } = await supabase
           .from('profiles')
-          .select('is_kids, created_at, subscription_plan')
+          .select('is_kids, created_at')
           .eq('id', userId)
           .maybeSingle();
         
-        // Get date joined from metadata or profile created_at
-        const dateJoined = profileData?.created_at || new Date().toISOString();
-        
-        // Determine user type (Kid or Adult)
-        const isKid = profileData?.is_kids === true;
-        const userType = isKid ? 'Kid' : 'Adult';
-        
-        // Get subscription plan
-        const subscriptionPlan = profileData?.subscription_plan || 'basic';
-        
-        // Wait for any pending debounce
-        if (debounceTimerRef.current) {
-          clearTimeout(debounceTimerRef.current);
-          debounceTimerRef.current = null;
+        if (error) {
+          console.error('Error fetching profile data:', error);
+          return;
         }
+        
+        // Only proceed if we have valid data
+        if (profileData) {
+          // Get date joined from metadata or profile created_at
+          const dateJoined = profileData?.created_at || new Date().toISOString();
+          
+          // Determine user type (Kid or Adult)
+          const isKid = profileData?.is_kids === true;
+          const userType = isKid ? 'Kid' : 'Adult';
+          
+          // Wait for any pending debounce
+          if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+            debounceTimerRef.current = null;
+          }
 
-        // Only identify group if the user type has changed
-        if (userType !== currentUserType) {
-          // Update UI state first
-          setCurrentUserType(userType);
-          
-          // Identify group with debounce
-          identifyUserGroup(userType, {
-            name: userType, // REQUIRED: Name property is essential for group to appear in UI
-            date_joined: dateJoined,
-            subscription_plan: subscriptionPlan
-          });
-          
-          // Also capture an event with the group context to help establish the connection
-          safeCaptureWithGroup('user_group_identified', 'user_type', userType, {
-            method: 'initial_identification',
-            user_email: email
-          });
-          
-          console.log(`PostHog: User identified as ${userType}`);
+          // Only identify group if the user type has changed
+          if (userType !== currentUserType) {
+            // Update UI state first
+            setCurrentUserType(userType);
+            
+            // Identify group with debounce
+            identifyUserGroup(userType, {
+              name: userType, // REQUIRED: Name property is essential for group to appear in UI
+              date_joined: dateJoined
+            });
+            
+            // Also capture an event with the group context to help establish the connection
+            safeCaptureWithGroup('user_group_identified', 'user_type', userType, {
+              method: 'initial_identification',
+              user_email: email
+            });
+            
+            console.log(`PostHog: User identified as ${userType}`);
+          }
+        } else {
+          console.log('No profile data found for user, skipping group identification');
         }
       } catch (error) {
         console.error('Error fetching profile for group identification:', error);
@@ -244,21 +251,19 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
       if (data?.user) {
         const userId = data.user.id;
         
-        // Fetch subscription info
+        // Fetch profile info
         supabase
           .from('profiles')
-          .select('subscription_plan, created_at')
+          .select('created_at')
           .eq('id', userId)
           .maybeSingle()
           .then(({ data: profileData }) => {
-            const subscriptionPlan = profileData?.subscription_plan || 'basic';
             const dateJoined = profileData?.created_at || new Date().toISOString();
             
             // Identify the group with relevant properties
             identifyUserGroup(newUserType, {
               name: newUserType, // REQUIRED for UI visibility
               update_time: new Date().toISOString(),
-              subscription_plan: subscriptionPlan,
               date_joined: dateJoined
             });
             

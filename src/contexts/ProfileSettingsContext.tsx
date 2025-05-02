@@ -102,6 +102,8 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
                 language: prev.language,
                 playbackSettings: prev.playbackSettings,
                 notifications: prev.notifications,
+                // Use the selectedPlanId from metadata if it exists, or keep the existing one
+                selectedPlanId: user.user_metadata?.selectedPlanId || prev.selectedPlanId,
               }));
               
               // Check if we need to update the PostHog group
@@ -168,6 +170,12 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
           if (newSettings.name !== undefined || newSettings.email !== undefined) {
             updateUserProfile(updated);
           }
+          
+          // If selectedPlanId is being updated, update it in user metadata
+          if (newSettings.selectedPlanId !== undefined &&
+              newSettings.selectedPlanId !== prev.selectedPlanId) {
+            updateSelectedPlanInMetadata(newSettings.selectedPlanId);
+          }
         }
         
         return updated;
@@ -203,6 +211,30 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
       }
     } catch (error) {
       console.error('Error in updateSiteAccessPassword:', error);
+    }
+  };
+  
+  // Update selectedPlanId in user metadata
+  const updateSelectedPlanInMetadata = async (planId: string) => {
+    try {
+      if (!isLoggedIn) return;
+      
+      const { error } = await supabase.auth.updateUser({
+        data: { selectedPlanId: planId }
+      });
+      
+      if (error) {
+        console.error('Error updating plan in user metadata:', error);
+        toast({
+          title: "Error saving plan",
+          description: "There was a problem saving your subscription plan.",
+          variant: "destructive"
+        });
+      } else {
+        console.log(`Subscription plan updated to ${planId} in user metadata`);
+      }
+    } catch (error) {
+      console.error('Error in updateSelectedPlanInMetadata:', error);
     }
   };
 
