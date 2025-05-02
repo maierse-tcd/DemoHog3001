@@ -1,4 +1,3 @@
-
 /**
  * PostHog utility functions for safer and more consistent usage
  */
@@ -84,6 +83,9 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
   }
 };
 
+// Track the last identified group to avoid duplicates
+const lastIdentifiedGroups: Record<string, string> = {};
+
 /**
  * Safely associate a user with a group in PostHog
  * @param groupType The type of group (e.g., 'company', 'team', 'user_type')
@@ -91,11 +93,19 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
  * @param properties Optional properties to set for the group
  */
 export const safeGroupIdentify = (groupType: string, groupKey: string, properties?: Record<string, any>): void => {
+  // Skip if this is the same group as last time
+  if (lastIdentifiedGroups[groupType] === groupKey) {
+    console.log(`PostHog: User already identified with ${groupType} group: ${groupKey}, skipping`);
+    return;
+  }
+
   if (isPostHogAvailable()) {
     try {
       // Associate user with group and set properties
       posthog.group(groupType, groupKey, properties);
       console.log(`PostHog: User associated with ${groupType} group: ${groupKey}`);
+      // Update the last identified group
+      lastIdentifiedGroups[groupType] = groupKey;
     } catch (err) {
       console.error(`PostHog group identify error for ${groupType}:`, err);
     }
@@ -104,6 +114,8 @@ export const safeGroupIdentify = (groupType: string, groupKey: string, propertie
       if (isPostHogInstance(window.posthog) && typeof window.posthog.group === 'function') {
         window.posthog.group(groupType, groupKey, properties);
         console.log(`PostHog: User associated with ${groupType} group: ${groupKey}`);
+        // Update the last identified group
+        lastIdentifiedGroups[groupType] = groupKey;
       } else {
         console.warn("PostHog group function not available");
       }

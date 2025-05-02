@@ -173,7 +173,13 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
   const updateIsKidsAccount = async (isKids: boolean) => {
     try {
       if (!isLoggedIn || !user?.id) return;
-      
+    
+      // Skip update if the value is the same as current
+      if (isKids === settings.isKidsAccount) {
+        console.log('Kids account status unchanged, skipping update');
+        return;
+      }
+    
       // Update the is_kids flag in the user's profile
       const { error } = await supabase
         .from('profiles')

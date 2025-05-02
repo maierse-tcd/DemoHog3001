@@ -17,6 +17,8 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
   const posthogLoadedRef = useRef(false);
   // Track the current user to avoid duplicate identifications
   const currentUserRef = useRef<string | null>(null);
+  // Track the current user type to avoid duplicate group identifications
+  const currentUserTypeRef = useRef<string | null>(null);
 
   // Configure PostHog with best practices
   const options = {
@@ -75,19 +77,27 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
         const isKid = profileData?.is_kids === true;
         const userType = isKid ? 'Kid' : 'Adult';
         
-        // Identify group
-        safeGroupIdentify('user_type', userType, {
-          name: userType,
-          date_joined: dateJoined,
-          subscription_plan: selectedPlan
-        });
-        
-        // Capture login event
-        posthog.capture('user_identified', {
-          $groups: {
-            user_type: userType
-          }
-        });
+        // Only identify group if the user type has changed
+        if (userType !== currentUserTypeRef.current) {
+          // Identify group
+          safeGroupIdentify('user_type', userType, {
+            name: userType,
+            date_joined: dateJoined,
+            subscription_plan: selectedPlan
+          });
+          
+          // Update current user type reference
+          currentUserTypeRef.current = userType;
+          
+          // Capture user_identified event with group
+          posthog.capture('user_identified', {
+            $groups: {
+              user_type: userType
+            }
+          });
+          
+          console.log(`PostHog: User identified as ${userType}`);
+        }
       } catch (error) {
         console.error('Error fetching profile for group identification:', error);
         // Fallback to just user identification
@@ -163,6 +173,8 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
           
           // Update current user reference
           currentUserRef.current = null;
+          // Reset current user type reference
+          currentUserTypeRef.current = null;
         }
       }
     });

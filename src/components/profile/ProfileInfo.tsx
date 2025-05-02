@@ -13,6 +13,8 @@ interface ProfileInfoProps {
 
 export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettings }) => {
   const [isLoading, setIsLoading] = useState(false);
+  // Track the current state of isKidsAccount to prevent unnecessary updates
+  const [currentIsKidsAccount, setCurrentIsKidsAccount] = useState<boolean>(settings.isKidsAccount);
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +33,7 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
         throw new Error("No authenticated user found");
       }
 
-      // Update user's profile in the database - using email for the query
+      // Update user's profile in the database - using ID for the query
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -40,7 +42,7 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
           is_kids: isKidsAccount,
           updated_at: new Date().toISOString()
         })
-        .eq('email', email);
+        .eq('id', user.id);
 
       if (error) throw error;
 
@@ -49,12 +51,21 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
         safeIdentify(email, { name });
       }
 
-      // Update the context
-      updateSettings({
-        name,
-        email,
-        isKidsAccount
-      });
+      // Update the context only if something changed
+      if (name !== settings.name || 
+          email !== settings.email || 
+          isKidsAccount !== settings.isKidsAccount) {
+        
+        // Update local state to track current value
+        setCurrentIsKidsAccount(isKidsAccount);
+        
+        // Update the context
+        updateSettings({
+          name,
+          email,
+          isKidsAccount
+        });
+      }
 
       toast({
         title: 'Profile updated',
@@ -110,7 +121,7 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
           <Checkbox 
             id="isKidsAccount" 
             name="isKidsAccount" 
-            defaultChecked={settings.isKidsAccount}
+            defaultChecked={currentIsKidsAccount}
             className="h-5 w-5 border border-netflix-gray" 
           />
           <label htmlFor="isKidsAccount" className="text-sm font-medium text-netflix-gray">
