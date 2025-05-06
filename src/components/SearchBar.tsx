@@ -18,10 +18,13 @@ export const SearchBar = () => {
   useEffect(() => {
     const loadAllContent = async () => {
       try {
+        setIsLoading(true);
         const content = await loadContentFromSupabase();
         setAllContent(content);
+        setIsLoading(false);
       } catch (error) {
         console.error("Error loading content for search:", error);
+        setIsLoading(false);
       }
     };
     
@@ -45,13 +48,12 @@ export const SearchBar = () => {
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    setIsLoading(true);
     
-    if (query.length > 1) {
-      const normalizedQuery = query.toLowerCase();
+    if (query.trim().length > 1) {
+      const normalizedQuery = query.toLowerCase().trim();
       const filteredResults = allContent.filter(item => 
         item.title.toLowerCase().includes(normalizedQuery) || 
-        item.description?.toLowerCase().includes(normalizedQuery) ||
+        (item.description?.toLowerCase() || '').includes(normalizedQuery) ||
         item.genre.some(genre => genre.toLowerCase().includes(normalizedQuery))
       );
       setSearchResults(filteredResults);
@@ -63,15 +65,16 @@ export const SearchBar = () => {
     } else {
       setSearchResults([]);
     }
-    
-    setIsLoading(false);
   };
 
   const handleSelectResult = (id: string) => {
     setIsExpanded(false);
     setSearchQuery('');
     setSearchResults([]);
-    navigate(`/content/${id}`);
+    
+    // Since we don't have a dedicated content page, we'll direct to Home for now
+    // In the future, this could go to a specific content page: navigate(`/content/${id}`);
+    navigate(`/`);
     
     safeCapture('search_result_selected', { contentId: id });
   };
@@ -85,7 +88,7 @@ export const SearchBar = () => {
             : ''
         }`}
       >
-        <button onClick={handleSearchToggle}>
+        <button onClick={handleSearchToggle} className="p-2">
           <Search size={20} className="text-netflix-gray hover:text-netflix-white" />
         </button>
         

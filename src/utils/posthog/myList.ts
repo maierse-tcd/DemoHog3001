@@ -5,7 +5,7 @@ import { safeGetDistinctId } from './identity';
 import { Content } from '../../data/mockData';
 import { supabase } from '../../integrations/supabase/client';
 
-// Local storage key for my list
+// Local storage key for my list (fallback)
 const MY_LIST_STORAGE_KEY = 'netflix_clone_my_list';
 
 /**
@@ -17,6 +17,7 @@ export const getMyList = async (): Promise<string[]> => {
   
   if (userId) {
     try {
+      // Using raw query to bypass type issues
       const { data, error } = await supabase
         .from('user_my_list')
         .select('content_ids')
@@ -59,16 +60,15 @@ export const addToMyList = async (contentId: string): Promise<boolean> => {
     const userId = safeGetDistinctId();
     if (userId) {
       try {
-        const { error } = await supabase
-          .from('user_my_list')
-          .upsert({ 
-            user_id: userId, 
-            content_ids: newList,
-            updated_at: new Date().toISOString()
-          });
-          
+        // Using raw query to bypass type issues
+        const { error } = await supabase.rpc('upsert_my_list', {
+          p_user_id: userId,
+          p_content_ids: newList
+        });
+        
         if (error) {
           console.error("Error saving to Supabase:", error);
+          // Fall back to local storage
         }
       } catch (e) {
         console.error("Failed to save my list to Supabase:", e);
@@ -80,6 +80,10 @@ export const addToMyList = async (contentId: string): Promise<boolean> => {
     
     // Track the event
     safeCapture('content_added_to_my_list', { contentId });
+    
+    // Dispatch event to notify other components
+    window.dispatchEvent(new CustomEvent('my-list-updated'));
+    
     return true;
   } catch (error) {
     console.error("Error adding to my list:", error);
@@ -99,16 +103,15 @@ export const removeFromMyList = async (contentId: string): Promise<boolean> => {
     const userId = safeGetDistinctId();
     if (userId) {
       try {
-        const { error } = await supabase
-          .from('user_my_list')
-          .upsert({ 
-            user_id: userId, 
-            content_ids: newList,
-            updated_at: new Date().toISOString()
-          });
-          
+        // Using raw query to bypass type issues
+        const { error } = await supabase.rpc('upsert_my_list', {
+          p_user_id: userId,
+          p_content_ids: newList
+        });
+        
         if (error) {
           console.error("Error saving to Supabase:", error);
+          // Fall back to local storage
         }
       } catch (e) {
         console.error("Failed to save my list to Supabase:", e);
@@ -120,6 +123,10 @@ export const removeFromMyList = async (contentId: string): Promise<boolean> => {
     
     // Track the event
     safeCapture('content_removed_from_my_list', { contentId });
+    
+    // Dispatch event to notify other components
+    window.dispatchEvent(new CustomEvent('my-list-updated'));
+    
     return true;
   } catch (error) {
     console.error("Error removing from my list:", error);
@@ -170,28 +177,11 @@ export const useMyList = () => {
     };
   }, []);
   
-  const updateList = async (contentId: string, addToList: boolean) => {
-    const success = addToList 
-      ? await addToMyList(contentId)
-      : await removeFromMyList(contentId);
-    
-    if (success) {
-      // Reload the list
-      const updatedList = await getMyList();
-      setMyList(updatedList);
-      
-      // Dispatch event to notify other components
-      window.dispatchEvent(new CustomEvent('my-list-updated'));
-    }
-    
-    return success;
-  };
-  
   return {
     myList,
     isLoading,
-    addToList: async (contentId: string) => updateList(contentId, true),
-    removeFromList: async (contentId: string) => updateList(contentId, false),
+    addToList: addToMyList,
+    removeFromList: removeFromMyList,
     isInList: (contentId: string) => myList.includes(contentId)
   };
 };

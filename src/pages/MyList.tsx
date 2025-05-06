@@ -17,10 +17,16 @@ const MyList = () => {
   // Load content for My List
   useEffect(() => {
     const loadMyListContent = async () => {
-      if (isMyListLoading || myList.length === 0) return;
+      if (isMyListLoading) return;
       
       try {
         setIsLoading(true);
+        
+        if (myList.length === 0) {
+          setMyListContent([]);
+          setIsLoading(false);
+          return;
+        }
         
         // Load all content from Supabase
         const allContent = await loadContentFromSupabase();

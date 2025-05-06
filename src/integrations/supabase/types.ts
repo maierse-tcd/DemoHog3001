@@ -171,6 +171,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_my_list: {
+        Row: {
+          content_ids: string[] | null
+          created_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content_ids?: string[] | null
+          created_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content_ids?: string[] | null
+          created_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
