@@ -1,122 +1,164 @@
 
 import { useState, useEffect } from 'react';
-import { SearchBar } from './SearchBar';
-import { ProfileDropdown } from './ProfileDropdown';
-import { Bell, Menu, X, Film, ListCheck, DollarSign } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import { AdminNavItems } from './AdminNavItems';
-import { safeCapture } from '../utils/posthogUtils';
+import { Menu, ChevronDown } from 'lucide-react';
+import { ProfileDropdown } from './ProfileDropdown';
+import { SearchBar } from './SearchBar';
+import { useAuth } from '../hooks/useAuth';
+import { useFeatureFlag } from '../hooks/useFeatureFlag';
 
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
+  const { isLoggedIn } = useAuth();
+  const isDarkTheme = location.pathname !== '/login' && location.pathname !== '/signup';
+  const isAdmin = useFeatureFlag('is_admin');
   
+  // Handle scroll events to change navbar appearance
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 20) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
+      const scrollPosition = window.scrollY;
+      setIsScrolled(scrollPosition > 20);
     };
-
+    
     window.addEventListener('scroll', handleScroll);
+    
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
-
-  // Track page view in PostHog whenever the route changes
-  useEffect(() => {
-    try {
-      const path = location.pathname;
-      const title = document.title;
-      
-      // Manually capture pageview
-      safeCapture('$pageview', {
-        path,
-        title,
-        $current_url: window.location.href,
-      });
-      console.log("Navbar: PageView tracked for path:", path);
-    } catch (error) {
-      console.error("Error capturing pageview:", error);
-    }
-  }, [location.pathname]);
-
+  
   return (
-    <nav 
-      className={`fixed top-0 z-50 w-full px-4 py-2 md:px-8 md:py-4 flex items-center justify-between transition-all duration-500 ${
-        isScrolled ? 'bg-black' : 'bg-gradient-to-b from-black/80 to-transparent'
+    <nav
+      className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
+        isDarkTheme 
+          ? isScrolled 
+            ? 'bg-netflix-black shadow-md' 
+            : 'bg-gradient-to-b from-netflix-black/90 to-transparent' 
+          : 'bg-transparent'
       }`}
     >
-      {/* Logo */}
-      <div className="flex items-center">
-        <Link to="/">
-          <h1 className="text-netflix-red text-3xl font-bold tracking-tighter mr-10">HOGFLIX</h1>
-        </Link>
-        
-        {/* Desktop Navigation */}
-        <div className="hidden md:flex space-x-6">
-          <Link to="/" className="navbar-link text-netflix-white">Home</Link>
-          <Link to="/movies" className="navbar-link flex items-center gap-1">
-            <Film size={16} />
-            <span>Movies</span>
+      <div className="px-4 md:px-10 py-3 flex items-center justify-between">
+        {/* Logo */}
+        <div className="flex items-center">
+          <Link to="/" className="mr-2">
+            <img 
+              src="/placeholder.svg" 
+              alt="Logo" 
+              className="h-8 w-24 object-contain" 
+            />
           </Link>
-          <Link to="/series" className="navbar-link flex items-center gap-1">
-            <ListCheck size={16} />
-            <span>Series</span>
-          </Link>
-          <Link to="/plans" className="navbar-link flex items-center gap-1">
-            <DollarSign size={16} />
-            <span>Plans</span>
-          </Link>
-          {/* Admin navigation items - shown conditionally */}
-          <AdminNavItems />
+          
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex space-x-6 ml-10">
+            <Link 
+              to="/" 
+              className={`text-sm font-medium ${location.pathname === '/' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
+            >
+              Home
+            </Link>
+            <Link 
+              to="/series" 
+              className={`text-sm font-medium ${location.pathname === '/series' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
+            >
+              TV Shows
+            </Link>
+            <Link 
+              to="/movies" 
+              className={`text-sm font-medium ${location.pathname === '/movies' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
+            >
+              Movies
+            </Link>
+            <Link 
+              to="/my-list" 
+              className={`text-sm font-medium ${location.pathname === '/my-list' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
+            >
+              My List
+            </Link>
+            {isAdmin && (
+              <Link 
+                to="/image-manager" 
+                className={`text-sm font-medium ${location.pathname === '/image-manager' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
+              >
+                Admin
+              </Link>
+            )}
+          </div>
+          
+          {/* Mobile Menu Button */}
+          <button 
+            className="md:hidden text-netflix-gray hover:text-netflix-white"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            <Menu size={24} />
+          </button>
         </div>
-      </div>
-
-      {/* Mobile Menu Button */}
-      <div className="md:hidden">
-        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      </div>
-
-      {/* Right side icons */}
-      <div className="hidden md:flex items-center space-x-4">
-        {!isAuthPage && <SearchBar />}
-        <ProfileDropdown />
-      </div>
-
-      {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <div className="fixed top-14 left-0 right-0 bg-black/90 p-4 flex flex-col space-y-4 md:hidden animate-fade-in">
-          <Link to="/" className="navbar-link text-netflix-white">Home</Link>
-          <Link to="/movies" className="navbar-link flex items-center gap-2">
-            <Film size={16} />
-            <span>Movies</span>
-          </Link>
-          <Link to="/series" className="navbar-link flex items-center gap-2">
-            <ListCheck size={16} />
-            <span>Series</span>
-          </Link>
-          <Link to="/plans" className="navbar-link flex items-center gap-2">
-            <DollarSign size={16} />
-            <span>Plans</span>
-          </Link>
-          {/* Admin navigation items in mobile menu - shown conditionally */}
-          <AdminNavItems />
-          {!isAuthPage && (
-            <div className="pt-2">
-              <SearchBar />
+        
+        {/* Right Side Items */}
+        <div className="flex items-center space-x-4">
+          <SearchBar />
+          {isLoggedIn ? (
+            <ProfileDropdown /> 
+          ) : (
+            <div className="flex items-center space-x-4">
+              <Link 
+                to="/login" 
+                className="text-netflix-white hover:text-netflix-gray text-sm"
+              >
+                Sign In
+              </Link>
+              <Link 
+                to="/signup" 
+                className="bg-netflix-red text-white py-1 px-3 rounded-sm hover:bg-netflix-red/90 text-sm"
+              >
+                Sign Up
+              </Link>
             </div>
           )}
-          <div className="flex items-center justify-between pt-2">
-            <ProfileDropdown />
-          </div>
+        </div>
+      </div>
+      
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden bg-netflix-black/95 border-t border-netflix-gray/20 py-2">
+          <Link 
+            to="/" 
+            className={`block px-4 py-2 ${location.pathname === '/' ? 'text-netflix-white' : 'text-netflix-gray'}`}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Home
+          </Link>
+          <Link 
+            to="/series" 
+            className={`block px-4 py-2 ${location.pathname === '/series' ? 'text-netflix-white' : 'text-netflix-gray'}`}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            TV Shows
+          </Link>
+          <Link 
+            to="/movies" 
+            className={`block px-4 py-2 ${location.pathname === '/movies' ? 'text-netflix-white' : 'text-netflix-gray'}`}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Movies
+          </Link>
+          <Link 
+            to="/my-list" 
+            className={`block px-4 py-2 ${location.pathname === '/my-list' ? 'text-netflix-white' : 'text-netflix-gray'}`}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            My List
+          </Link>
+          {isAdmin && (
+            <Link 
+              to="/image-manager" 
+              className={`block px-4 py-2 ${location.pathname === '/image-manager' ? 'text-netflix-white' : 'text-netflix-gray'}`}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Admin
+            </Link>
+          )}
         </div>
       )}
     </nav>

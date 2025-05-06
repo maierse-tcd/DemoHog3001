@@ -1,9 +1,11 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Content } from '../data/mockData';
-import { Play, Plus, ThumbsUp, ChevronDown, X, Info } from 'lucide-react';
+import { Play, Plus, ThumbsUp, ChevronDown, X, Info, Check } from 'lucide-react';
 import { getRandomVideo } from '../utils/videoUtils';
 import { DEFAULT_IMAGES } from '../utils/imageUtils';
+import { safeCapture } from '../utils/posthog';
+import { useMyList, isInMyList } from '../utils/posthog/myList';
 
 interface ContentCardProps {
   content: Content;
@@ -14,9 +16,46 @@ export const ContentCard = ({ content }: ContentCardProps) => {
   const [showVideo, setShowVideo] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [videoUrl] = useState(getRandomVideo());
+  const [isInList, setIsInList] = useState(false);
+  const { addToList, removeFromList } = useMyList();
+  
+  // Check if content is in My List
+  useEffect(() => {
+    const checkMyList = async () => {
+      const inList = await isInMyList(content.id);
+      setIsInList(inList);
+    };
+    
+    checkMyList();
+    
+    // Listen for my list updates
+    const handleMyListUpdate = () => checkMyList();
+    window.addEventListener('my-list-updated', handleMyListUpdate);
+    
+    return () => {
+      window.removeEventListener('my-list-updated', handleMyListUpdate);
+    };
+  }, [content.id]);
   
   // Use backdrop image if available, otherwise fallback to poster, then default image
   const displayImage = content.backdropUrl || content.posterUrl || DEFAULT_IMAGES.backdrop;
+
+  const handleMyListToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (isInList) {
+      await removeFromList(content.id);
+    } else {
+      await addToList(content.id);
+    }
+    
+    // Track the action
+    safeCapture(isInList ? 'remove_from_list' : 'add_to_list', {
+      contentId: content.id,
+      contentTitle: content.title,
+      location: 'content_card'
+    });
+  };
   
   return (
     <>
@@ -56,12 +95,23 @@ export const ContentCard = ({ content }: ContentCardProps) => {
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowVideo(true);
+                    safeCapture('content_play_clicked', { 
+                      contentId: content.id,
+                      contentTitle: content.title
+                    });
                   }}
                 >
                   <Play size={16} className="text-black" />
                 </button>
-                <button className="p-1 bg-netflix-darkgray/80 rounded-full hover:bg-netflix-darkgray">
-                  <Plus size={16} className="text-white" />
+                <button 
+                  className="p-1 bg-netflix-darkgray/80 rounded-full hover:bg-netflix-darkgray"
+                  onClick={handleMyListToggle}
+                >
+                  {isInList ? (
+                    <Check size={16} className="text-white" />
+                  ) : (
+                    <Plus size={16} className="text-white" />
+                  )}
                 </button>
                 <button className="p-1 bg-netflix-darkgray/80 rounded-full hover:bg-netflix-darkgray">
                   <ThumbsUp size={16} className="text-white" />
@@ -72,6 +122,10 @@ export const ContentCard = ({ content }: ContentCardProps) => {
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowDetails(true);
+                    safeCapture('content_details_opened', { 
+                      contentId: content.id,
+                      contentTitle: content.title
+                    });
                   }}
                 >
                   <ChevronDown size={16} className="text-white" />
@@ -105,7 +159,7 @@ export const ContentCard = ({ content }: ContentCardProps) => {
         </div>
       )}
 
-      {/* Details Modal - similar to the one in HeroSection */}
+      {/* Details Modal */}
       {showDetails && (
         <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="relative bg-netflix-darkgray rounded-lg max-w-2xl w-full">
@@ -150,6 +204,21 @@ export const ContentCard = ({ content }: ContentCardProps) => {
                   className="btn-primary flex items-center justify-center px-6 py-2 rounded bg-white hover:bg-white/80 text-black transition-colors"
                 >
                   <Play size={20} className="mr-2" /> Play
+                </button>
+                
+                <button 
+                  onClick={handleMyListToggle}
+                  className="flex items-center justify-center px-6 py-2 rounded border border-white/30 hover:bg-white/10 text-white transition-colors"
+                >
+                  {isInList ? (
+                    <>
+                      <Check size={20} className="mr-2" /> Remove from My List
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={20} className="mr-2" /> Add to My List
+                    </>
+                  )}
                 </button>
               </div>
             </div>

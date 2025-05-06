@@ -1,12 +1,13 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Play, Info, Plus, Check } from 'lucide-react';
 import { Content } from '../data/mockData';
 import { Button } from './ui/button';
 import { getRandomVideo } from '../utils/videoUtils';
 import { DEFAULT_IMAGES } from '../utils/imageUtils';
-import { safeCapture } from '../utils/posthogUtils';
+import { safeCapture } from '../utils/posthog';
+import { useMyList, isInMyList } from '../utils/posthog/myList';
 
 interface HeroSectionProps {
   content: Content;
@@ -16,7 +17,26 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [isAddedToList, setIsAddedToList] = useState(false);
+  const { addToList, removeFromList } = useMyList();
   const navigate = useNavigate();
+
+  // Check if content is in My List
+  useEffect(() => {
+    const checkMyList = async () => {
+      const inList = await isInMyList(content.id);
+      setIsAddedToList(inList);
+    };
+    
+    checkMyList();
+    
+    // Listen for my list updates
+    const handleMyListUpdate = () => checkMyList();
+    window.addEventListener('my-list-updated', handleMyListUpdate);
+    
+    return () => {
+      window.removeEventListener('my-list-updated', handleMyListUpdate);
+    };
+  }, [content.id]);
 
   // Use backdrop if available, otherwise fall back to default image
   const backdropUrl = content.backdropUrl || DEFAULT_IMAGES.backdrop;
@@ -41,8 +61,12 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
     });
   };
   
-  const handleMyListClick = () => {
-    setIsAddedToList(!isAddedToList);
+  const handleMyListClick = async () => {
+    if (isAddedToList) {
+      await removeFromList(content.id);
+    } else {
+      await addToList(content.id);
+    }
     
     // Track list action in PostHog
     safeCapture(isAddedToList ? 'remove_from_list' : 'add_to_list', {
