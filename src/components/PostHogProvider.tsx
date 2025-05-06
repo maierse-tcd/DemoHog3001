@@ -1,4 +1,3 @@
-
 import { PostHogProvider as OriginalPostHogProvider } from 'posthog-js/react';
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../integrations/supabase/client';
@@ -8,7 +7,7 @@ import {
   safeCapture, 
   safeGroupIdentify, 
   getLastIdentifiedGroup,
-  safeCaptureWithGroup,
+  groupCaptureWithGroup,
   clearStoredGroups
 } from '../utils/posthog';
 import { slugifyGroupKey, formatSubscriptionGroupProps, extractPriceValue } from '../utils/posthog/helpers';
@@ -134,7 +133,7 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
             });
             
             // Also capture an event with the group context to help establish the connection
-            safeCaptureWithGroup('user_group_identified', 'user_type', userType, {
+            groupCaptureWithGroup('user_group_identified', 'user_type', userType, {
               method: 'initial_identification',
               user_email: email
             });
@@ -278,7 +277,7 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
       safeGroupIdentify('subscription', planName, groupProperties);
       
       // Method 3: Send explicit event with group context
-      safeCaptureWithGroup('subscription_plan_associated', 'subscription', planName, {
+      groupCaptureWithGroup('subscription_plan_associated', 'subscription', planName, {
         set_method: 'provider_central',
         timestamp: new Date().toISOString()
       });
@@ -413,7 +412,7 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
             });
             
             // Also capture an event with the new group
-            safeCaptureWithGroup('user_type_changed', 'user_type', newUserType, {
+            groupCaptureWithGroup('user_type_changed', 'user_type', newUserType, {
               previous_type: currentUserType,
               changed_at: new Date().toISOString()
             });
@@ -464,4 +463,3 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     </OriginalPostHogProvider>
   );
 };
-
