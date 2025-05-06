@@ -3,7 +3,7 @@ import { safeCapture } from '../../utils/posthog';
 import { usePostHogContext } from '../../contexts/PostHogContext';
 
 export const usePostHogIdentity = () => {
-  const { updateUserType, captureEvent, identifyUserGroup } = usePostHogContext();
+  const { updateUserType, captureEvent, identifyUserGroup: contextIdentifyUserGroup } = usePostHogContext();
 
   const identifyUserInPostHog = useCallback((userId: string, userEmail: string, displayName: string) => {
     if (!userEmail) {
@@ -29,7 +29,7 @@ export const usePostHogIdentity = () => {
   }, [captureEvent]);
   
   // Method to identify user's group - now uses the context methods
-  const identifyUserGroup = useCallback((groupType: string, groupKey: string, properties?: Record<string, any>) => {
+  const identifyGroup = useCallback((groupType: string, groupKey: string, properties?: Record<string, any>) => {
     try {
       // For user_type groups, use the central method
       if (groupType === 'user_type' && (groupKey === 'Kid' || groupKey === 'Adult')) {
@@ -38,15 +38,15 @@ export const usePostHogIdentity = () => {
       }
       
       // Otherwise fall back to the general method
-      identifyUserGroup(groupKey, properties);
+      contextIdentifyUserGroup(groupKey, properties);
     } catch (err) {
       console.error("PostHog group identify error:", err);
     }
-  }, [updateUserType, identifyUserGroup]);
+  }, [updateUserType, contextIdentifyUserGroup]);
   
   return {
     identifyUserInPostHog,
     capturePostHogEvent,
-    identifyUserGroup
+    identifyUserGroup: identifyGroup
   };
 };
