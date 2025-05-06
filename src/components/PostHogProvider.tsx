@@ -7,7 +7,7 @@ import {
   safeCapture, 
   safeGroupIdentify, 
   getLastIdentifiedGroup,
-  groupCaptureWithGroup,
+  captureEventWithGroup,
   clearStoredGroups
 } from '../utils/posthog';
 import { slugifyGroupKey, formatSubscriptionGroupProps, extractPriceValue } from '../utils/posthog/helpers';

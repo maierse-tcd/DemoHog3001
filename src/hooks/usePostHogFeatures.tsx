@@ -6,7 +6,7 @@ import {
   useActiveFeatureFlags
 } from 'posthog-js/react';
 import { useCallback, useEffect } from 'react';
-import { safeGroupIdentify, groupCaptureWithGroup } from '../utils/posthog';
+import { safeGroupIdentify, captureEventWithGroup } from '../utils/posthog';
 import { formatSubscriptionGroupProps, slugifyGroupKey } from '../utils/posthog/helpers';
 
 // Re-export all official hooks for consistency in our app
@@ -190,7 +190,7 @@ export const usePostHogSubscription = () => {
       
       // Backup through utilities
       safeGroupIdentify('subscription', planName, groupProps);
-      groupCaptureWithGroup('subscription_fallback_set', 'subscription', planName, {
+      captureEventWithGroup('subscription_fallback_set', 'subscription', planName, {
         plan_id: planId,
         slug_key: slugKey,
         method: 'direct_hook',
