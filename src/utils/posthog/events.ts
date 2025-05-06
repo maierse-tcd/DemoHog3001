@@ -34,14 +34,14 @@ export const safeCapture = (event: string, properties?: Record<string, any>): vo
  * @param groupKey The identifier for the specific group
  * @param properties Additional event properties
  */
-export const safeCaptureWithGroup = (
+export const captureEventWithGroup = (
   eventName: string, 
   groupType: string, 
   groupKey: string, 
   properties?: Record<string, any>
 ): void => {
   if (!eventName || !groupType || !groupKey) {
-    console.warn("Missing required parameters for captureWithGroup");
+    console.warn("Missing required parameters for captureEventWithGroup");
     return;
   }
 
@@ -55,6 +55,9 @@ export const safeCaptureWithGroup = (
 
   safeCapture(eventName, eventProperties);
 };
+
+// Alias for backward compatibility - will be deprecated
+export const safeCaptureWithGroup = captureEventWithGroup;
 
 /**
  * Safely reload feature flags

@@ -1,5 +1,5 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { getLastIdentifiedGroup } from '../utils/posthog';
 
 export function usePostHogStateManager() {
@@ -15,7 +15,7 @@ export function usePostHogStateManager() {
   const [currentSubscriptionName, setCurrentSubscriptionName] = useState<string | null>(null);
 
   // Initialize state from localStorage on mount
-  const initializeState = () => {
+  const initializeState = useCallback(() => {
     // Restore user type
     const savedUserType = getLastIdentifiedGroup('user_type');
     if (savedUserType) {
@@ -29,7 +29,7 @@ export function usePostHogStateManager() {
       console.log(`Restored subscription from storage: ${savedSubscription}`);
       setCurrentSubscription(savedSubscription);
     }
-  };
+  }, []);
 
   return {
     posthogLoadedRef,

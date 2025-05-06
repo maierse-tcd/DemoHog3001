@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { toast } from '../../hooks/use-toast';
 import { ProfileSettings } from '../../contexts/ProfileSettingsContext';
 import { supabase } from '../../integrations/supabase/client';
-import { safeIdentify } from '../../utils/posthogUtils';
+import { safeIdentify } from '../../utils/posthog';
 import { Checkbox } from '../ui/checkbox';
 import { usePostHogContext } from '../../contexts/PostHogContext';
 
@@ -14,14 +14,12 @@ interface ProfileInfoProps {
 export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettings }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isKidsAccount, setIsKidsAccount] = useState<boolean>(settings.isKidsAccount);
-  // Use a ref to track if this is the initial render
   const initialRenderRef = useRef(true);
-  // Track if an update is already in progress
   const updateInProgressRef = useRef(false);
-  // Get PostHog context instead of using window object
+  
+  // Use PostHog context
   const { updateUserType } = usePostHogContext();
 
-  // Sync local state with settings when they change from context
   useEffect(() => {
     if (!initialRenderRef.current || settings.isKidsAccount !== isKidsAccount) {
       console.log(`Syncing kids account state from settings: ${settings.isKidsAccount}`);
@@ -30,24 +28,22 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
     initialRenderRef.current = false;
   }, [settings.isKidsAccount, isKidsAccount]);
 
-  // Handle checkbox change directly
   const handleKidsAccountChange = (checked: boolean) => {
     console.log(`Kids account checkbox changed to: ${checked}`);
     setIsKidsAccount(checked);
   };
 
-  // Update PostHog group when the kids account status changes
   useEffect(() => {
-    // Skip on initial render to prevent unnecessary API calls
+    // Skip on initial render
     if (initialRenderRef.current) {
       return;
     }
     
-    // Only update PostHog if the value differs from settings
+    // Only update if value differs from settings
     if (isKidsAccount !== settings.isKidsAccount) {
       console.log(`Updating PostHog with new kids account status: ${isKidsAccount}`);
       
-      // Use context method instead of window.__posthogMethods
+      // Use context method
       try {
         updateUserType(isKidsAccount);
       } catch (err) {
@@ -72,11 +68,7 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
       const formData = new FormData(e.target as HTMLFormElement);
       const name = formData.get('name') as string;
       const email = formData.get('email') as string;
-
-      // Use React state instead of form data for checkbox
-      // This ensures we always have the correct state
-
-      // Get current user to get the ID
+      
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
@@ -97,7 +89,6 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
         hasChanges = true;
       }
 
-      // Only include is_kids in the update if it actually changed
       if (isKidsAccount !== settings.isKidsAccount) {
         console.log(`Kids account changed from ${settings.isKidsAccount} to ${isKidsAccount}`);
         changes.is_kids = isKidsAccount;
@@ -106,14 +97,9 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
         console.log('Kids account status unchanged, skipping update');
       }
 
-      // Skip database update if nothing changed
       if (hasChanges) {
-        // Set updated_at only when we're actually updating
         changes.updated_at = new Date().toISOString();
-
         console.log('Updating profile with changes:', changes);
-
-        // Update user's profile in the database using the changes object
         const { error } = await supabase
           .from('profiles')
           .update(changes)
@@ -122,12 +108,10 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
         if (error) throw error;
       }
 
-      // Store the name in PostHog for better identification
       if (email && email !== settings.email) {
         safeIdentify(email, { name });
       }
 
-      // Update the context only if something changed
       const settingsChanges: Partial<ProfileSettings> = {};
       let hasSettingsChanges = false;
 
@@ -145,7 +129,7 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
         settingsChanges.isKidsAccount = isKidsAccount;
         hasSettingsChanges = true;
         
-        // Also update PostHog if we have direct access to the method
+        // Use context for updating PostHog
         try {
           updateUserType(isKidsAccount);
         } catch (err) {
@@ -153,7 +137,6 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
         }
       }
 
-      // Only update settings if something actually changed
       if (hasSettingsChanges) {
         console.log('Updating settings context with changes:', settingsChanges);
         updateSettings(settingsChanges);

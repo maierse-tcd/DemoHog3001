@@ -15,8 +15,7 @@ export {
 // Re-export from events
 export {
   safeCapture,
-  // Export safeCaptureWithGroup as captureEventWithGroup consistently
-  safeCaptureWithGroup as captureEventWithGroup,
+  captureEventWithGroup, // Standard name for capturing events with group context
   safeReloadFeatureFlags,
   safeIsFeatureEnabled
 } from './events';

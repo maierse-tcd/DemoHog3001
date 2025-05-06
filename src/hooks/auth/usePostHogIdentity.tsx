@@ -1,10 +1,9 @@
-
 import { useCallback } from 'react';
-import { safeIdentify, safeCapture, safeGroupIdentify } from '../../utils/posthog';
+import { safeCapture } from '../../utils/posthog';
 import { usePostHogContext } from '../../contexts/PostHogContext';
 
 export const usePostHogIdentity = () => {
-  const { updateUserType } = usePostHogContext();
+  const { updateUserType, captureEvent, identifyUserGroup } = usePostHogContext();
 
   const identifyUserInPostHog = useCallback((userId: string, userEmail: string, displayName: string) => {
     if (!userEmail) {
@@ -14,8 +13,7 @@ export const usePostHogIdentity = () => {
     
     try {
       // PostHog identification is now centralized in PostHogProvider
-      // This function is kept for backward compatibility, but actual identification
-      // should now happen through the PostHogProvider's auth listener
+      // This function is kept for backward compatibility
       console.log(`PostHog identity now managed by PostHogProvider for: ${userEmail}`);
     } catch (err) {
       console.error("PostHog identify error:", err);
@@ -24,13 +22,13 @@ export const usePostHogIdentity = () => {
   
   const capturePostHogEvent = useCallback((eventName: string, properties?: Record<string, any>) => {
     try {
-      safeCapture(eventName, properties);
+      captureEvent(eventName, properties);
     } catch (err) {
       console.error("PostHog event error:", err);
     }
-  }, []);
+  }, [captureEvent]);
   
-  // New method to identify user's group - now uses the direct context method
+  // Method to identify user's group - now uses the context methods
   const identifyUserGroup = useCallback((groupType: string, groupKey: string, properties?: Record<string, any>) => {
     try {
       // For user_type groups, use the central method
@@ -39,17 +37,12 @@ export const usePostHogIdentity = () => {
         return;
       }
       
-      // For other group types, use the safe method
-      const groupProps = {
-        name: groupKey, // Required for group to appear in UI
-        ...(properties || {})
-      };
-      
-      safeGroupIdentify(groupType, groupKey, groupProps);
+      // Otherwise fall back to the general method
+      identifyUserGroup(groupKey, properties);
     } catch (err) {
       console.error("PostHog group identify error:", err);
     }
-  }, [updateUserType]);
+  }, [updateUserType, identifyUserGroup]);
   
   return {
     identifyUserInPostHog,

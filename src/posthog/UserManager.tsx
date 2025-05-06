@@ -14,7 +14,7 @@ export function usePostHogUserManager() {
     }
     
     debounceTimerRef.current = setTimeout(() => {
-      // Make sure the name property is always present (required for groups to be visible in PostHog UI)
+      // Always ensure name property is present (required for groups to be visible in PostHog UI)
       const groupProperties = {
         name: userType,
         ...(properties || {})
@@ -25,7 +25,7 @@ export function usePostHogUserManager() {
     }, 300);
   }, []);
 
-  // Update user type (exposed to other components)
+  // Update user type (exposed to other components through context)
   const updateUserType = useCallback((isKid: boolean) => {
     const newUserType = isKid ? 'Kid' : 'Adult';
     
