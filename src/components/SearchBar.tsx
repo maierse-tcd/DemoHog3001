@@ -114,11 +114,18 @@ export const SearchBar = () => {
     setSearchQuery('');
     setSearchResults([]);
     
-    // Since we don't have a dedicated content page, we'll direct to Home for now
-    // In the future, this could go to a specific content page: navigate(`/content/${id}`);
+    // Navigate to the content item (for now we'll go to home page)
+    // In the future this could go to a specific content page
     navigate(`/`);
     
     safeCapture('search_result_selected', { contentId: id });
+    
+    // Show a toast notification that the content was selected
+    toast({
+      title: "Selected content",
+      description: "Content details page coming soon!",
+      variant: "default"
+    });
   };
 
   return (
@@ -171,14 +178,21 @@ export const SearchBar = () => {
                 onClick={() => handleSelectResult(item.id)}
               >
                 <div className="w-10 h-14 bg-netflix-darkgray rounded overflow-hidden flex-shrink-0 mr-2">
-                  <img 
-                    src={item.posterUrl} 
-                    alt={item.title}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = '/placeholder.svg';
-                    }}
-                  />
+                  {item.posterUrl || item.backdropUrl ? (
+                    <img 
+                      src={item.posterUrl || item.backdropUrl}
+                      alt={item.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Set a default placeholder image on error
+                        e.currentTarget.src = '/placeholder.svg';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-netflix-darkgray">
+                      <span className="text-netflix-gray text-xs">No image</span>
+                    </div>
+                  )}
                 </div>
                 <div className="overflow-hidden">
                   <p className="text-netflix-white text-sm truncate font-medium">{item.title}</p>
