@@ -1,7 +1,11 @@
+
 import { useCallback } from 'react';
 import { safeIdentify, safeCapture, safeGroupIdentify } from '../../utils/posthog';
+import { usePostHogContext } from '../../contexts/PostHogContext';
 
 export const usePostHogIdentity = () => {
+  const { updateUserType } = usePostHogContext();
+
   const identifyUserInPostHog = useCallback((userId: string, userEmail: string, displayName: string) => {
     if (!userEmail) {
       console.warn('Email is required for PostHog identification');
@@ -26,10 +30,16 @@ export const usePostHogIdentity = () => {
     }
   }, []);
   
-  // New method to identify user's group
+  // New method to identify user's group - now uses the direct context method
   const identifyUserGroup = useCallback((groupType: string, groupKey: string, properties?: Record<string, any>) => {
     try {
-      // Ensure we have at least a name property
+      // For user_type groups, use the central method
+      if (groupType === 'user_type' && (groupKey === 'Kid' || groupKey === 'Adult')) {
+        updateUserType(groupKey === 'Kid');
+        return;
+      }
+      
+      // For other group types, use the safe method
       const groupProps = {
         name: groupKey, // Required for group to appear in UI
         ...(properties || {})
@@ -39,7 +49,7 @@ export const usePostHogIdentity = () => {
     } catch (err) {
       console.error("PostHog group identify error:", err);
     }
-  }, []);
+  }, [updateUserType]);
   
   return {
     identifyUserInPostHog,

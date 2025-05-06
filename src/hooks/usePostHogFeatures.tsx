@@ -1,3 +1,4 @@
+
 import { 
   usePostHog, 
   useFeatureFlagEnabled, 
@@ -5,9 +6,10 @@ import {
   useFeatureFlagVariantKey,
   useActiveFeatureFlags
 } from 'posthog-js/react';
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { safeGroupIdentify, captureEventWithGroup } from '../utils/posthog';
 import { formatSubscriptionGroupProps, slugifyGroupKey } from '../utils/posthog/helpers';
+import { usePostHogContext } from '../contexts/PostHogContext';
 
 // Re-export all official hooks for consistency in our app
 export { 
@@ -21,7 +23,7 @@ export {
 // Alias for backward compatibility with existing components
 export const useFeatureFlag = useFeatureFlagEnabled;
 
-// Enhanced hook for group operations
+// Enhanced hook for group operations - now uses the standard captureEventWithGroup
 export const usePostHogGroups = () => {
   const posthog = usePostHog();
   
@@ -134,74 +136,16 @@ export const usePostHogIdentity = () => {
   return { identifyUser };
 };
 
-// New hook specifically for subscription management
+// New hook specifically for subscription management - now uses the context
 export const usePostHogSubscription = () => {
-  const posthog = usePostHog();
+  const { updateSubscription } = usePostHogContext();
   
-  // Access the centrally managed subscription update method
-  const updateSubscription = useCallback((planName: string, planId: string, planPrice: string) => {
-    if (!posthog) return;
-    
-    try {
-      // Check if window.__posthogMethods exists (our central methods)
-      if (typeof window !== 'undefined' && (window as any).__posthogMethods?.updateSubscription) {
-        // Use the centralized method
-        (window as any).__posthogMethods.updateSubscription(planId);
-        return;
-      }
-      
-      // Fallback to direct implementation
-      const slugKey = slugifyGroupKey(planName);
-      console.log(`Directly identifying subscription group: ${planName} (key: ${slugKey})`);
-      
-      // Format subscription properties consistently
-      const groupProps = formatSubscriptionGroupProps(planName, planId, planPrice, {
-        method: 'direct_hook',
-        timestamp: new Date().toISOString()
-      });
-      
-      // Direct PostHog calls
-      posthog.group('subscription', slugKey, groupProps);
-      
-      posthog.capture('$groupidentify', {
-        $group_type: 'subscription',
-        $group_key: slugKey,
-        $group_set: groupProps
-      });
-      
-      // Explicit event with group association
-      posthog.capture('subscription_updated', {
-        plan_name: planName,
-        plan_id: planId,
-        $groups: {
-          subscription: slugKey
-        }
-      });
-      
-      // Additional reinforcement event
-      posthog.capture('subscription_group_reinforced', {
-        original_name: planName,
-        slug_key: slugKey,
-        plan_id: planId,
-        $groups: {
-          subscription: slugKey
-        }
-      });
-      
-      // Backup through utilities
-      safeGroupIdentify('subscription', planName, groupProps);
-      captureEventWithGroup('subscription_fallback_set', 'subscription', planName, {
-        plan_id: planId,
-        slug_key: slugKey,
-        method: 'direct_hook',
-        timestamp: new Date().toISOString()
-      });
-      
-      console.log(`PostHog: Subscription identified: ${planName} (${slugKey})`);
-    } catch (err) {
-      console.error("PostHog subscription group error:", err);
-    }
-  }, [posthog]);
-
   return { updateSubscription };
+};
+
+// New hook to access common PostHog methods
+export const usePostHogHelper = () => {
+  const { updateUserType, updateSubscription } = usePostHogContext();
+  
+  return { updateUserType, updateSubscription };
 };

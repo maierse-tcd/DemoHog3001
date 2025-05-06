@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { toast } from '../../hooks/use-toast';
 import { ProfileSettings } from '../../contexts/ProfileSettingsContext';
 import { supabase } from '../../integrations/supabase/client';
 import { safeIdentify } from '../../utils/posthogUtils';
 import { Checkbox } from '../ui/checkbox';
+import { usePostHogContext } from '../../contexts/PostHogContext';
 
 interface ProfileInfoProps {
   settings: ProfileSettings;
@@ -18,6 +18,8 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
   const initialRenderRef = useRef(true);
   // Track if an update is already in progress
   const updateInProgressRef = useRef(false);
+  // Get PostHog context instead of using window object
+  const { updateUserType } = usePostHogContext();
 
   // Sync local state with settings when they change from context
   useEffect(() => {
@@ -26,7 +28,7 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
       setIsKidsAccount(settings.isKidsAccount);
     }
     initialRenderRef.current = false;
-  }, [settings.isKidsAccount]);
+  }, [settings.isKidsAccount, isKidsAccount]);
 
   // Handle checkbox change directly
   const handleKidsAccountChange = (checked: boolean) => {
@@ -45,16 +47,14 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
     if (isKidsAccount !== settings.isKidsAccount) {
       console.log(`Updating PostHog with new kids account status: ${isKidsAccount}`);
       
-      // Call the PostHog methods if available
-      if (window && (window as any).__posthogMethods) {
-        try {
-          (window as any).__posthogMethods.updateUserType(isKidsAccount);
-        } catch (err) {
-          console.error('Error updating PostHog user type:', err);
-        }
+      // Use context method instead of window.__posthogMethods
+      try {
+        updateUserType(isKidsAccount);
+      } catch (err) {
+        console.error('Error updating PostHog user type:', err);
       }
     }
-  }, [isKidsAccount, settings.isKidsAccount]);
+  }, [isKidsAccount, settings.isKidsAccount, updateUserType]);
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,12 +146,10 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
         hasSettingsChanges = true;
         
         // Also update PostHog if we have direct access to the method
-        if (window && (window as any).__posthogMethods) {
-          try {
-            (window as any).__posthogMethods.updateUserType(isKidsAccount);
-          } catch (err) {
-            console.error('Error updating PostHog user type:', err);
-          }
+        try {
+          updateUserType(isKidsAccount);
+        } catch (err) {
+          console.error('Error updating PostHog user type:', err);
         }
       }
 

@@ -15,7 +15,7 @@ export {
 // Re-export from events
 export {
   safeCapture,
-  // Export safeCaptureWithGroup only from events.ts, not from both files
+  // Export safeCaptureWithGroup as captureEventWithGroup consistently
   safeCaptureWithGroup as captureEventWithGroup,
   safeReloadFeatureFlags,
   safeIsFeatureEnabled
@@ -34,9 +34,7 @@ export {
   getLastGroups,
   setLastGroup,
   getLastIdentifiedGroup,
-  safeGroupIdentify,
-  // Rename this export to avoid the conflict
-  safeCaptureWithGroup as groupCaptureWithGroup
+  safeGroupIdentify
 } from './groups';
 
 // Re-export from helpers

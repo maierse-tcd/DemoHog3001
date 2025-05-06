@@ -12,7 +12,7 @@ import { useToast } from '../../hooks/use-toast';
 import { Checkbox } from '../ui/checkbox';
 import { safeCapture, safeGroupIdentify, captureEventWithGroup } from '../../utils/posthog';
 import { usePostHog } from 'posthog-js/react';
-import { usePostHogSubscription } from '../../hooks/usePostHogFeatures';
+import { usePostHogContext } from '../../contexts/PostHogContext';
 
 // Define the schema for the form
 const formSchema = z.object({
@@ -31,8 +31,10 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelec
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Get PostHog context for direct method access
+  const { updateSubscription } = usePostHogContext();
   const posthog = usePostHog();
-  const { updateSubscription } = usePostHogSubscription();
 
   // Initialize react-hook-form
   const form = useForm<z.infer<typeof formSchema>>({
