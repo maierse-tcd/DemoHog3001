@@ -33,5 +33,14 @@ export {
   getLastGroups,
   setLastGroup,
   getLastIdentifiedGroup,
-  safeGroupIdentify
+  safeGroupIdentify,
+  safeCaptureWithGroup
 } from './groups';
+
+// Re-export from helpers
+export {
+  slugifyGroupKey,
+  extractPriceValue,
+  formatSubscriptionGroupProps
+} from './helpers';
+

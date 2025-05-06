@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { SubscriptionPlan, Plan } from '../SubscriptionPlan';
 import { supabase } from '../../integrations/supabase/client';
 import { Skeleton } from '../ui/skeleton';
 import { useSearchParams } from 'react-router-dom';
-import { safeCapture } from '../../utils/posthogUtils';
+import { safeCapture } from '../../utils/posthog';
+import { extractPriceValue } from '../../utils/posthog/helpers';
 
 interface PlanSelectorProps {
   plans?: Plan[];
@@ -80,12 +80,6 @@ export const PlanSelector: React.FC<PlanSelectorProps> = ({
 
     fetchPlans();
   }, [providedPlans]);
-
-  // Extract numeric price value for analytics
-  const extractPriceValue = (priceString: string): number => {
-    const numericValue = priceString.replace(/[^\d.]/g, '');
-    return parseFloat(numericValue) || 0;
-  };
 
   const handlePlanSelect = (planId: string) => {
     onPlanSelect(planId);

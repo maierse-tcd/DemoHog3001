@@ -1,3 +1,4 @@
+
 import { PostHogProvider as OriginalPostHogProvider } from 'posthog-js/react';
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../integrations/supabase/client';
@@ -10,6 +11,7 @@ import {
   safeCaptureWithGroup,
   clearStoredGroups
 } from '../utils/posthog';
+import { slugifyGroupKey, formatSubscriptionGroupProps, extractPriceValue } from '../utils/posthog/helpers';
 import posthog from 'posthog-js';
 
 // PostHog configuration
@@ -28,6 +30,8 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
   const [currentUserType, setCurrentUserType] = useState<string | null>(null);
   // Track the current subscription plan to avoid duplicate group identifications
   const [currentSubscription, setCurrentSubscription] = useState<string | null>(null);
+  // Store the original subscription name (unslugified)
+  const [currentSubscriptionName, setCurrentSubscriptionName] = useState<string | null>(null);
   // Debounce timer for group identification
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Debounce timer for subscription identification
@@ -196,9 +200,11 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
       
       if (planData) {
         const planName = planData.name;
+        // Store original name for reference
+        setCurrentSubscriptionName(planName);
+        
         // Call the subscription group identification with plan details
         identifySubscriptionGroup(planName, {
-          name: planName, // REQUIRED for UI visibility
           plan_id: planId,
           plan_cost: extractPriceValue(planData.price),
           features_count: planData.features?.length || 0,
@@ -211,18 +217,15 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
       console.error('Error fetching subscription plan:', error);
     }
   };
-
-  // Extract numeric price value for analytics
-  const extractPriceValue = (priceString: string): number => {
-    const numericValue = priceString.replace(/[^\d.]/g, '');
-    return parseFloat(numericValue) || 0;
-  };
   
   // Debounced subscription group identification with persistent caching
   const identifySubscriptionGroup = (planName: string, properties?: Record<string, any>) => {
-    // Skip if this is the same subscription as last time
-    if (planName === currentSubscription) {
-      console.log(`PostHog: User already identified with subscription: ${planName}, skipping`);
+    // Process the subscription name to get a consistent key
+    const slugKey = slugifyGroupKey(planName);
+    
+    // Skip if this is the same subscription as last time (using slugified key)
+    if (slugKey === currentSubscription) {
+      console.log(`PostHog: User already identified with subscription: ${slugKey} (${planName}), skipping`);
       return;
     }
 
@@ -231,36 +234,41 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     }
     
     subscriptionDebounceRef.current = setTimeout(() => {
-      console.log(`PostHog: Identifying subscription group: ${planName}`);
+      console.log(`PostHog: Identifying subscription group: ${planName} (key: ${slugKey})`);
       
-      // Make sure the name property is always present (required for groups to be visible in PostHog UI)
-      const groupProperties = {
-        name: planName, // REQUIRED for UI visibility
+      // Format subscription properties consistently
+      const groupProperties = formatSubscriptionGroupProps(planName, properties?.plan_id || '', 
+                                                          properties?.plan_cost || 0, {
+        method: 'provider_central',
+        original_name: planName,
         ...(properties || {})
-      };
+      });
       
       // Method 1: Use direct PostHog instance for maximum reliability
       if (posthogLoadedRef.current && typeof posthog !== 'undefined') {
         try {
+          console.log(`Direct PostHog call: group('subscription', '${slugKey}')`, groupProperties);
+          
           // Step 1: Direct group method
-          posthog.group('subscription', planName, groupProperties);
+          posthog.group('subscription', slugKey, groupProperties);
           
           // Step 2: Explicit $groupidentify event (critical for UI visibility)
           posthog.capture('$groupidentify', {
             $group_type: 'subscription',
-            $group_key: planName,
+            $group_key: slugKey,
             $group_set: groupProperties
           });
           
           // Step 3: Reinforcement event associated with the group
           posthog.capture('subscription_identified', {
             plan_name: planName,
+            slug_key: slugKey,
             $groups: {
-              subscription: planName
+              subscription: slugKey
             }
           });
           
-          console.log(`PostHog Direct: User associated with subscription group: ${planName}`);
+          console.log(`PostHog Direct: User associated with subscription group: ${slugKey} (${planName})`);
         } catch (err) {
           console.error('PostHog direct subscription identify error:', err);
         }
@@ -275,12 +283,23 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
         timestamp: new Date().toISOString()
       });
       
+      // Additional reinforcement event with subscription info
+      safeCapture('subscription_group_reinforced', {
+        group_key: slugKey,
+        original_name: planName,
+        timestamp: new Date().toISOString(),
+        $groups: {
+          subscription: slugKey
+        }
+      });
+      
       subscriptionDebounceRef.current = null;
       
       // Update state after successful identification
-      setCurrentSubscription(planName);
+      setCurrentSubscription(slugKey);
+      setCurrentSubscriptionName(planName);
       
-      console.log(`PostHog: Subscription group identified: ${planName}`);
+      console.log(`PostHog: Subscription group identified: ${slugKey} (${planName})`);
     }, 300);
   };
 
@@ -348,6 +367,7 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
           // Reset user type and subscription
           setCurrentUserType(null);
           setCurrentSubscription(null);
+          setCurrentSubscriptionName(null);
           // Clear stored groups
           clearStoredGroups();
         }
@@ -403,10 +423,18 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
   };
   
   // Method to update the subscription plan from outside components
-  const updateSubscription = (planId: string) => {
-    console.log(`Updating subscription plan: ${planId}`);
+  const updateSubscription = (planName: string, planId: string, planPrice: string) => {
+    console.log(`Updating subscription plan: ${planName} (${planId}, ${planPrice})`);
     
-    fetchAndIdentifySubscriptionGroup(planId);
+    // Format subscription properties
+    const groupProperties = {
+      plan_id: planId,
+      plan_cost: extractPriceValue(planPrice),
+      last_updated: new Date().toISOString()
+    };
+    
+    // Process through central identification
+    identifySubscriptionGroup(planName, groupProperties);
   };
 
   // Expose the methods through a ref that can be accessed by other components
@@ -436,3 +464,4 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     </OriginalPostHogProvider>
   );
 };
+

@@ -8,6 +8,7 @@ import {
 } from 'posthog-js/react';
 import { useCallback, useEffect } from 'react';
 import { safeGroupIdentify, safeCaptureWithGroup } from '../utils/posthog';
+import { formatSubscriptionGroupProps, slugifyGroupKey } from '../utils/posthog/helpers';
 
 // Re-export all official hooks for consistency in our app
 export { 
@@ -29,35 +30,41 @@ export const usePostHogGroups = () => {
     if (!posthog) return;
     
     try {
+      // Apply slugify for subscription group type
+      const processedKey = groupType === 'subscription' 
+        ? slugifyGroupKey(groupKey) 
+        : groupKey;
+      
       // Ensure the name property is always present - CRITICAL for UI visibility
       const groupProps = {
-        name: groupKey, // This is mandatory for the group to appear in the UI
+        name: processedKey, // This is mandatory for the group to appear in the UI
+        ...(processedKey !== groupKey ? { display_name: groupKey } : {}),
         ...(properties || {})
       };
       
-      console.log(`Identifying PostHog group: ${groupType}:${groupKey}`, groupProps);
+      console.log(`Identifying PostHog group: ${groupType}:${processedKey}`, groupProps);
       
       // Step 1: Use the direct group method
-      posthog.group(groupType, groupKey, groupProps);
+      posthog.group(groupType, processedKey, groupProps);
       
       // Step 2: Send an explicit group identify event (critical for UI visibility)
       posthog.capture('$groupidentify', {
         $group_type: groupType,
-        $group_key: groupKey,
+        $group_key: processedKey,
         $group_set: groupProps
       });
       
       // Step 3: Capture an event with group context to reinforce the association
       posthog.capture('group_association_reinforced', {
         group_type: groupType,
-        group_key: groupKey,
+        group_key: processedKey,
         timestamp: new Date().toISOString(),
         $groups: {
-          [groupType]: groupKey
+          [groupType]: processedKey
         }
       });
       
-      console.log(`PostHog: Group identified: ${groupType}:${groupKey}`);
+      console.log(`PostHog: Group identified: ${groupType}:${processedKey}`);
     } catch (err) {
       console.error("PostHog group identify error:", err);
     }
@@ -89,11 +96,16 @@ export const usePostHogEvent = () => {
     if (!posthog) return;
     
     try {
+      // Apply slugify for subscription group type
+      const processedKey = groupType === 'subscription' 
+        ? slugifyGroupKey(groupKey) 
+        : groupKey;
+        
       // Include the group property in the event
       const eventProps = {
         ...properties,
         $groups: {
-          [groupType]: groupKey
+          [groupType]: processedKey
         }
       };
       
@@ -140,28 +152,21 @@ export const usePostHogSubscription = () => {
       }
       
       // Fallback to direct implementation
-      console.log(`Directly identifying subscription group: ${planName}`);
+      const slugKey = slugifyGroupKey(planName);
+      console.log(`Directly identifying subscription group: ${planName} (key: ${slugKey})`);
       
-      // Extract numeric price value
-      const extractPriceValue = (priceString: string): number => {
-        const numericValue = priceString.replace(/[^\d.]/g, '');
-        return parseFloat(numericValue) || 0;
-      };
-      
-      // CRITICAL: Ensure name property is included
-      const groupProps = {
-        name: planName, // REQUIRED for UI visibility
-        plan_id: planId,
-        plan_cost: extractPriceValue(planPrice),
-        last_updated: new Date().toISOString()
-      };
+      // Format subscription properties consistently
+      const groupProps = formatSubscriptionGroupProps(planName, planId, planPrice, {
+        method: 'direct_hook',
+        timestamp: new Date().toISOString()
+      });
       
       // Direct PostHog calls
-      posthog.group('subscription', planName, groupProps);
+      posthog.group('subscription', slugKey, groupProps);
       
       posthog.capture('$groupidentify', {
         $group_type: 'subscription',
-        $group_key: planName,
+        $group_key: slugKey,
         $group_set: groupProps
       });
       
@@ -170,7 +175,17 @@ export const usePostHogSubscription = () => {
         plan_name: planName,
         plan_id: planId,
         $groups: {
-          subscription: planName
+          subscription: slugKey
+        }
+      });
+      
+      // Additional reinforcement event
+      posthog.capture('subscription_group_reinforced', {
+        original_name: planName,
+        slug_key: slugKey,
+        plan_id: planId,
+        $groups: {
+          subscription: slugKey
         }
       });
       
@@ -178,12 +193,12 @@ export const usePostHogSubscription = () => {
       safeGroupIdentify('subscription', planName, groupProps);
       safeCaptureWithGroup('subscription_fallback_set', 'subscription', planName, {
         plan_id: planId,
-        plan_price: extractPriceValue(planPrice),
+        slug_key: slugKey,
         method: 'direct_hook',
         timestamp: new Date().toISOString()
       });
       
-      console.log(`PostHog: Subscription identified: ${planName}`);
+      console.log(`PostHog: Subscription identified: ${planName} (${slugKey})`);
     } catch (err) {
       console.error("PostHog subscription group error:", err);
     }
@@ -191,3 +206,4 @@ export const usePostHogSubscription = () => {
 
   return { updateSubscription };
 };
+

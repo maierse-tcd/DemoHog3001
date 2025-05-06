@@ -4,9 +4,10 @@ import { Plan, SubscriptionPlan } from '../SubscriptionPlan';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuthContext } from '../../hooks/auth/useAuthContext';
 import { Skeleton } from '../ui/skeleton';
-import { safeCapture } from '../../utils/posthog';
+import { safeCapture, safeCaptureWithGroup } from '../../utils/posthog';
 import { usePostHog } from 'posthog-js/react';
 import { usePostHogSubscription } from '../../hooks/usePostHogFeatures';
+import { slugifyGroupKey, formatSubscriptionGroupProps, extractPriceValue } from '../../utils/posthog/helpers';
 
 interface SubscriptionSettingsProps {
   selectedPlanId: string;
@@ -30,12 +31,6 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
     setCurrentPlanId(initialPlanId);
   }, [initialPlanId]);
   
-  // Extract numeric price value for analytics
-  const extractPriceValue = (priceString: string): number => {
-    const numericValue = priceString.replace(/[^\d.]/g, '');
-    return parseFloat(numericValue) || 0;
-  };
-
   // Load plans from Supabase
   useEffect(() => {
     const fetchPlans = async () => {
@@ -130,30 +125,32 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
         last_plan_change: new Date().toISOString()
       });
       
+      // Generate consistent subscription key
+      const subscriptionKey = slugifyGroupKey(selectedPlan.name);
+      
       // Use the centralized subscription group management
-      console.log(`Updating subscription group to: ${selectedPlan.name}`);
+      console.log(`Updating subscription group to: ${selectedPlan.name} (key: ${subscriptionKey})`);
       updateSubscription(selectedPlan.name, selectedPlan.id, selectedPlan.price);
       
       // Direct reinforcement when posthog is available
       if (posthog) {
-        console.log(`Direct PostHog reinforcement for subscription: ${selectedPlan.name}`);
+        console.log(`Direct PostHog reinforcement for subscription: ${selectedPlan.name} (key: ${subscriptionKey})`);
         
-        const groupProps = {
-          name: selectedPlan.name,  // REQUIRED for UI visibility
-          plan_id: selectedPlan.id,
-          plan_cost: extractPriceValue(selectedPlan.price),
-          updated_at: new Date().toISOString()
-        };
+        // Format subscription properties consistently
+        const groupProps = formatSubscriptionGroupProps(selectedPlan.name, selectedPlan.id, selectedPlan.price, {
+          updated_at: new Date().toISOString(),
+          method: 'settings_component'
+        });
         
         // Direct PostHog calls for maximum reliability
         try {
           // Step 1: Use group method to directly associate
-          posthog.group('subscription', selectedPlan.name, groupProps);
+          posthog.group('subscription', subscriptionKey, groupProps);
           
           // Step 2: Send explicit $groupidentify event
           posthog.capture('$groupidentify', {
             $group_type: 'subscription',
-            $group_key: selectedPlan.name,
+            $group_key: subscriptionKey,
             $group_set: groupProps
           });
           
@@ -161,14 +158,23 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
           posthog.capture('subscription_updated_settings', {
             plan_id: selectedPlan.id,
             plan_name: selectedPlan.name,
+            slug_key: subscriptionKey,
             $groups: {
-              subscription: selectedPlan.name
+              subscription: subscriptionKey
             }
           });
         } catch (err) {
           console.error('Direct PostHog subscription update error:', err);
         }
       }
+      
+      // Additional reinforcement with safe utilities
+      safeCaptureWithGroup('subscription_update_confirmed', 'subscription', selectedPlan.name, {
+        plan_id: selectedPlan.id,
+        slug_key: subscriptionKey,
+        set_method: 'settings_component',
+        timestamp: new Date().toISOString()
+      });
       
       toast({
         title: 'Changes saved',
