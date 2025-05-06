@@ -18,8 +18,11 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
   // Use local placeholder image to prevent network errors
   const fallbackImage = '/placeholder.svg';
   
-  // Show user initials as fallback when no image
-  const userInitial = userName?.charAt(0)?.toUpperCase() || 'U';
+  // Get first name if there's a space in the username
+  const firstName = userName?.includes(' ') ? userName.split(' ')[0] : userName;
+  
+  // Show first initial of first name as fallback
+  const userInitial = firstName?.charAt(0)?.toUpperCase() || 'U';
   
   return (
     <>

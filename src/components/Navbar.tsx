@@ -43,11 +43,7 @@ export const Navbar = () => {
         {/* Logo */}
         <div className="flex items-center">
           <Link to="/" className="mr-2">
-            <img 
-              src="/placeholder.svg" 
-              alt="Logo" 
-              className="h-8 w-24 object-contain" 
-            />
+            <h1 className="text-netflix-red text-3xl font-bold tracking-tighter">HOGFLIX</h1>
           </Link>
           
           {/* Desktop Navigation */}

@@ -1,10 +1,11 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Search, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { loadContentFromSupabase } from '../utils/contentUtils';
 import { Content } from '../data/mockData';
 import { safeCapture } from '../utils/posthog';
+import { toast } from '../hooks/use-toast';
 
 export const SearchBar = () => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -12,6 +13,7 @@ export const SearchBar = () => {
   const [searchResults, setSearchResults] = useState<Content[]>([]);
   const [allContent, setAllContent] = useState<Content[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   // Load all content for search
@@ -20,10 +22,16 @@ export const SearchBar = () => {
       try {
         setIsLoading(true);
         const content = await loadContentFromSupabase();
+        console.log("Loaded content for search:", content.length, "items");
         setAllContent(content);
         setIsLoading(false);
       } catch (error) {
         console.error("Error loading content for search:", error);
+        toast({
+          title: "Search Error",
+          description: "Could not load search content. Please try again later.",
+          variant: "destructive"
+        });
         setIsLoading(false);
       }
     };
@@ -38,6 +46,18 @@ export const SearchBar = () => {
     };
   }, []);
 
+  // Handle clicks outside to close search dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setIsExpanded(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleSearchToggle = () => {
     setIsExpanded(!isExpanded);
     if (isExpanded) {
@@ -49,13 +69,35 @@ export const SearchBar = () => {
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     
-    if (query.trim().length > 1) {
+    if (query.trim().length > 0) {
       const normalizedQuery = query.toLowerCase().trim();
-      const filteredResults = allContent.filter(item => 
-        item.title.toLowerCase().includes(normalizedQuery) || 
-        (item.description?.toLowerCase() || '').includes(normalizedQuery) ||
-        item.genre.some(genre => genre.toLowerCase().includes(normalizedQuery))
-      );
+      
+      // Improved search algorithm
+      const filteredResults = allContent.filter(item => {
+        // Search in title with higher priority
+        const titleMatch = item.title.toLowerCase().includes(normalizedQuery);
+        
+        // Search in description
+        const descMatch = item.description?.toLowerCase().includes(normalizedQuery);
+        
+        // Search in genres
+        const genreMatch = item.genre.some(genre => 
+          genre.toLowerCase().includes(normalizedQuery)
+        );
+        
+        return titleMatch || descMatch || genreMatch;
+      });
+      
+      // Sort results by relevance (title matches first)
+      filteredResults.sort((a, b) => {
+        const aTitleMatch = a.title.toLowerCase().includes(normalizedQuery);
+        const bTitleMatch = b.title.toLowerCase().includes(normalizedQuery);
+        
+        if (aTitleMatch && !bTitleMatch) return -1;
+        if (!aTitleMatch && bTitleMatch) return 1;
+        return 0;
+      });
+      
       setSearchResults(filteredResults);
       
       safeCapture('search_performed', { 
@@ -80,7 +122,7 @@ export const SearchBar = () => {
   };
 
   return (
-    <div className="relative flex items-center">
+    <div className="relative flex items-center" ref={searchContainerRef}>
       <div 
         className={`flex items-center ${
           isExpanded 
@@ -116,10 +158,10 @@ export const SearchBar = () => {
       
       {/* Search Results Dropdown */}
       {isExpanded && (
-        <div className="absolute top-full right-0 mt-2 w-64 md:w-80 bg-black border border-netflix-gray/20 rounded py-2 max-h-96 overflow-y-auto z-50">
+        <div className="absolute top-full right-0 mt-2 w-64 md:w-80 bg-netflix-black border border-netflix-gray/20 rounded py-2 max-h-96 overflow-y-auto z-50">
           {isLoading ? (
             <div className="px-4 py-2 text-netflix-gray text-center">Loading...</div>
-          ) : searchQuery.length > 1 && searchResults.length === 0 ? (
+          ) : searchQuery.length > 0 && searchResults.length === 0 ? (
             <div className="px-4 py-2 text-netflix-gray text-center">No results found</div>
           ) : searchResults.length > 0 && (
             searchResults.map(item => (
