@@ -4,7 +4,7 @@ import { Plan, SubscriptionPlan } from '../SubscriptionPlan';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuthContext } from '../../hooks/auth/useAuthContext';
 import { Skeleton } from '../ui/skeleton';
-import { safeCapture, safeCaptureWithGroup } from '../../utils/posthog';
+import { safeCapture, captureEventWithGroup } from '../../utils/posthog';
 import { usePostHog } from 'posthog-js/react';
 import { usePostHogSubscription } from '../../hooks/usePostHogFeatures';
 import { slugifyGroupKey, formatSubscriptionGroupProps, extractPriceValue } from '../../utils/posthog/helpers';
@@ -168,8 +168,8 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
         }
       }
       
-      // Additional reinforcement with safe utilities
-      safeCaptureWithGroup('subscription_update_confirmed', 'subscription', selectedPlan.name, {
+      // Additional reinforcement with safe utilities - updated to use captureEventWithGroup
+      captureEventWithGroup('subscription_update_confirmed', 'subscription', selectedPlan.name, {
         plan_id: selectedPlan.id,
         slug_key: subscriptionKey,
         set_method: 'settings_component',

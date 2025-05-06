@@ -10,7 +10,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { supabase } from '../../integrations/supabase/client';
 import { useToast } from '../../hooks/use-toast';
 import { Checkbox } from '../ui/checkbox';
-import { safeCapture, safeGroupIdentify, safeCaptureWithGroup } from '../../utils/posthog';
+import { safeCapture, safeGroupIdentify, captureEventWithGroup } from '../../utils/posthog';
 import { usePostHog } from 'posthog-js/react';
 import { usePostHogSubscription } from '../../hooks/usePostHogFeatures';
 
@@ -182,7 +182,7 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelec
       });
       
       // Additional reinforcement with safe utilities
-      safeCaptureWithGroup('signup_with_subscription_event', 'subscription', planName, {
+      captureEventWithGroup('signup_with_subscription_event', 'subscription', planName, {
         plan_id: selectedPlanId,
         plan_cost: planCost,
         set_method: 'signup_process',
