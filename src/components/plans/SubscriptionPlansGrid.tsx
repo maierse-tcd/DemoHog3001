@@ -6,7 +6,7 @@ import { Skeleton } from '../ui/skeleton';
 interface SubscriptionPlansGridProps {
   plans: Plan[];
   isLoading: boolean;
-  onSelectPlan?: (planId: string) => void;
+  onSelectPlan: (planId: string) => void;
 }
 
 export const SubscriptionPlansGrid: React.FC<SubscriptionPlansGridProps> = ({ 
@@ -50,7 +50,7 @@ export const SubscriptionPlansGrid: React.FC<SubscriptionPlansGridProps> = ({
           <SubscriptionPlan
             plan={plan}
             selectedPlanId={null}
-            onSelect={onSelectPlan || (() => {})}
+            onSelect={onSelectPlan}
           />
         </div>
       ))}

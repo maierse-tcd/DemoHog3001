@@ -1,6 +1,7 @@
 
 import React from 'react';
 import confetti from 'canvas-confetti';
+import { SubscriptionCTA } from './plans/SubscriptionCTA';
 
 export interface Plan {
   id: string;
@@ -77,16 +78,12 @@ export const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
         ))}
       </ul>
       
-      <button
-        onClick={handleSelect}
-        className={`w-full py-2 px-4 rounded font-medium transition-colors ${
-          isSelected 
-            ? 'bg-[#ea384c] text-white' 
-            : 'bg-[#1A1F2C] text-white hover:bg-[#ea384c]'
-        }`}
-      >
-        {isSelected ? 'Selected' : 'Choose Plan'}
-      </button>
+      <SubscriptionCTA 
+        planId={plan.id}
+        planName={plan.name}
+        isSelected={isSelected}
+        onSelect={handleSelect}
+      />
     </div>
   );
 };

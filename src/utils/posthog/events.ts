@@ -60,6 +60,27 @@ export const captureEventWithGroup = (
 export const safeCaptureWithGroup = captureEventWithGroup;
 
 /**
+ * Helper function for tracking A/B test events
+ * @param eventName The name of the event
+ * @param testName The name of the A/B test
+ * @param variant The variant the user is seeing
+ * @param properties Additional event properties
+ */
+export const captureTestEvent = (
+  eventName: string,
+  testName: string,
+  variant: string | null,
+  properties?: Record<string, any>
+): void => {
+  safeCapture(eventName, {
+    ...properties,
+    ab_test: testName,
+    variant: variant || 'control',
+    timestamp: new Date().toISOString()
+  });
+};
+
+/**
  * Safely reload feature flags
  */
 export const safeReloadFeatureFlags = async (): Promise<void> => {

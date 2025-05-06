@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
@@ -7,13 +8,25 @@ import { SubscriptionPlansGrid } from '../components/plans/SubscriptionPlansGrid
 import { supabase } from '../integrations/supabase/client';
 import { useToast } from '../hooks/use-toast';
 import { Plan } from '../components/SubscriptionPlan';
-import { safeCapture } from '../utils/posthog';
+import { safeCapture, captureEventWithGroup } from '../utils/posthog';
+import { useFeatureFlagVariantKey } from 'posthog-js/react';
 
 const Plans = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
+  // Get A/B test variant for analytics
+  const ctaVariant = useFeatureFlagVariantKey('subscription_cta_test') as string | null;
+
+  // Track page view with test variant information
+  useEffect(() => {
+    safeCapture('plans_page_viewed', {
+      cta_variant: ctaVariant || 'control',
+      timestamp: new Date().toISOString(),
+      test_active: ctaVariant !== null
+    });
+  }, [ctaVariant]);
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -69,15 +82,29 @@ const Plans = () => {
     const selectedPlan = plans.find(plan => plan.id === planId);
     
     if (selectedPlan) {
-      // Track plan selection in PostHog with detailed properties
+      // Track plan selection in PostHog with detailed properties and A/B test variant
       safeCapture('plan_selected', {
         plan_id: planId,
         plan_type: selectedPlan.name,
         plan_cost: extractPriceValue(selectedPlan.price),
         plan_features_count: selectedPlan.features.length,
         is_recommended: selectedPlan.recommended || false,
-        selection_timestamp: new Date().toISOString()
+        selection_timestamp: new Date().toISOString(),
+        cta_variant: ctaVariant || 'control',
+        test_id: 'subscription_cta_test'
       });
+      
+      // Also track as group event for subscription analytics
+      captureEventWithGroup(
+        'subscription_plan_selected',
+        'subscription',
+        selectedPlan.name, 
+        {
+          plan_id: planId,
+          variant: ctaVariant || 'control',
+          from_page: 'plans'
+        }
+      );
       
       // Navigate to signup with plan ID
       navigate(`/signup?plan=${planId}`);
