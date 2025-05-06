@@ -60,11 +60,12 @@ export const addToMyList = async (contentId: string): Promise<boolean> => {
     const userId = safeGetDistinctId();
     if (userId) {
       try {
-        // Using raw query to bypass type issues
-        const { error } = await supabase.rpc('upsert_my_list', {
-          p_user_id: userId,
-          p_content_ids: newList
-        });
+        // Update the function call to use the correct function name in Supabase
+        const { error } = await supabase
+          .rpc('upsert_my_list', {
+            p_user_id: userId,
+            p_content_ids: newList
+          });
         
         if (error) {
           console.error("Error saving to Supabase:", error);
@@ -103,11 +104,12 @@ export const removeFromMyList = async (contentId: string): Promise<boolean> => {
     const userId = safeGetDistinctId();
     if (userId) {
       try {
-        // Using raw query to bypass type issues
-        const { error } = await supabase.rpc('upsert_my_list', {
-          p_user_id: userId,
-          p_content_ids: newList
-        });
+        // Update the function call to use the correct function name in Supabase
+        const { error } = await supabase
+          .rpc('upsert_my_list', {
+            p_user_id: userId,
+            p_content_ids: newList
+          });
         
         if (error) {
           console.error("Error saving to Supabase:", error);

@@ -201,6 +201,10 @@ export type Database = {
         Args: { content_items: Json }
         Returns: undefined
       }
+      upsert_my_list: {
+        Args: { p_user_id: string; p_content_ids: string[] }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
