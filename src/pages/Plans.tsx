@@ -8,24 +8,32 @@ import { SubscriptionPlansGrid } from '../components/plans/SubscriptionPlansGrid
 import { supabase } from '../integrations/supabase/client';
 import { useToast } from '../hooks/use-toast';
 import { Plan } from '../components/SubscriptionPlan';
-import { safeCapture, captureEventWithGroup } from '../utils/posthog';
+import { safeCapture, captureEventWithGroup, captureTestEvent } from '../utils/posthog';
 import { useFeatureFlagVariantKey } from 'posthog-js/react';
+import { extractPriceValue } from '../utils/posthog/helpers';
 
 const Plans = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [pageLoadTime] = useState<Date>(new Date());
   const { toast } = useToast();
   const navigate = useNavigate();
+  
   // Get A/B test variant for analytics
   const ctaVariant = useFeatureFlagVariantKey('subscription_cta_test') as string | null;
 
-  // Track page view with test variant information
+  // Track page view with test variant information and funnel step
   useEffect(() => {
-    safeCapture('plans_page_viewed', {
-      cta_variant: ctaVariant || 'control',
-      timestamp: new Date().toISOString(),
-      test_active: ctaVariant !== null
-    });
+    captureTestEvent(
+      'plans_page_viewed', 
+      'subscription_cta_test',
+      ctaVariant,
+      {
+        timestamp: new Date().toISOString(),
+        funnel_step: 'view_plans',
+        test_active: ctaVariant !== null
+      }
+    );
   }, [ctaVariant]);
 
   useEffect(() => {
@@ -70,29 +78,35 @@ const Plans = () => {
     fetchPlans();
   }, [toast]);
 
-  // Extract numeric price value for analytics
-  const extractPriceValue = (priceString: string): number => {
-    const numericValue = priceString.replace(/[^\d.]/g, '');
-    return parseFloat(numericValue) || 0;
-  };
-
   // Handle plan selection - redirect to signup with selected plan
   const handleSelectPlan = (planId: string) => {
     // Find the selected plan to get its details
     const selectedPlan = plans.find(plan => plan.id === planId);
     
     if (selectedPlan) {
-      // Track plan selection in PostHog with detailed properties and A/B test variant
-      safeCapture('plan_selected', {
-        plan_id: planId,
-        plan_type: selectedPlan.name,
-        plan_cost: extractPriceValue(selectedPlan.price),
-        plan_features_count: selectedPlan.features.length,
-        is_recommended: selectedPlan.recommended || false,
-        selection_timestamp: new Date().toISOString(),
-        cta_variant: ctaVariant || 'control',
-        test_id: 'subscription_cta_test'
-      });
+      // Calculate time spent on page
+      const timeOnPage = (new Date().getTime() - pageLoadTime.getTime()) / 1000;
+      
+      // Extract numeric price value for analytics
+      const planPrice = extractPriceValue(selectedPlan.price);
+      
+      // Track plan selection as test event with detailed properties
+      captureTestEvent(
+        'plan_selected', 
+        'subscription_cta_test',
+        ctaVariant,
+        {
+          plan_id: planId,
+          plan_name: selectedPlan.name,
+          plan_cost: planPrice,
+          funnel_step: 'select_plan',
+          time_to_decide: timeOnPage,
+          conversion_value: planPrice,
+          plan_features_count: selectedPlan.features.length,
+          is_recommended: selectedPlan.recommended || false,
+          timestamp: new Date().toISOString()
+        }
+      );
       
       // Also track as group event for subscription analytics
       captureEventWithGroup(
@@ -102,7 +116,8 @@ const Plans = () => {
         {
           plan_id: planId,
           variant: ctaVariant || 'control',
-          from_page: 'plans'
+          from_page: 'plans',
+          time_on_page: timeOnPage
         }
       );
       

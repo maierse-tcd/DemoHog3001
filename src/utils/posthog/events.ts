@@ -76,7 +76,11 @@ export const captureTestEvent = (
     ...properties,
     ab_test: testName,
     variant: variant || 'control',
-    timestamp: new Date().toISOString()
+    test_id: testName,
+    timestamp: new Date().toISOString(),
+    funnel_step: properties?.funnel_step || null,
+    time_to_decide: properties?.time_to_decide || null,
+    conversion_value: properties?.conversion_value || null
   });
 };
 

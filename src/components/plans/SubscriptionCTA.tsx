@@ -1,8 +1,8 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useFeatureFlagVariantKey } from 'posthog-js/react';
 import { Button } from '../ui/button';
-import { safeCapture } from '../../utils/posthog';
+import { safeCapture, captureTestEvent } from '../../utils/posthog';
 import { Timer } from 'lucide-react';
 
 interface SubscriptionCTAProps {
@@ -26,15 +26,30 @@ export const SubscriptionCTA: React.FC<SubscriptionCTAProps> = ({
   const variant = useFeatureFlagVariantKey('subscription_cta_test') as string | null;
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes in seconds
   
+  // Track when component was first viewed for time-to-decision metric
+  const firstViewedAt = useRef<Date | null>(null);
+  
+  // Set first viewed timestamp
+  useEffect(() => {
+    if (!firstViewedAt.current) {
+      firstViewedAt.current = new Date();
+    }
+  }, []);
+  
   // Log impression when component is rendered with a specific variant
   useEffect(() => {
     if (variant) {
-      safeCapture('subscription_cta_impression', {
+      captureTestEvent(
+        'subscription_cta_impression',
+        'subscription_cta_test',
         variant,
-        plan_id: planId,
-        plan_name: planName,
-        timestamp: new Date().toISOString()
-      });
+        {
+          plan_id: planId,
+          plan_name: planName,
+          funnel_step: 'view_cta',
+          timestamp: new Date().toISOString()
+        }
+      );
     }
   }, [variant, planId, planName]);
   
@@ -58,12 +73,23 @@ export const SubscriptionCTA: React.FC<SubscriptionCTAProps> = ({
   
   // Handle button click with tracking
   const handleClick = () => {
-    safeCapture('subscription_cta_clicked', {
-      variant: variant || 'control',
-      plan_id: planId,
-      plan_name: planName,
-      timestamp: new Date().toISOString()
-    });
+    // Calculate time to decision if first view timestamp exists
+    const timeToDecide = firstViewedAt.current 
+      ? (new Date().getTime() - firstViewedAt.current.getTime()) / 1000 
+      : null;
+    
+    captureTestEvent(
+      'subscription_cta_clicked',
+      'subscription_cta_test',
+      variant || 'control',
+      {
+        plan_id: planId,
+        plan_name: planName,
+        funnel_step: 'click_cta',
+        time_to_decide: timeToDecide,
+        timestamp: new Date().toISOString()
+      }
+    );
     
     onSelect();
   };

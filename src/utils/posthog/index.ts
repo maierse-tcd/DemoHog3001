@@ -16,7 +16,7 @@ export {
 export {
   safeCapture,
   captureEventWithGroup, // Standard name for capturing events with group context
-  captureTestEvent, // New method for A/B test event tracking
+  captureTestEvent, // Explicit method for A/B test event tracking
   safeReloadFeatureFlags,
   safeIsFeatureEnabled
 } from './events';
