@@ -4,6 +4,7 @@ import { Content } from '../data/mockData';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { ScrollArea } from './ui/scroll-area';
+import './ContentRow.css';
 
 interface ContentRowProps {
   title: string;
@@ -46,7 +47,7 @@ export const ContentRow = ({ title, contentList }: ContentRowProps) => {
   
   return (
     <div className="relative my-8">
-      <h2 className="text-xl md:text-2xl font-medium mb-2 px-4 md:px-8 lg:px-12">{title}</h2>
+      <h2 className="text-xl md:text-2xl font-medium mb-2 px-4 md:px-8 lg:px-12 content-row-title">{title}</h2>
       
       <div className="group relative">
         {/* Left scroll button */}

@@ -58,7 +58,10 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
 };
 
 /**
- * Get the current anonymous ID from PostHog
+ * Get the current user ID from PostHog
+ * 
+ * IMPORTANT: This returns the user's ID in the format that matches what's in the database
+ * For the user_my_list table, this should be the user ID string
  */
 export const safeGetDistinctId = (): string | null => {
   const posthogInstance = getPostHogInstance();
