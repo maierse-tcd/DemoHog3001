@@ -1,25 +1,27 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Input } from '../ui/input';
-import { Label } from '../ui/label';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '../ui/form';
 import { Button } from '../ui/button';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { supabase } from '../../integrations/supabase/client';
 import { useToast } from '../../hooks/use-toast';
-import { Checkbox } from '../ui/checkbox';
-import { safeCapture, safeGroupIdentify, captureEventWithGroup } from '../../utils/posthog';
+import { safeGroupIdentify } from '../../utils/posthog';
 import { usePostHog } from 'posthog-js/react';
 import { usePostHogContext } from '../../contexts/PostHogContext';
+import { PlanProvider, usePlanContext } from './signup/PlanContext';
+import { PasswordFields, passwordSchema } from './signup/PasswordFields';
+import { KidsAccountToggle, kidsAccountSchema } from './signup/KidsAccountToggle';
+import { trackSignup, identifySubscription } from './signup/AnalyticsUtils';
 
 // Define the schema for the form
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters." }),
-  confirmPassword: z.string(),
-  isKidsAccount: z.boolean().optional()
+  ...passwordSchema.shape,
+  ...kidsAccountSchema.shape
 });
 
 interface SignUpFormProps {
@@ -27,14 +29,24 @@ interface SignUpFormProps {
   setSelectedPlanId: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
-export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelectedPlanId }) => {
+const SignUpFormInner: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Get PostHog context for direct method access
+  // Get PostHog context and instance
   const { updateSubscription } = usePostHogContext();
   const posthog = usePostHog();
+  
+  // Get plan context
+  const { selectedPlanId, planName, planCost, loadPlanDetails } = usePlanContext();
+  
+  // Load plan details when plan ID changes
+  useEffect(() => {
+    if (selectedPlanId) {
+      loadPlanDetails(selectedPlanId);
+    }
+  }, [selectedPlanId, loadPlanDetails]);
 
   // Initialize react-hook-form
   const form = useForm<z.infer<typeof formSchema>>({
@@ -46,26 +58,6 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelec
       isKidsAccount: false
     },
   });
-
-  // Extract numeric price value from price string for analytics
-  const extractPriceValue = async (planId: string): Promise<number> => {
-    try {
-      const { data } = await supabase
-        .from('subscription_plans')
-        .select('price')
-        .eq('id', planId)
-        .single();
-      
-      if (data?.price) {
-        const numericValue = data.price.replace(/[^\d.]/g, '');
-        return parseFloat(numericValue) || 0;
-      }
-      return 0;
-    } catch (error) {
-      console.error("Error fetching plan price:", error);
-      return 0;
-    }
-  };
 
   // Function to handle form submission
   const onSubmit: SubmitHandler<z.infer<typeof formSchema>> = async (values) => {
@@ -92,17 +84,6 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelec
     }
 
     try {
-      // Get plan details for analytics
-      const planCost = await extractPriceValue(selectedPlanId);
-      
-      // Get plan details for analytics
-      const { data: planData } = await supabase
-        .from('subscription_plans')
-        .select('name')
-        .eq('id', selectedPlanId)
-        .single();
-      
-      const planName = planData?.name || 'Unknown Plan';
       const signupDate = new Date().toISOString();
       
       const { data, error } = await supabase.auth.signUp({
@@ -133,63 +114,25 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelec
       });
       
       // Use the centralized subscription update method
-      console.log(`Registering new user with subscription: ${planName}`);
-      updateSubscription(planName, selectedPlanId, planCost.toString());
-      
-      // Direct PostHog reinforcement for maximum reliability
-      if (posthog) {
-        console.log(`Direct PostHog subscription identification for new user: ${planName}`);
+      if (planName) {
+        console.log(`Registering new user with subscription: ${planName}`);
+        updateSubscription(planName, selectedPlanId, planCost.toString());
         
-        // Prepare group properties with name
-        const groupProps = {
-          name: planName, // REQUIRED for UI visibility
-          plan_id: selectedPlanId,
-          plan_cost: planCost,
-          signup_date: signupDate
-        };
-        
-        try {
-          // Step 1: Direct group method
-          posthog.group('subscription', planName, groupProps);
-          
-          // Step 2: Explicit $groupidentify event
-          posthog.capture('$groupidentify', {
-            $group_type: 'subscription',
-            $group_key: planName,
-            $group_set: groupProps
-          });
-          
-          // Step 3: Reinforcement event with group context
-          posthog.capture('signup_with_subscription', {
-            plan_name: planName,
-            plan_id: selectedPlanId,
-            $groups: {
-              subscription: planName
-            }
-          });
-          
-          console.log(`PostHog: New user associated with subscription: ${planName}`);
-        } catch (err) {
-          console.error("PostHog direct subscription identify error at signup:", err);
-        }
+        // Direct PostHog reinforcement for maximum reliability
+        identifySubscription(posthog, planName, selectedPlanId, planCost);
       }
       
-      // Track signup event with plan details
-      safeCapture('user_signup', {
-        plan_id: selectedPlanId,
-        plan_type: planName,
-        plan_cost: planCost,
-        is_kids_account: values.isKidsAccount || false,
-        signup_date: signupDate
-      });
-      
-      // Additional reinforcement with safe utilities
-      captureEventWithGroup('signup_with_subscription_event', 'subscription', planName, {
-        plan_id: selectedPlanId,
-        plan_cost: planCost,
-        set_method: 'signup_process',
-        timestamp: signupDate
-      });
+      // Track signup analytics
+      if (data?.user) {
+        trackSignup(
+          data.user.id, 
+          values.email, 
+          selectedPlanId, 
+          planName || 'Unknown Plan',
+          planCost,
+          values.isKidsAccount || false
+        );
+      }
 
       // If sign up is successful, navigate to profile page
       navigate('/profile');
@@ -209,7 +152,6 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelec
     }
   };
 
-  
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -226,62 +168,26 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelec
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Password</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter your password" {...field} type="password" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="confirmPassword"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Confirm Password</FormLabel>
-              <FormControl>
-                <Input placeholder="Confirm your password" {...field} type="password" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
         
-        {/* Kids Account Checkbox */}
-        <FormField
-          control={form.control}
-          name="isKidsAccount"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md p-4 border border-netflix-gray/30">
-              <FormControl>
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                  id="isKidsAccount"
-                />
-              </FormControl>
-              <div className="space-y-1 leading-none">
-                <FormLabel htmlFor="isKidsAccount">
-                  This is a kids account
-                </FormLabel>
-                <FormDescription>
-                  Kids accounts have restricted content and simplified controls.
-                </FormDescription>
-              </div>
-            </FormItem>
-          )}
-        />
+        {/* Password fields component */}
+        <PasswordFields form={form} />
+        
+        {/* Kids account toggle component */}
+        <KidsAccountToggle form={form} />
         
         <Button type="submit" disabled={isLoading} className="w-full">
           {isLoading ? "Signing Up..." : "Sign Up"}
         </Button>
       </form>
     </Form>
+  );
+};
+
+// Wrapper component that provides the PlanContext
+export const SignUpForm: React.FC<SignUpFormProps> = ({ selectedPlanId, setSelectedPlanId }) => {
+  return (
+    <PlanProvider initialPlanId={selectedPlanId}>
+      <SignUpFormInner />
+    </PlanProvider>
   );
 };
