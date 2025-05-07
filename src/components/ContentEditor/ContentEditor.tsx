@@ -182,6 +182,19 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
     }
   };
   
+  // Handle content change from DetailsTab
+  const handleContentChange = (updatedContent: Content) => {
+    setFormData(updatedContent);
+  };
+  
+  // Handle preview
+  const handlePreview = () => {
+    toast({
+      title: "Preview Mode",
+      description: "This would open a preview of the content."
+    });
+  };
+  
   // Handle form submission
   const handleSave = async () => {
     setSaving(true);
@@ -292,11 +305,11 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
           {/* Basic Details Tab */}
           <TabsContent value="details">
             <DetailsTab 
-              formData={formData}
-              selectedGenres={selectedGenres}
-              availableGenres={AVAILABLE_GENRES}
-              onUpdateFormData={updateFormData}
-              onToggleGenre={toggleGenre}
+              content={formData}
+              onChange={handleContentChange}
+              isLoading={saving}
+              onSave={handleSave}
+              onPreview={handlePreview}
             />
           </TabsContent>
           
