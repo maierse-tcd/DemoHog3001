@@ -2,7 +2,8 @@
 // Type definitions for the PostHog global window object
 
 interface PostHogFeatureFlags {
-  currentFlags: Record<string, boolean | string>;
+  // Making currentFlags optional to match the actual implementation
+  currentFlags?: Record<string, boolean | string>;
   override: (flags: Record<string, boolean | string>) => void;
   getFlags?: () => Record<string, boolean | string>;
   _refresh?: () => void;
@@ -20,7 +21,7 @@ export interface PostHog {
   identify: (distinctId: string, properties?: Record<string, any>) => void;
   alias: (alias: string, distinctId?: string) => void;
   reset: () => void;
-  reloadFeatureFlags: () => Promise<void> | void; // Updated to accept both Promise<void> and void
+  reloadFeatureFlags: () => Promise<void> | void;
   isFeatureEnabled: (flag: string) => boolean;
   getFeatureFlag: (flag: string) => boolean | string | undefined;
   featureFlags: PostHogFeatureFlags;
