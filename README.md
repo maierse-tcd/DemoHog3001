@@ -1,81 +1,85 @@
 
 # HogFlix - A PostHog Demo Application
 
-## Project info
+HogFlix is a Netflix-style streaming platform that demonstrates PostHog integration for analytics, feature flags, and A/B testing.
 
-**URL**: https://lovable.dev/projects/72261356-0985-4c62-b16f-98e6f929c81d
+## PostHog Integration
 
-## Feature Flags and A/B Testing Documentation
+This application showcases how to implement PostHog functionality in a React application:
 
-For detailed documentation on how feature flags and A/B testing are implemented in this application, please see:
+- Feature flags for toggling features
+- A/B testing for experimenting with different UI variations
+- Analytics for tracking user behavior
+- Group analytics for segmenting users
+
+For detailed documentation on the PostHog implementation, please see:
+
+[PostHog Integration Guide](./PostHogIntegration.md)
+
+## Feature Flags and A/B Testing
+
+For comprehensive documentation on feature flags and A/B testing implementation, see:
 
 [Feature Flags and A/B Testing Guide](./src/docs/FeatureFlagsAndABTesting.md)
 
-## How can I edit this code?
+## Getting Started
 
-There are several ways of editing your application.
+### Prerequisites
 
-**Use Lovable**
+- Node.js & npm
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/72261356-0985-4c62-b16f-98e6f929c81d) and start prompting.
+### Installation
 
-Changes made via Lovable will be committed automatically to this repo.
+```bash
+# Clone the repository
+git clone <repository-url>
 
-**Use your preferred IDE**
+# Install dependencies
+npm install
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start the development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Key Features
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- Modern streaming platform UI with Netflix-inspired design
+- Feature flags to control functionality visibility
+- A/B testing framework for experimentation
+- User analytics and event tracking
+- Responsive design for all devices
 
-**Use GitHub Codespaces**
+## Tech Stack
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- React with TypeScript
+- Tailwind CSS for styling
 - PostHog for analytics, feature flags and A/B testing
+- React Router for navigation
+- Supabase for backend functionality
 
-## How can I deploy this project?
+## PostHog Setup
 
-Simply open [Lovable](https://lovable.dev/projects/72261356-0985-4c62-b16f-98e6f929c81d) and click on Share -> Publish.
+To use PostHog in your own project:
 
-## Can I connect a custom domain to my Lovable project?
+1. Sign up for a [PostHog account](https://posthog.com/)
+2. Create a new project in the PostHog dashboard
+3. Copy your project's API key
+4. Configure the PostHogProvider component with your API key
 
-Yes, you can!
+## Project Structure
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+```
+src/
+├── components/         # UI components
+├── hooks/              # React hooks including PostHog hooks
+├── pages/              # Page components
+├── utils/
+│   └── posthog/        # PostHog utility functions
+├── contexts/           # Context providers
+├── posthog/            # PostHog integration components
+└── docs/               # Documentation
+```
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## License
+
+This project is for demonstration purposes only.

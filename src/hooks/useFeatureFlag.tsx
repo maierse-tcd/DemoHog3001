@@ -1,20 +1,15 @@
 
-import { useEffect } from 'react';
 import { useFeatureFlagEnabled } from 'posthog-js/react';
 
 /**
  * A simple wrapper for the PostHog useFeatureFlagEnabled hook
- * This is a transition hook to allow gradual migration to the standard PostHog hook
+ * This provides a consistent way to use feature flags in the application
  */
 export function useFeatureFlag(flagName: string): boolean {
   // Use the official PostHog hook
   const enabled = useFeatureFlagEnabled(flagName);
   
-  // For debugging purposes
-  useEffect(() => {
-    console.log(`Feature flag ${flagName} value:`, enabled);
-  }, [flagName, enabled]);
-  
+  // Return the flag value with a fallback to false for safety
   return enabled || false;
 }
 
