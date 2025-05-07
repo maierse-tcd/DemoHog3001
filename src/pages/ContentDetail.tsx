@@ -5,14 +5,21 @@ import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { supabase } from '../integrations/supabase/client';
 import { Skeleton } from '../components/ui/skeleton';
-import { Play, Plus, ChevronLeft } from 'lucide-react';
+import { Play, Plus, ChevronLeft, X } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 import { safeCapture } from '../utils/posthog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
 
 const ContentDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [content, setContent] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -64,79 +71,89 @@ const ContentDetail = () => {
     });
   };
 
+  // Close modal and navigate back
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    navigate(-1);
+  };
+
   if (isLoading) {
     return (
-      <div className="bg-netflix-black min-h-screen">
-        <Navbar />
-        <div className="pt-20 px-4 md:px-8">
-          <div className="max-w-7xl mx-auto">
-            <Skeleton className="h-[50vh] w-full mb-8" />
-            <Skeleton className="h-10 w-1/3 mb-4" />
-            <Skeleton className="h-6 w-1/2 mb-8" />
-            <Skeleton className="h-32 w-full" />
-          </div>
-        </div>
-        <Footer />
-      </div>
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="bg-netflix-darkgray border-netflix-darkgray text-white max-w-4xl w-[90vw]">
+          <Skeleton className="h-[50vh] w-full mb-8" />
+          <Skeleton className="h-10 w-1/3 mb-4" />
+          <Skeleton className="h-6 w-1/2 mb-8" />
+          <Skeleton className="h-32 w-full" />
+        </DialogContent>
+      </Dialog>
     );
   }
 
   if (!content) {
     return (
-      <div className="bg-netflix-black min-h-screen">
-        <Navbar />
-        <div className="pt-32 px-4 md:px-8 text-center">
-          <h1 className="text-netflix-red text-3xl font-bold mb-4">Content Not Found</h1>
-          <p className="text-netflix-gray mb-8">The content you're looking for doesn't exist or has been removed.</p>
-          <button 
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-netflix-white hover:text-netflix-red"
-          >
-            <ChevronLeft size={16} />
-            Back
-          </button>
-        </div>
-        <Footer />
-      </div>
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="bg-netflix-darkgray border-netflix-darkgray text-white max-w-4xl w-[90vw]">
+          <div className="text-center py-8">
+            <h1 className="text-netflix-red text-3xl font-bold mb-4">Content Not Found</h1>
+            <p className="text-netflix-gray mb-8">The content you're looking for doesn't exist or has been removed.</p>
+            <button 
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-2 text-netflix-white hover:text-netflix-red"
+            >
+              <ChevronLeft size={16} />
+              Back
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   return (
-    <div className="bg-netflix-black min-h-screen">
-      <Navbar />
-      
-      {/* Hero Banner */}
-      <div className="relative pt-16">
-        <div className="w-full h-[70vh] relative">
-          {content.backdrop_url ? (
-            <img 
-              src={content.backdrop_url} 
-              alt={content.title}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = '/placeholder.svg';
-              }}
-            />
-          ) : content.poster_url ? (
-            <img 
-              src={content.poster_url} 
-              alt={content.title}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = '/placeholder.svg';
-              }}
-            />
-          ) : (
-            <div className="w-full h-full bg-netflix-darkgray/50"></div>
-          )}
-          
-          {/* Gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-netflix-black via-netflix-black/60 to-transparent"></div>
+    <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
+      <DialogContent className="bg-netflix-darkgray border-netflix-darkgray text-white max-w-4xl w-[90vw] p-0 overflow-hidden">
+        {/* Hero Banner */}
+        <div className="relative">
+          <div className="w-full h-[40vh] relative">
+            {content.backdrop_url ? (
+              <img 
+                src={content.backdrop_url} 
+                alt={content.title}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/placeholder.svg';
+                }}
+              />
+            ) : content.poster_url ? (
+              <img 
+                src={content.poster_url} 
+                alt={content.title}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/placeholder.svg';
+                }}
+              />
+            ) : (
+              <div className="w-full h-full bg-netflix-darkgray/50"></div>
+            )}
+            
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-netflix-black via-netflix-black/60 to-transparent"></div>
+            
+            {/* Close button */}
+            <button 
+              onClick={handleCloseModal}
+              className="absolute top-2 right-2 p-2 bg-netflix-black/80 rounded-full text-white hover:bg-netflix-black"
+            >
+              <X size={20} />
+            </button>
+          </div>
           
           {/* Content details */}
-          <div className="absolute bottom-0 left-0 right-0 p-6 md:p-12">
-            <div className="max-w-4xl">
-              <h1 className="text-4xl md:text-6xl font-bold mb-4">{content.title}</h1>
+          <div className="p-6">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold mb-3">{content.title}</h1>
               
               <div className="flex items-center space-x-4 text-sm text-netflix-gray mb-4">
                 <span>{content.release_year}</span>
@@ -155,7 +172,7 @@ const ContentDetail = () => {
                 ))}
               </div>
               
-              <div className="flex space-x-4 mb-8">
+              <div className="flex space-x-4 mb-6">
                 <button className="bg-netflix-red hover:bg-netflix-red/90 text-white py-2 px-6 rounded flex items-center gap-2">
                   <Play size={20} />
                   Play
@@ -175,10 +192,8 @@ const ContentDetail = () => {
             </div>
           </div>
         </div>
-      </div>
-      
-      <Footer />
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
