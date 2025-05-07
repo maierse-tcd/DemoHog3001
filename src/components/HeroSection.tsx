@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import { getRandomVideo } from '../utils/videoUtils';
 import { DEFAULT_IMAGES } from '../utils/imageUtils';
 import { safeCapture } from '../utils/posthog';
+import { useToast } from '../hooks/use-toast';
 
 interface HeroSectionProps {
   content: Content;
@@ -14,6 +15,7 @@ interface HeroSectionProps {
 export const HeroSection = ({ content }: HeroSectionProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const { toast } = useToast();
   
   // Use backdrop if available, otherwise fall back to default image
   const backdropUrl = content.backdropUrl || DEFAULT_IMAGES.backdrop;
@@ -35,6 +37,21 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
     safeCapture('hero_info_clicked', {
       contentId: content.id,
       contentTitle: content.title
+    });
+  };
+  
+  // Visual-only handler for My List button (no functionality)
+  const handleMyListClick = () => {
+    // Track the click event without actually adding to a list
+    safeCapture('my_list_button_clicked', {
+      contentId: content.id,
+      contentTitle: content.title,
+      location: 'hero_section'
+    });
+    
+    toast({
+      title: 'Feature not available',
+      description: 'My List functionality is purely visual in this demo.',
     });
   };
   
@@ -101,6 +118,7 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
               <Button
                 variant="outline" 
                 className="border-gray-400 hover:bg-white/10"
+                onClick={handleMyListClick}
               >
                 <Plus className="mr-2 h-5 w-5" /> My List
               </Button>
@@ -160,6 +178,7 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
                 <Button
                   variant="outline" 
                   className="border-gray-400 hover:bg-white/10"
+                  onClick={handleMyListClick}
                 >
                   <Plus className="mr-2 h-5 w-5" /> Add to My List
                 </Button>

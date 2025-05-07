@@ -5,6 +5,7 @@ import { Play, Plus, ThumbsUp, ChevronDown, X, Info } from 'lucide-react';
 import { getRandomVideo } from '../utils/videoUtils';
 import { DEFAULT_IMAGES } from '../utils/imageUtils';
 import { safeCapture } from '../utils/posthog';
+import { useToast } from '../hooks/use-toast';
 
 interface ContentCardProps {
   content: Content;
@@ -15,9 +16,27 @@ export const ContentCard = ({ content }: ContentCardProps) => {
   const [showVideo, setShowVideo] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [videoUrl] = useState(getRandomVideo());
+  const { toast } = useToast();
   
   // Use backdrop image if available, otherwise fallback to poster, then default image
   const displayImage = content.backdropUrl || content.posterUrl || DEFAULT_IMAGES.backdrop;
+  
+  // Visual-only handler for My List button (no functionality)
+  const handleMyListClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // Track the click event without actually adding to a list
+    safeCapture('my_list_button_clicked', {
+      contentId: content.id,
+      contentTitle: content.title,
+      location: 'content_card'
+    });
+    
+    toast({
+      title: 'Feature not available',
+      description: 'My List functionality is purely visual in this demo.',
+    });
+  };
   
   return (
     <>
@@ -69,6 +88,7 @@ export const ContentCard = ({ content }: ContentCardProps) => {
                 {/* Purely visual My List button with no functionality */}
                 <button 
                   className="p-1 bg-netflix-darkgray/80 rounded-full hover:bg-netflix-darkgray"
+                  onClick={handleMyListClick}
                 >
                   <Plus size={16} className="text-white" />
                 </button>
@@ -169,6 +189,7 @@ export const ContentCard = ({ content }: ContentCardProps) => {
                 {/* Purely visual My List button with no functionality */}
                 <button 
                   className="flex items-center justify-center px-6 py-2 rounded border border-white/30 hover:bg-white/10 text-white transition-colors"
+                  onClick={handleMyListClick}
                 >
                   <Plus size={20} className="mr-2" /> Add to My List
                 </button>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
@@ -6,6 +7,7 @@ import { supabase } from '../integrations/supabase/client';
 import { Skeleton } from '../components/ui/skeleton';
 import { Play, Plus, ChevronLeft } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
+import { safeCapture } from '../utils/posthog';
 
 const ContentDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -46,6 +48,21 @@ const ContentDetail = () => {
     
     fetchContent();
   }, [id, toast]);
+
+  // Visual-only handler for My List button (no functionality)
+  const handleMyListClick = () => {
+    // Track the click event without actually adding to a list
+    safeCapture('my_list_button_clicked', {
+      contentId: content?.id,
+      contentTitle: content?.title,
+      location: 'content_detail'
+    });
+    
+    toast({
+      title: 'Feature not available',
+      description: 'My List functionality is purely visual in this demo.',
+    });
+  };
 
   if (isLoading) {
     return (
@@ -147,6 +164,7 @@ const ContentDetail = () => {
                 {/* Purely visual My List button with no functionality */}
                 <button 
                   className="bg-[#333] hover:bg-[#444] text-white py-2 px-6 rounded flex items-center gap-2"
+                  onClick={handleMyListClick}
                 >
                   <Plus size={20} />
                   Add to My List
@@ -158,8 +176,6 @@ const ContentDetail = () => {
           </div>
         </div>
       </div>
-      
-      {/* Additional content sections can be added here */}
       
       <Footer />
     </div>
