@@ -46,7 +46,7 @@ export const ContentRow = ({ title, contentList }: ContentRowProps) => {
   };
   
   return (
-    <div className="relative my-8">
+    <div className="relative my-8 content-row">
       <h2 className="text-xl md:text-2xl font-medium mb-2 px-4 md:px-8 lg:px-12 content-row-title">{title}</h2>
       
       <div className="group relative">
@@ -69,7 +69,9 @@ export const ContentRow = ({ title, contentList }: ContentRowProps) => {
             style={{ minWidth: "100%" }}
           >
             {contentList.map((content) => (
-              <ContentCard key={content.id} content={content} />
+              <div key={content.id} className="content-card">
+                <ContentCard content={content} />
+              </div>
             ))}
           </div>
         </ScrollArea>

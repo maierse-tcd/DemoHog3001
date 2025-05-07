@@ -32,9 +32,12 @@ const MyList = () => {
         
         // Load all content from Supabase
         const allContent = await loadContentFromSupabase();
+        console.log('MyList: Loaded all content, count:', allContent.length);
+        console.log('MyList: My list IDs:', myList);
         
         // Filter for items in My List
         const myContent = allContent.filter(item => myList.includes(item.id));
+        console.log('MyList: Filtered content for my list, count:', myContent.length);
         setMyListContent(myContent);
         
         // Track page view

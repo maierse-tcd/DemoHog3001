@@ -6,3 +6,18 @@
   margin-bottom: 1rem;
   font-weight: 600;
 }
+
+/* Set proper spacing for content rows */
+.content-row {
+  margin-bottom: 2.5rem;
+}
+
+/* Content card hover effects */
+.content-card {
+  transition: transform 0.3s ease-out;
+}
+
+.content-card:hover {
+  transform: scale(1.05);
+  z-index: 10;
+}

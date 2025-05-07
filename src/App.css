@@ -48,3 +48,19 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Netflix theme colors */
+:root {
+  --netflix-red: #E50914;
+  --netflix-black: #141414;
+  --netflix-darkgray: #181818;
+  --netflix-gray: #808080;
+  --netflix-white: #FFFFFF;
+}
+
+/* General theme overrides */
+body {
+  background-color: var(--netflix-black);
+  color: var(--netflix-white);
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+}
