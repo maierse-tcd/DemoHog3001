@@ -12,6 +12,7 @@ import { safeCapture } from '../utils/posthog';
 const MyList = () => {
   const [myListContent, setMyListContent] = useState<Content[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { myList, isLoading: isMyListLoading } = useMyList();
   
   // Load content for My List
@@ -21,6 +22,7 @@ const MyList = () => {
       
       try {
         setIsLoading(true);
+        setError(null);
         
         if (myList.length === 0) {
           setMyListContent([]);
@@ -42,6 +44,7 @@ const MyList = () => {
         });
       } catch (error) {
         console.error("Error loading My List content:", error);
+        setError("There was a problem loading your saved content. Please try again later.");
         toast({
           title: "Error loading My List",
           description: "There was a problem loading your saved content. Please try again later.",
@@ -77,7 +80,19 @@ const MyList = () => {
       
       <main className="pt-24 pb-12">
         <div className="px-4 md:px-8 lg:px-16 max-w-7xl mx-auto">
-          <h1 className="text-3xl md:text-4xl font-bold mb-8">My List</h1>
+          <h1 className="text-3xl md:text-4xl font-bold mb-8 text-left">My List</h1>
+          
+          {error && (
+            <div className="bg-red-900/50 border border-red-500 p-4 rounded-md mb-6">
+              <p className="text-white">{error}</p>
+              <button 
+                onClick={() => window.location.reload()}
+                className="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded text-sm"
+              >
+                Retry
+              </button>
+            </div>
+          )}
           
           {isContentLoading ? (
             <div className="text-netflix-gray text-xl text-center py-12">Loading your list...</div>

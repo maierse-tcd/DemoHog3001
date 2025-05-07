@@ -17,12 +17,12 @@ export const getMyList = async (): Promise<string[]> => {
   
   if (userId) {
     try {
-      // Using raw query to bypass type issues
+      // First attempt - try to get the data with maybeSingle instead of single
       const { data, error } = await supabase
         .from('user_my_list')
         .select('content_ids')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
       
       if (!error && data) {
         return data.content_ids || [];
