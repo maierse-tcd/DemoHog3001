@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, ChevronDown } from 'lucide-react';
+import { Menu, ChevronDown, Home, Video, Film, Bookmark } from 'lucide-react';
 import { ProfileDropdown } from './ProfileDropdown';
 import { SearchBar } from './SearchBar';
 import { useAuth } from '../hooks/useAuth';
@@ -14,6 +14,7 @@ export const Navbar = () => {
   const { isLoggedIn } = useAuth();
   const isDarkTheme = location.pathname !== '/login' && location.pathname !== '/signup';
   const isAdmin = useFeatureFlag('is_admin');
+  const showMyListToAll = useFeatureFlag('my_list_override');
   
   // Handle scroll events to change navbar appearance
   useEffect(() => {
@@ -28,6 +29,9 @@ export const Navbar = () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
+  
+  // Determine if My List should be shown
+  const showMyList = isLoggedIn || showMyListToAll;
   
   return (
     <nav
@@ -50,28 +54,34 @@ export const Navbar = () => {
           <div className="hidden md:flex space-x-6 ml-10">
             <Link 
               to="/" 
-              className={`text-sm font-medium ${location.pathname === '/' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
+              className={`text-sm font-medium flex items-center gap-2 ${location.pathname === '/' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
             >
+              <Home size={16} />
               Home
             </Link>
             <Link 
               to="/series" 
-              className={`text-sm font-medium ${location.pathname === '/series' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
+              className={`text-sm font-medium flex items-center gap-2 ${location.pathname === '/series' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
             >
+              <Video size={16} />
               TV Shows
             </Link>
             <Link 
               to="/movies" 
-              className={`text-sm font-medium ${location.pathname === '/movies' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
+              className={`text-sm font-medium flex items-center gap-2 ${location.pathname === '/movies' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
             >
+              <Film size={16} />
               Movies
             </Link>
-            <Link 
-              to="/my-list" 
-              className={`text-sm font-medium ${location.pathname === '/my-list' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
-            >
-              My List
-            </Link>
+            {showMyList && (
+              <Link 
+                to="/my-list" 
+                className={`text-sm font-medium flex items-center gap-2 ${location.pathname === '/my-list' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
+              >
+                <Bookmark size={16} />
+                My List
+              </Link>
+            )}
             {isAdmin && (
               <Link 
                 to="/image-manager" 
@@ -120,36 +130,42 @@ export const Navbar = () => {
         <div className="md:hidden bg-netflix-black/95 border-t border-netflix-gray/20 py-2">
           <Link 
             to="/" 
-            className={`block px-4 py-2 ${location.pathname === '/' ? 'text-netflix-white' : 'text-netflix-gray'}`}
+            className={`flex items-center gap-2 px-4 py-2 ${location.pathname === '/' ? 'text-netflix-white' : 'text-netflix-gray'}`}
             onClick={() => setMobileMenuOpen(false)}
           >
+            <Home size={16} />
             Home
           </Link>
           <Link 
             to="/series" 
-            className={`block px-4 py-2 ${location.pathname === '/series' ? 'text-netflix-white' : 'text-netflix-gray'}`}
+            className={`flex items-center gap-2 px-4 py-2 ${location.pathname === '/series' ? 'text-netflix-white' : 'text-netflix-gray'}`}
             onClick={() => setMobileMenuOpen(false)}
           >
+            <Video size={16} />
             TV Shows
           </Link>
           <Link 
             to="/movies" 
-            className={`block px-4 py-2 ${location.pathname === '/movies' ? 'text-netflix-white' : 'text-netflix-gray'}`}
+            className={`flex items-center gap-2 px-4 py-2 ${location.pathname === '/movies' ? 'text-netflix-white' : 'text-netflix-gray'}`}
             onClick={() => setMobileMenuOpen(false)}
           >
+            <Film size={16} />
             Movies
           </Link>
-          <Link 
-            to="/my-list" 
-            className={`block px-4 py-2 ${location.pathname === '/my-list' ? 'text-netflix-white' : 'text-netflix-gray'}`}
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            My List
-          </Link>
+          {showMyList && (
+            <Link 
+              to="/my-list" 
+              className={`flex items-center gap-2 px-4 py-2 ${location.pathname === '/my-list' ? 'text-netflix-white' : 'text-netflix-gray'}`}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <Bookmark size={16} />
+              My List
+            </Link>
+          )}
           {isAdmin && (
             <Link 
               to="/image-manager" 
-              className={`block px-4 py-2 ${location.pathname === '/image-manager' ? 'text-netflix-white' : 'text-netflix-gray'}`}
+              className={`flex items-center gap-2 px-4 py-2 ${location.pathname === '/image-manager' ? 'text-netflix-white' : 'text-netflix-gray'}`}
               onClick={() => setMobileMenuOpen(false)}
             >
               Admin
