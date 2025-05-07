@@ -12,7 +12,7 @@ interface VideoModalProps {
 export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onOpenChange, videoUrl, title }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-black border-none max-w-4xl w-[90vw] p-0">
+      <DialogContent className="bg-black border-none max-w-4xl w-[90vw] p-0" style={{ backgroundColor: "#000" }}>
         <div className="relative aspect-video bg-black">
           <button 
             onClick={() => onOpenChange(false)}

@@ -1,3 +1,4 @@
+
 // Collection of YouTube videos for the application
 export const youtubeVideos = {
   posthogVideos: [
@@ -16,8 +17,8 @@ export const youtubeVideos = {
 // Get a random video from the collection
 export const getRandomVideo = (): string => {
   const videos = youtubeVideos.posthogVideos;
-  // 20% chance for a rickroll
-  if (Math.random() < 0.2) {
+  // 10% chance for a rickroll (reduced from 20%)
+  if (Math.random() < 0.1) {
     return youtubeVideos.rickroll;
   }
   // Otherwise pick a random PostHog video
