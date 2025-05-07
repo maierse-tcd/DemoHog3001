@@ -132,10 +132,10 @@ const Plans = () => {
     <div className="min-h-screen bg-[#141414]">
       <Navbar />
       <main className="pt-24 pb-12 px-4 md:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Choose Your Perfect Hog Plan</h1>
-            <p className="text-xl text-[#F1F0FB] max-w-3xl mx-auto">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-10">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">Choose Your Perfect Hog Plan</h1>
+            <p className="text-lg text-[#F1F0FB]/80 max-w-3xl mx-auto">
               Unlock the full potential of HogFlix with our flexible subscription options. 
               Find the perfect plan for your hedgehog entertainment needs.
             </p>

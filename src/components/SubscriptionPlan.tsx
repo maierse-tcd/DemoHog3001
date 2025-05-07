@@ -2,6 +2,8 @@
 import React from 'react';
 import confetti from 'canvas-confetti';
 import { SubscriptionCTA } from './plans/SubscriptionCTA';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
+import { Badge } from './ui/badge';
 
 export interface Plan {
   id: string;
@@ -39,10 +41,10 @@ export const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
   };
   
   return (
-    <div 
-      className={`border rounded-lg p-5 transition-all relative overflow-hidden ${
+    <Card 
+      className={`h-full transition-all relative overflow-hidden group ${
         isSelected 
-          ? 'border-[#ea384c] bg-[#1A1F2C]/50 shadow-lg' 
+          ? 'border-[#ea384c] shadow-lg shadow-[#ea384c]/10' 
           : 'border-[#8E9196]/20 hover:border-[#ea384c]/40'
       }`}
     >
@@ -64,26 +66,32 @@ export const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
         </div>
       )}
       
-      <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
-      <p className="text-[#8E9196] text-sm mb-4">{plan.description}</p>
+      <CardHeader className="pt-6 pb-2">
+        <CardTitle className="text-xl font-bold">{plan.name}</CardTitle>
+        <CardDescription className="text-[#8E9196] text-sm">{plan.description}</CardDescription>
+      </CardHeader>
       
-      <div className="text-xl font-bold mb-4">{plan.price}</div>
+      <CardContent className="pb-4">
+        <div className="text-2xl font-bold mb-4 text-white">{plan.price}</div>
+        
+        <ul className="space-y-2">
+          {plan.features.map((feature, index) => (
+            <li key={index} className="text-sm flex items-start">
+              <span className="text-[#ea384c] mr-2 flex-shrink-0">✓</span>
+              <span className="text-[#F1F0FB]">{feature}</span>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
       
-      <ul className="mb-6 space-y-2">
-        {plan.features.map((feature, index) => (
-          <li key={index} className="text-sm flex items-start">
-            <span className="text-[#ea384c] mr-2">✓</span>
-            <span>{feature}</span>
-          </li>
-        ))}
-      </ul>
-      
-      <SubscriptionCTA 
-        planId={plan.id}
-        planName={plan.name}
-        isSelected={isSelected}
-        onSelect={handleSelect}
-      />
-    </div>
+      <CardFooter className="pt-4 pb-6">
+        <SubscriptionCTA 
+          planId={plan.id}
+          planName={plan.name}
+          isSelected={isSelected}
+          onSelect={handleSelect}
+        />
+      </CardFooter>
+    </Card>
   );
 };

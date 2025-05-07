@@ -16,7 +16,7 @@ export const SubscriptionPlansGrid: React.FC<SubscriptionPlansGridProps> = ({
 }) => {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 my-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-8">
         {[1, 2, 3].map((_, index) => (
           <div key={index} className="rounded-lg overflow-hidden">
             <Skeleton className="h-[450px] w-full bg-[#1A1F2C]/50" />
@@ -35,18 +35,9 @@ export const SubscriptionPlansGrid: React.FC<SubscriptionPlansGridProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 my-8">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-8">
       {plans.map((plan) => (
-        <div key={plan.id} className="relative">
-          {plan.imageUrl && (
-            <div className="absolute inset-0 z-0 opacity-10 rounded-lg overflow-hidden">
-              <img
-                src={plan.imageUrl}
-                alt={plan.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
+        <div key={plan.id} className="flex">
           <SubscriptionPlan
             plan={plan}
             selectedPlanId={null}

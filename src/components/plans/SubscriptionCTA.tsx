@@ -129,13 +129,13 @@ export const SubscriptionCTA: React.FC<SubscriptionCTAProps> = ({
   // Render urgency-focused variant
   if (variant === 'urgency') {
     return (
-      <div className="space-y-2">
+      <div className="space-y-2 w-full">
         <Button
           onClick={handleClick}
-          className={`w-full py-2 px-4 rounded font-medium transition-all animate-pulse ${
+          className={`w-full py-2 px-4 rounded font-medium transition-all ${
             isSelected 
               ? 'bg-[#ea384c] text-white' 
-              : 'bg-[#ea384c] text-white hover:bg-[#d02c3f]'
+              : 'bg-[#ea384c] text-white hover:bg-[#d02c3f] animate-pulse'
           }`}
         >
           {isSelected ? 'Offer Claimed!' : 'Join Now - Limited Offer!'}
