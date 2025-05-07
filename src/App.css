@@ -4,7 +4,6 @@
   max-width: 100%;
   margin: 0;
   padding: 0;
-  text-align: center;
 }
 
 /* Title alignment for content sections */
@@ -70,13 +69,6 @@ body {
   display: inline-flex;
   vertical-align: middle;
   margin-right: 0.5rem;
-}
-
-/* Fix for content rows */
-.content-row h2,
-.content-row h3 {
-  text-align: left !important;
-  margin-left: 1rem;
 }
 
 /* Fix for button styles */

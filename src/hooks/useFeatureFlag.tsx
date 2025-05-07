@@ -15,9 +15,9 @@ export function useFeatureFlag(flagName: string): boolean {
     console.log(`Feature flag ${flagName} value:`, enabled);
   }, [flagName, enabled]);
   
-  // Special case - my_list_override is deprecated and always returns false
+  // Always show My List
   if (flagName === 'my_list_override') {
-    return false;
+    return true;
   }
   
   return enabled || false;

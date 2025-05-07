@@ -22,12 +22,6 @@
   z-index: 10;
 }
 
-/* Fix alignment issues */
-.content-row h2 {
-  text-align: left;
-  margin-left: 0;
-}
-
 /* Content scroll area */
 .content-row .scrollbar-none {
   -ms-overflow-style: none;
