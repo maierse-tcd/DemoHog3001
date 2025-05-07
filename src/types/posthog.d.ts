@@ -5,7 +5,7 @@ interface PostHogFeatureFlags {
   // Making currentFlags optional to match the actual implementation
   currentFlags?: Record<string, boolean | string>;
   override: (flags: Record<string, boolean | string>) => void;
-  getFlags?: () => Record<string, boolean | string>;
+  getFlags?: () => Record<string, boolean | string> | string[];
   _refresh?: () => void;
   _startPolling?: (timeoutMs: number) => void;
 }

@@ -12,10 +12,16 @@ export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, userEmail } = useAuth();
   const isDarkTheme = location.pathname !== '/login' && location.pathname !== '/signup';
   const isAdmin = useFeatureFlag('is_admin');
   const hidePlan = useFeatureFlag('hide_plan');
+  
+  // Check if the user has a posthog.com email
+  const isPosthogEmail = userEmail && userEmail.toLowerCase().endsWith('@posthog.com');
+  
+  // Determine if we should show the Admin menu item (if they have the isAdmin flag OR posthog.com email)
+  const showAdminMenuItem = isAdmin || isPosthogEmail;
   
   // Determine if we should show the Plans menu item
   const showPlansMenuItem = !(isLoggedIn && hidePlan);
@@ -86,7 +92,7 @@ export const Navbar = () => {
               </Link>
             )}
             
-            {isAdmin && (
+            {showAdminMenuItem && (
               <Link 
                 to="/image-manager" 
                 className={`text-sm font-medium flex items-center gap-2 ${location.pathname === '/image-manager' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
@@ -169,7 +175,8 @@ export const Navbar = () => {
             </Link>
           )}
           
-          {isAdmin && (
+          {/* Only show Admin link when showAdminMenuItem is true */}
+          {showAdminMenuItem && (
             <Link 
               to="/image-manager" 
               className={`flex items-center gap-2 px-4 py-2 ${location.pathname === '/image-manager' ? 'text-netflix-white' : 'text-netflix-gray'}`}

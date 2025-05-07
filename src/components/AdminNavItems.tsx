@@ -2,16 +2,24 @@
 import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { Link } from 'react-router-dom';
 import { Image } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 /**
  * Admin navigation items that are only shown when the user has the is_admin feature flag enabled
+ * or has a posthog.com email domain
  */
 export const AdminNavItems = () => {
   // Use the standard PostHog hook for feature flags
   const isAdmin = useFeatureFlagEnabled('is_admin');
+  const { userEmail } = useAuth();
   
-  // Only render the admin nav item if the user has the is_admin flag enabled
-  if (!isAdmin) {
+  // Check if the user has a posthog.com email
+  const isPosthogEmail = userEmail && userEmail.toLowerCase().endsWith('@posthog.com');
+  
+  // Only render the admin nav item if the user has the is_admin flag enabled OR has a posthog.com email
+  const showAdminLink = isAdmin || isPosthogEmail;
+  
+  if (!showAdminLink) {
     return null;
   }
   
