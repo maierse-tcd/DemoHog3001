@@ -1,47 +1,15 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { safeCapture } from './events';
-import { safeGetDistinctId } from './identity';
 import { Content } from '../../data/mockData';
-import { supabase } from '../../integrations/supabase/client';
 
-// Local storage key for my list (fallback)
+// Local storage key for my list (visual only, no Supabase)
 const MY_LIST_STORAGE_KEY = 'netflix_clone_my_list';
 
 /**
- * Get the current user's My List from local storage or Supabase
+ * Get the current user's My List from local storage
  */
 export const getMyList = async (): Promise<string[]> => {
-  // Try to get from Supabase first
-  const userId = safeGetDistinctId();
-  
-  if (userId) {
-    try {
-      console.log("Fetching my list for user ID:", userId);
-      
-      // First attempt - try to get the data with maybeSingle instead of single
-      const { data, error } = await supabase
-        .from('user_my_list')
-        .select('content_ids')
-        .eq('user_id', userId)
-        .maybeSingle();
-      
-      if (!error && data) {
-        console.log("Successfully retrieved my list from Supabase:", data.content_ids);
-        return data.content_ids || [];
-      } else if (error) {
-        console.error("Error fetching from Supabase:", error);
-      } else {
-        console.log("No my list data found in Supabase for user:", userId);
-      }
-    } catch (error) {
-      console.error("Error fetching my list from Supabase:", error);
-    }
-  } else {
-    console.log("No user ID available for fetching my list");
-  }
-  
-  // Fallback to local storage
   try {
     const storedList = localStorage.getItem(MY_LIST_STORAGE_KEY);
     const parsedList = storedList ? JSON.parse(storedList) : [];
@@ -54,7 +22,7 @@ export const getMyList = async (): Promise<string[]> => {
 };
 
 /**
- * Add content to My List
+ * Add content to My List (visual only)
  */
 export const addToMyList = async (contentId: string): Promise<boolean> => {
   try {
@@ -66,32 +34,9 @@ export const addToMyList = async (contentId: string): Promise<boolean> => {
     }
     
     const newList = [...currentList, contentId];
-    console.log("Adding to my list:", contentId, "New list:", newList);
+    console.log("Adding to my list (visual only):", contentId, "New list:", newList);
     
-    // Try to save to Supabase
-    const userId = safeGetDistinctId();
-    if (userId) {
-      try {
-        const { error } = await supabase
-          .rpc('upsert_my_list', {
-            p_user_id: userId,
-            p_content_ids: newList
-          });
-        
-        if (error) {
-          console.error("Error saving to Supabase:", error);
-          // Fall back to local storage
-        } else {
-          console.log("Successfully saved to Supabase for user:", userId);
-        }
-      } catch (e) {
-        console.error("Failed to save my list to Supabase:", e);
-      }
-    } else {
-      console.log("No user ID available, saving only to local storage");
-    }
-    
-    // Always save to local storage as fallback
+    // Save to local storage only
     localStorage.setItem(MY_LIST_STORAGE_KEY, JSON.stringify(newList));
     
     // Track the event
@@ -108,38 +53,15 @@ export const addToMyList = async (contentId: string): Promise<boolean> => {
 };
 
 /**
- * Remove content from My List
+ * Remove content from My List (visual only)
  */
 export const removeFromMyList = async (contentId: string): Promise<boolean> => {
   try {
     const currentList = await getMyList();
     const newList = currentList.filter(id => id !== contentId);
-    console.log("Removing from my list:", contentId, "New list:", newList);
+    console.log("Removing from my list (visual only):", contentId, "New list:", newList);
     
-    // Try to save to Supabase
-    const userId = safeGetDistinctId();
-    if (userId) {
-      try {
-        const { error } = await supabase
-          .rpc('upsert_my_list', {
-            p_user_id: userId,
-            p_content_ids: newList
-          });
-        
-        if (error) {
-          console.error("Error saving to Supabase:", error);
-          // Fall back to local storage
-        } else {
-          console.log("Successfully saved to Supabase for user:", userId);
-        }
-      } catch (e) {
-        console.error("Failed to save my list to Supabase:", e);
-      }
-    } else {
-      console.log("No user ID available, saving only to local storage");
-    }
-    
-    // Always save to local storage as fallback
+    // Save to local storage only
     localStorage.setItem(MY_LIST_STORAGE_KEY, JSON.stringify(newList));
     
     // Track the event
@@ -169,7 +91,7 @@ export const isInMyList = async (contentId: string): Promise<boolean> => {
 };
 
 /**
- * React hook for using My List
+ * React hook for using My List (visual only)
  */
 export const useMyList = () => {
   const [myList, setMyList] = useState<string[]>([]);

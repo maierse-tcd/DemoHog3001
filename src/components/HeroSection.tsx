@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Play, Info, Plus, Check } from 'lucide-react';
@@ -20,7 +19,7 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
   const { addToList, removeFromList } = useMyList();
   const navigate = useNavigate();
 
-  // Check if content is in My List
+  // Check if content is in My List (visual only)
   useEffect(() => {
     const checkMyList = async () => {
       const inList = await isInMyList(content.id);

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Content } from '../data/mockData';
 import { Play, Plus, ThumbsUp, ChevronDown, X, Info, Check } from 'lucide-react';
@@ -19,7 +18,7 @@ export const ContentCard = ({ content }: ContentCardProps) => {
   const [isInList, setIsInList] = useState(false);
   const { addToList, removeFromList } = useMyList();
   
-  // Check if content is in My List
+  // Check if content is in My List (visual only)
   useEffect(() => {
     const checkMyList = async () => {
       const inList = await isInMyList(content.id);

@@ -8,7 +8,6 @@ import NotFound from './pages/NotFound';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import Profile from './pages/Profile';
-import MyList from './pages/MyList';
 import HelpPage from './pages/HelpPage';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
@@ -32,7 +31,6 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/profile" element={<Profile />} />
-            <Route path="/my-list" element={<MyList />} />
             <Route path="/help" element={<HelpPage />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />

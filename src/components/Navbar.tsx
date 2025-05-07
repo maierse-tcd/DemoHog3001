@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, ChevronDown, Home, Video, Film, Bookmark, CreditCard } from 'lucide-react';
+import { Menu, ChevronDown, Home, Video, Film, CreditCard } from 'lucide-react';
 import { ProfileDropdown } from './ProfileDropdown';
 import { SearchBar } from './SearchBar';
 import { useAuth } from '../hooks/useAuth';
@@ -76,13 +76,6 @@ export const Navbar = () => {
             >
               <CreditCard size={16} />
               Plans
-            </Link>
-            <Link 
-              to="/my-list" 
-              className={`text-sm font-medium flex items-center gap-2 ${location.pathname === '/my-list' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
-            >
-              <Bookmark size={16} />
-              My List
             </Link>
             {isAdmin && (
               <Link 
@@ -161,14 +154,6 @@ export const Navbar = () => {
           >
             <CreditCard size={16} />
             Plans
-          </Link>
-          <Link 
-            to="/my-list" 
-            className={`flex items-center gap-2 px-4 py-2 ${location.pathname === '/my-list' ? 'text-netflix-white' : 'text-netflix-gray'}`}
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <Bookmark size={16} />
-            My List
           </Link>
           {isAdmin && (
             <Link 
