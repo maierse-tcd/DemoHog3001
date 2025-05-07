@@ -1,3 +1,4 @@
+
 # PostHog Integration Guide for HogFlix (Netflix Clone)
 
 This document provides a comprehensive overview of how PostHog is integrated into the HogFlix application, with examples of feature flags, experiments, and best practices for implementation.
@@ -75,6 +76,7 @@ The application currently uses these feature flags:
 
 1. **`is_admin`** - Controls admin-only features and UI elements
 2. **`hide_plan`** - Controls visibility of Plans menu item for logged-in users
+3. **`single_plan_selection`** - Controls whether users see only their selected plan on the signup page
 
 ### Implementing Feature Flags
 
@@ -138,6 +140,57 @@ export const Navbar = () => {
         )}
       </div>
     </nav>
+  );
+};
+```
+
+#### Real Example: Single Plan Selection
+
+Here's how we implemented the `single_plan_selection` feature flag:
+
+```tsx
+// src/components/auth/PlanSelector.tsx
+import { useFeatureFlag } from '../../hooks/useFeatureFlag';
+
+export const PlanSelector = ({ plans, selectedPlanId, onPlanSelect }) => {
+  // Feature flag to control single plan selection mode
+  const singlePlanSelectionEnabled = useFeatureFlag('single_plan_selection');
+  
+  // Get the selected plan details if we have one
+  const selectedPlan = selectedPlanId 
+    ? plans.find(plan => plan.id === selectedPlanId)
+    : null;
+
+  // Filter plans if single plan selection is enabled and we have a selected plan
+  const displayPlans = (singlePlanSelectionEnabled && selectedPlan) 
+    ? [selectedPlan]
+    : plans;
+    
+  return (
+    <div>
+      {singlePlanSelectionEnabled && selectedPlan ? (
+        <>
+          <h3>Your Selected Plan</h3>
+          <p>You've selected the {selectedPlan.name} plan.</p>
+        </>
+      ) : (
+        <>
+          <h3>Choose your plan</h3>
+          <p>Select the subscription plan that works for you!</p>
+        </>
+      )}
+      
+      <div className="space-y-4">
+        {displayPlans.map(plan => (
+          <SubscriptionPlan
+            key={plan.id}
+            plan={plan}
+            selectedPlanId={selectedPlanId}
+            onSelect={handlePlanSelect}
+          />
+        ))}
+      </div>
+    </div>
   );
 };
 ```
@@ -383,3 +436,4 @@ const FeatureFlagDebugger = () => {
 ---
 
 This integration guide should help your team understand how PostHog is implemented in the application and how to extend it with new feature flags and experiments.
+

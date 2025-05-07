@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { SubscriptionPlan, Plan } from '../SubscriptionPlan';
 import { supabase } from '../../integrations/supabase/client';
@@ -5,6 +6,7 @@ import { Skeleton } from '../ui/skeleton';
 import { useSearchParams } from 'react-router-dom';
 import { safeCapture } from '../../utils/posthog';
 import { extractPriceValue } from '../../utils/posthog/helpers';
+import { useFeatureFlag } from '../../hooks/useFeatureFlag';
 
 interface PlanSelectorProps {
   plans?: Plan[];
@@ -20,6 +22,9 @@ export const PlanSelector: React.FC<PlanSelectorProps> = ({
   const [plans, setPlans] = useState<Plan[]>(providedPlans || []);
   const [isLoading, setIsLoading] = useState(!providedPlans);
   const [searchParams] = useSearchParams();
+  
+  // Feature flag to control single plan selection mode
+  const singlePlanSelectionEnabled = useFeatureFlag('single_plan_selection');
   
   // Get plan parameter from URL if available
   useEffect(() => {
@@ -96,6 +101,16 @@ export const PlanSelector: React.FC<PlanSelectorProps> = ({
     }
   };
 
+  // Get the selected plan details if we have one
+  const selectedPlan = selectedPlanId 
+    ? plans.find(plan => plan.id === selectedPlanId)
+    : null;
+
+  // Filter plans if single plan selection is enabled and we have a selected plan
+  const displayPlans = (singlePlanSelectionEnabled && selectedPlan) 
+    ? [selectedPlan]
+    : plans;
+
   if (isLoading) {
     return (
       <div>
@@ -112,10 +127,22 @@ export const PlanSelector: React.FC<PlanSelectorProps> = ({
 
   return (
     <div>
-      <h3 className="text-xl font-medium mb-4">Choose your plan</h3>
-      <p className="text-[#8E9196] mb-4">Select the subscription plan that works for your hedgehog needs!</p>
+      {singlePlanSelectionEnabled && selectedPlan ? (
+        <>
+          <h3 className="text-xl font-medium mb-4">Your Selected Plan</h3>
+          <p className="text-[#8E9196] mb-4">
+            You've selected the {selectedPlan.name} plan. Perfect choice for your hedgehog needs!
+          </p>
+        </>
+      ) : (
+        <>
+          <h3 className="text-xl font-medium mb-4">Choose your plan</h3>
+          <p className="text-[#8E9196] mb-4">Select the subscription plan that works for your hedgehog needs!</p>
+        </>
+      )}
+      
       <div className="space-y-4">
-        {plans.map(plan => (
+        {displayPlans.map(plan => (
           <SubscriptionPlan
             key={plan.id}
             plan={plan}
@@ -127,3 +154,4 @@ export const PlanSelector: React.FC<PlanSelectorProps> = ({
     </div>
   );
 };
+
