@@ -83,12 +83,24 @@ button, a {
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5) !important;
 }
 
+/* Fixed background for all dialog content */
+[data-radix-dialog-content] {
+  background-color: #181818 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Fix for dialog backdrop */
+[data-radix-dialog-overlay] {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+}
+
 /* Fix for dialog close button */
 [data-radix-dialog-close] {
   position: absolute;
   top: 16px;
   right: 16px;
   z-index: 60;
+  background-color: rgba(0, 0, 0, 0.7) !important;
 }
 
 /* Netflix pulse animation */
@@ -145,3 +157,16 @@ button, a {
 .netflix-btn:hover::before {
   transform: translateX(0);
 }
+
+/* Ensure dialog backgrounds are solid */
+.Dialog, 
+.DialogOverlay,
+.DialogContent {
+  background-color: #181818 !important;
+}
+
+/* Ensure iframe has background */
+iframe {
+  background-color: #000000;
+}
+

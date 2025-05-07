@@ -13,10 +13,10 @@ export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onOpenChange, vi
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="bg-black border-none max-w-4xl w-[90vw] p-0">
-        <div className="relative aspect-video">
+        <div className="relative aspect-video bg-black">
           <button 
             onClick={() => onOpenChange(false)}
-            className="absolute top-4 right-4 z-50 p-2 bg-black/70 hover:bg-black text-white rounded-full transition-colors"
+            className="absolute top-4 right-4 z-50 p-2 bg-black/90 hover:bg-black text-white rounded-full transition-colors"
             aria-label="Close"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -26,7 +26,7 @@ export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onOpenChange, vi
           </button>
           <iframe 
             src={`${videoUrl}?autoplay=1`}
-            className="w-full h-full" 
+            className="w-full h-full bg-black" /* Add black background */
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
             allowFullScreen
             title={title}

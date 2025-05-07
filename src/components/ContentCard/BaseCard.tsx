@@ -17,6 +17,7 @@ export const BaseCard: React.FC<BaseCardProps> = ({ title, imageUrl, onClick }) 
         onError={(e) => {
           (e.target as HTMLImageElement).src = DEFAULT_IMAGES.backdrop;
         }}
+        className="z-10 relative" /* Ensure image is above the background */
       />
       
       <div className="title-overlay">

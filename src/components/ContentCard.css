@@ -34,6 +34,7 @@
   overflow: hidden;
   transition: all 300ms ease;
   cursor: pointer;
+  background-color: #000; /* Add black background to prevent gray transparent showing */
 }
 
 /* Base card image */
@@ -58,8 +59,8 @@
 }
 
 .content-card:hover .title-overlay {
-  transform: translateY(-20px); /* Move title up instead of hiding it */
-  opacity: 0; /* Fade out when expanded content becomes visible */
+  opacity: 0; /* Instead of moving it, just fade it out */
+  transform: none; /* Remove the translation effect */
 }
 
 /* Expanded content that shows on hover */
@@ -73,7 +74,7 @@
   overflow: hidden;
   opacity: 0;
   visibility: hidden;
-  transform: translateY(0);
+  transform: scale(0.97);
   transition: all 300ms ease;
   box-shadow: 0 15px 30px rgba(0, 0, 0, 0.75);
   z-index: 10;
@@ -82,7 +83,7 @@
 .content-card:hover .expanded-content {
   opacity: 1;
   visibility: visible;
-  transform: translateY(-8px); /* Match the card lift effect */
+  transform: scale(1);
 }
 
 /* Netflix style overlay gradient on hover */
