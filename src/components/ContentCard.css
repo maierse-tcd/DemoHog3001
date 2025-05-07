@@ -115,7 +115,7 @@
   justify-content: center;
   gap: 12px;
   padding: 0 16px;
-  transform: translateY(-50%);
+  transform: translateY(-60%); /* Adjust positioning to prevent being cut off */
   z-index: 2;
   opacity: 0;
   transition: opacity 300ms ease 100ms; /* Small delay for smoother appearance */

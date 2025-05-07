@@ -8,6 +8,7 @@ import { useToast } from '../../hooks/use-toast';
 import { BaseCard } from './BaseCard';
 import { ExpandedContent } from './ExpandedContent';
 import { VideoModal } from './VideoModal';
+import { getRandomVideo } from '../../utils/videoUtils';
 import '../ContentCard.css';
 
 interface ContentCardProps {
@@ -21,8 +22,8 @@ export const ContentCard = ({ content }: ContentCardProps) => {
   // Use backdrop image if available, otherwise fallback to poster or default
   const displayImage = content.backdropUrl || content.posterUrl || DEFAULT_IMAGES.backdrop;
   
-  // Video URL - use content's specific URL or default
-  const videoUrl = content.videoUrl || 'https://www.youtube.com/embed/dQw4w9WgXcQ';
+  // Video URL - use content's specific URL or get a random PostHog video
+  const videoUrl = content.videoUrl || getRandomVideo();
   
   // Handler for My List button
   const handleMyListClick = (e: React.MouseEvent) => {
