@@ -15,6 +15,10 @@ export const Navbar = () => {
   const { isLoggedIn } = useAuth();
   const isDarkTheme = location.pathname !== '/login' && location.pathname !== '/signup';
   const isAdmin = useFeatureFlag('is_admin');
+  const hidePlan = useFeatureFlag('hide_plan');
+  
+  // Determine if we should show the Plans menu item
+  const showPlansMenuItem = !(isLoggedIn && hidePlan);
   
   // Handle scroll events to change navbar appearance
   useEffect(() => {
@@ -70,13 +74,18 @@ export const Navbar = () => {
               <Film size={16} />
               Movies
             </Link>
-            <Link 
-              to="/plans" 
-              className={`text-sm font-medium flex items-center gap-2 ${location.pathname === '/plans' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
-            >
-              <CreditCard size={16} />
-              Plans
-            </Link>
+            
+            {/* Only show Plans when showPlansMenuItem is true */}
+            {showPlansMenuItem && (
+              <Link 
+                to="/plans" 
+                className={`text-sm font-medium flex items-center gap-2 ${location.pathname === '/plans' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
+              >
+                <CreditCard size={16} />
+                Plans
+              </Link>
+            )}
+            
             {isAdmin && (
               <Link 
                 to="/image-manager" 
@@ -147,14 +156,19 @@ export const Navbar = () => {
             <Film size={16} />
             Movies
           </Link>
-          <Link 
-            to="/plans" 
-            className={`flex items-center gap-2 px-4 py-2 ${location.pathname === '/plans' ? 'text-netflix-white' : 'text-netflix-gray'}`}
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <CreditCard size={16} />
-            Plans
-          </Link>
+          
+          {/* Only show Plans in mobile menu when showPlansMenuItem is true */}
+          {showPlansMenuItem && (
+            <Link 
+              to="/plans" 
+              className={`flex items-center gap-2 px-4 py-2 ${location.pathname === '/plans' ? 'text-netflix-white' : 'text-netflix-gray'}`}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <CreditCard size={16} />
+              Plans
+            </Link>
+          )}
+          
           {isAdmin && (
             <Link 
               to="/image-manager" 
