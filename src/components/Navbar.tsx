@@ -1,11 +1,12 @@
 
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, ChevronDown, Home, Video, Film, Bookmark } from 'lucide-react';
+import { Menu, ChevronDown, Home, Video, Film, Bookmark, CreditCard } from 'lucide-react';
 import { ProfileDropdown } from './ProfileDropdown';
 import { SearchBar } from './SearchBar';
 import { useAuth } from '../hooks/useAuth';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
+import { ProfileAvatar } from './ProfileAvatar';
 
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -73,6 +74,13 @@ export const Navbar = () => {
               <Film size={16} />
               Movies
             </Link>
+            <Link 
+              to="/plans" 
+              className={`text-sm font-medium flex items-center gap-2 ${location.pathname === '/plans' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
+            >
+              <CreditCard size={16} />
+              Plans
+            </Link>
             {showMyList && (
               <Link 
                 to="/my-list" 
@@ -85,7 +93,7 @@ export const Navbar = () => {
             {isAdmin && (
               <Link 
                 to="/image-manager" 
-                className={`text-sm font-medium ${location.pathname === '/image-manager' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
+                className={`text-sm font-medium flex items-center gap-2 ${location.pathname === '/image-manager' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
               >
                 Admin
               </Link>
@@ -151,6 +159,14 @@ export const Navbar = () => {
           >
             <Film size={16} />
             Movies
+          </Link>
+          <Link 
+            to="/plans" 
+            className={`flex items-center gap-2 px-4 py-2 ${location.pathname === '/plans' ? 'text-netflix-white' : 'text-netflix-gray'}`}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <CreditCard size={16} />
+            Plans
           </Link>
           {showMyList && (
             <Link 

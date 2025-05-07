@@ -2,204 +2,165 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { loadContentFromSupabase } from '../utils/contentUtils';
-import { Content } from '../data/mockData';
-import { safeCapture } from '../utils/posthog';
-import { toast } from '../hooks/use-toast';
+import { supabase } from '../integrations/supabase/client';
 
 export const SearchBar = () => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Content[]>([]);
-  const [allContent, setAllContent] = useState<Content[]>([]);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  // Load all content for search
-  useEffect(() => {
-    const loadAllContent = async () => {
-      try {
-        setIsLoading(true);
-        const content = await loadContentFromSupabase();
-        console.log("Loaded content for search:", content.length, "items");
-        setAllContent(content);
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error loading content for search:", error);
-        toast({
-          title: "Search Error",
-          description: "Could not load search content. Please try again later.",
-          variant: "destructive"
-        });
-        setIsLoading(false);
-      }
-    };
-    
-    loadAllContent();
-    
-    // Listen for content updates
-    window.addEventListener('content-updated', loadAllContent);
-    
-    return () => {
-      window.removeEventListener('content-updated', loadAllContent);
-    };
-  }, []);
-
-  // Handle clicks outside to close search dropdown
+  // Handle clicks outside of search to collapse it
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setIsExpanded(false);
       }
     };
-    
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
-  const handleSearchToggle = () => {
-    setIsExpanded(!isExpanded);
-    if (isExpanded) {
-      setSearchQuery('');
-      setSearchResults([]);
+  // Search content when query changes
+  useEffect(() => {
+    const searchTimeout = setTimeout(() => {
+      if (query.trim().length >= 2) {
+        searchContent();
+      } else {
+        setResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(searchTimeout);
+  }, [query]);
+
+  const searchContent = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('content_items')
+        .select('*')
+        .ilike('title', `%${query}%`)
+        .limit(5);
+      
+      if (error) {
+        console.error('Error searching content:', error);
+        return;
+      }
+      
+      setResults(data || []);
+    } catch (error) {
+      console.error('Search error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    
-    if (query.trim().length > 0) {
-      const normalizedQuery = query.toLowerCase().trim();
-      
-      // Improved search algorithm
-      const filteredResults = allContent.filter(item => {
-        // Search in title with higher priority
-        const titleMatch = item.title.toLowerCase().includes(normalizedQuery);
-        
-        // Search in description
-        const descMatch = item.description?.toLowerCase().includes(normalizedQuery);
-        
-        // Search in genres
-        const genreMatch = item.genre.some(genre => 
-          genre.toLowerCase().includes(normalizedQuery)
-        );
-        
-        return titleMatch || descMatch || genreMatch;
-      });
-      
-      // Sort results by relevance (title matches first)
-      filteredResults.sort((a, b) => {
-        const aTitleMatch = a.title.toLowerCase().includes(normalizedQuery);
-        const bTitleMatch = b.title.toLowerCase().includes(normalizedQuery);
-        
-        if (aTitleMatch && !bTitleMatch) return -1;
-        if (!aTitleMatch && bTitleMatch) return 1;
-        return 0;
-      });
-      
-      setSearchResults(filteredResults);
-      
-      safeCapture('search_performed', { 
-        query, 
-        resultCount: filteredResults.length 
-      });
-    } else {
-      setSearchResults([]);
-    }
-  };
-
-  const handleSelectResult = (id: string) => {
+  const handleContentClick = (id: string) => {
+    // Reset search
+    setQuery('');
     setIsExpanded(false);
-    setSearchQuery('');
-    setSearchResults([]);
+    setResults([]);
     
-    // Navigate to the content item (for now we'll go to home page)
-    // In the future this could go to a specific content page
-    navigate(`/`);
-    
-    safeCapture('search_result_selected', { contentId: id });
-    
-    // Show a toast notification that the content was selected
-    toast({
-      title: "Selected content",
-      description: "Content details page coming soon!",
-      variant: "default"
-    });
+    // Navigate to content detail page
+    navigate(`/content/${id}`);
+  };
+
+  const toggleSearch = () => {
+    setIsExpanded(!isExpanded);
+    if (!isExpanded) {
+      setTimeout(() => {
+        const input = document.getElementById('search-input');
+        if (input) {
+          input.focus();
+        }
+      }, 100);
+    } else {
+      setQuery('');
+      setResults([]);
+    }
   };
 
   return (
-    <div className="relative flex items-center" ref={searchContainerRef}>
-      <div 
-        className={`flex items-center ${
-          isExpanded 
-            ? 'bg-black border border-netflix-white rounded-md' 
-            : ''
-        }`}
+    <div className="relative" ref={searchRef}>
+      <button
+        onClick={toggleSearch}
+        className="text-netflix-gray hover:text-netflix-white transition-colors p-1"
       >
-        <button onClick={handleSearchToggle} className="p-2">
-          <Search size={20} className="text-netflix-gray hover:text-netflix-white" />
-        </button>
-        
-        {isExpanded && (
-          <>
+        <Search size={20} />
+      </button>
+      
+      {isExpanded && (
+        <div className="absolute right-0 top-full mt-2 w-64 md:w-80 bg-[#141414] rounded-md shadow-lg border border-netflix-gray/20 overflow-hidden z-50">
+          <div className="flex items-center p-2 border-b border-netflix-gray/20">
+            <Search size={16} className="text-netflix-gray" />
             <input
+              id="search-input"
               type="text"
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Titles, genres, keywords"
-              className="bg-transparent text-netflix-white ml-2 pr-8 py-1 outline-none w-40 md:w-64 text-sm"
-              autoFocus
+              placeholder="Search titles..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="bg-transparent border-none outline-none text-white w-full p-2 text-sm"
+              autoComplete="off"
             />
-            {searchQuery && (
-              <button 
-                onClick={() => handleSearch('')}
-                className="absolute right-2"
-              >
-                <X size={16} className="text-netflix-gray hover:text-netflix-white" />
+            {query && (
+              <button onClick={() => setQuery('')} className="text-netflix-gray hover:text-white">
+                <X size={16} />
               </button>
             )}
-          </>
-        )}
-      </div>
-      
-      {/* Search Results Dropdown */}
-      {isExpanded && (
-        <div className="absolute top-full right-0 mt-2 w-64 md:w-80 bg-netflix-black border border-netflix-gray/20 rounded py-2 max-h-96 overflow-y-auto z-50">
-          {isLoading ? (
-            <div className="px-4 py-2 text-netflix-gray text-center">Loading...</div>
-          ) : searchQuery.length > 0 && searchResults.length === 0 ? (
-            <div className="px-4 py-2 text-netflix-gray text-center">No results found</div>
-          ) : searchResults.length > 0 && (
-            searchResults.map(item => (
-              <div 
-                key={item.id} 
-                className="px-4 py-2 hover:bg-netflix-darkgray cursor-pointer flex items-center"
-                onClick={() => handleSelectResult(item.id)}
-              >
-                <div className="w-10 h-14 bg-netflix-darkgray rounded overflow-hidden flex-shrink-0 mr-2">
-                  {item.posterUrl || item.backdropUrl ? (
-                    <img 
-                      src={item.posterUrl || item.backdropUrl}
-                      alt={item.title}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        // Set a default placeholder image on error
-                        e.currentTarget.src = '/placeholder.svg';
-                      }}
-                    />
+          </div>
+          
+          {isLoading && (
+            <div className="p-4 text-center text-netflix-gray text-sm">
+              Searching...
+            </div>
+          )}
+          
+          {!isLoading && query.trim().length >= 2 && results.length === 0 && (
+            <div className="p-4 text-center text-netflix-gray text-sm">
+              No results found
+            </div>
+          )}
+          
+          {results.length > 0 && (
+            <div className="max-h-80 overflow-y-auto">
+              {results.map((item) => (
+                <div 
+                  key={item.id}
+                  onClick={() => handleContentClick(item.id)}
+                  className="flex items-center p-2 hover:bg-netflix-gray/20 cursor-pointer transition-colors"
+                >
+                  {item.poster_url ? (
+                    <div className="w-12 h-16 mr-3 overflow-hidden rounded">
+                      <img 
+                        src={item.poster_url} 
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/placeholder.svg';
+                        }}
+                      />
+                    </div>
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-netflix-darkgray">
-                      <span className="text-netflix-gray text-xs">No image</span>
+                    <div className="w-12 h-16 mr-3 bg-netflix-gray/20 flex items-center justify-center rounded">
+                      <Film size={20} />
                     </div>
                   )}
+                  <div>
+                    <h4 className="text-netflix-white text-sm font-medium">{item.title}</h4>
+                    <p className="text-netflix-gray text-xs">
+                      {item.type === 'movie' ? 'Movie' : 'TV Show'} • {item.release_year || 'N/A'}
+                    </p>
+                  </div>
                 </div>
-                <div className="overflow-hidden">
-                  <p className="text-netflix-white text-sm truncate font-medium">{item.title}</p>
-                  <p className="text-netflix-gray text-xs truncate">{item.genre.join(' • ')}</p>
-                </div>
-              </div>
-            ))
+              ))}
+            </div>
           )}
         </div>
       )}

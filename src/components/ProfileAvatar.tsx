@@ -1,11 +1,10 @@
 
 import React, { useState } from 'react';
-import { User } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 
 interface ProfileAvatarProps {
   isLoggedIn: boolean;
-  avatarUrl: string;
+  avatarUrl?: string;
   userName: string;
 }
 
@@ -15,8 +14,6 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
   userName
 }) => {
   const [imageError, setImageError] = useState(false);
-  // Use local placeholder image to prevent network errors
-  const fallbackImage = '/placeholder.svg';
   
   // Get first name if there's a space in the username
   const firstName = userName?.includes(' ') ? userName.split(' ')[0] : userName;
