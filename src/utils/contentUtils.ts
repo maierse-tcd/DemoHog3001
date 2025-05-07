@@ -16,7 +16,8 @@ export const contentToDbFormat = (content: Content) => {
     release_year: content.releaseYear,
     age_rating: content.ageRating,
     duration: content.duration,
-    trending: content.trending
+    trending: content.trending,
+    video_url: content.videoUrl || null
   };
 };
 
@@ -33,7 +34,8 @@ export const dbFormatToContent = (dbContent: any): Content => {
     releaseYear: dbContent.release_year || new Date().getFullYear().toString(),
     ageRating: dbContent.age_rating || "PG-13",
     duration: dbContent.duration || "1h 30m",
-    trending: dbContent.trending || false
+    trending: dbContent.trending || false,
+    videoUrl: dbContent.video_url || ""
   };
 };
 
@@ -66,7 +68,8 @@ export const saveContentToSupabase = async (content: Content): Promise<Content> 
     // Log what is being saved (helpful for debugging image URLs)
     console.log("Saving content to Supabase with images:", {
       posterUrl: content.posterUrl,
-      backdropUrl: content.backdropUrl
+      backdropUrl: content.backdropUrl,
+      videoUrl: content.videoUrl
     });
     
     // Convert to DB format

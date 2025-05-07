@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Content } from '../data/mockData';
 import { Play, Plus, ThumbsUp, ChevronDown, X, Info } from 'lucide-react';
-import { getRandomVideo } from '../utils/videoUtils';
 import { DEFAULT_IMAGES } from '../utils/imageUtils';
 import { safeCapture } from '../utils/posthog';
 import { useToast } from '../hooks/use-toast';
@@ -17,11 +16,13 @@ interface ContentCardProps {
 export const ContentCard = ({ content }: ContentCardProps) => {
   const [showVideo, setShowVideo] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
-  const [videoUrl] = useState(getRandomVideo());
   const { toast } = useToast();
   
   // Use backdrop image if available, otherwise fallback to poster, then default image
   const displayImage = content.backdropUrl || content.posterUrl || DEFAULT_IMAGES.backdrop;
+  
+  // Get video URL - use content's specific URL or default
+  const videoUrl = content.videoUrl || 'https://www.youtube.com/embed/dQw4w9WgXcQ';
   
   // Visual-only handler for My List button (no functionality)
   const handleMyListClick = (e: React.MouseEvent) => {
@@ -80,6 +81,7 @@ export const ContentCard = ({ content }: ContentCardProps) => {
                 className="control-button play-button"
                 onClick={(e) => {
                   e.stopPropagation();
+                  e.preventDefault();
                   setShowVideo(true);
                   safeCapture('content_play_clicked', { 
                     contentId: content.id,
@@ -99,6 +101,14 @@ export const ContentCard = ({ content }: ContentCardProps) => {
               
               <button 
                 className="control-button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  toast({
+                    title: "Liked",
+                    description: "We'll recommend more like this."
+                  });
+                }}
               >
                 <ThumbsUp size={16} />
               </button>

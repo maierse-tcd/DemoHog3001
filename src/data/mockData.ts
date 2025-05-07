@@ -1,401 +1,472 @@
+export interface Category {
+  id: string;
+  name: string;
+}
+
+export const mockCategories: Category[] = [
+  { id: 'trending', name: 'Trending Now' },
+  { id: 'tech', name: 'Tech & Design' },
+  { id: 'comedies', name: 'Comedies' },
+  { id: 'dramas', name: 'Dramas' },
+  { id: 'action', name: 'Action & Adventure' },
+  { id: 'fantasy', name: 'Fantasy' },
+  { id: 'documentaries', name: 'Documentaries' },
+  { id: 'nature', name: 'Nature' }
+];
+
+export type Genre = 
+  | 'Action' | 'Adventure' | 'Animation' | 'Comedy' | 'Crime'
+  | 'Documentary' | 'Drama' | 'Family' | 'Fantasy' | 'Horror'  
+  | 'Mystery' | 'Romance' | 'Sci-Fi' | 'Thriller' | 'Western'
+  | 'Biography' | 'History' | 'Sport' | 'Musical' | 'War'
+  | 'Technology' | 'Design' | 'Arts' | 'Creativity' | 'Data' 
+  | 'Science' | 'Biography' | 'Sports' | 'Reality' | 'Fashion' 
+  | 'Ethics' | 'Business' | 'Finance' | 'Entrepreneurship' 
+  | 'Inspiration' | 'Nature';
+
 export interface Content {
   id: string;
   title: string;
   description: string;
-  posterUrl: string;
-  backdropUrl?: string;
   type: 'movie' | 'series';
+  posterUrl: string;
+  backdropUrl: string;
+  genre: Genre[];
   releaseYear: string;
   ageRating: string;
   duration: string;
-  genre: Genre[];
-  trending?: boolean;
-}
-
-export type Genre = 
-  | 'Action' | 'Adventure' | 'Animation' | 'Comedy' | 'Crime'
-  | 'Documentary' | 'Drama' | 'Family' | 'Fantasy' | 'Horror'
-  | 'Mystery' | 'Romance' | 'Sci-Fi' | 'Thriller' | 'Technology'
-  | 'Design' | 'Arts' | 'Creativity' | 'Data' | 'Science' 
-  | 'Biography' | 'Sports' | 'Reality' | 'Fashion' | 'Ethics' 
-  | 'Business' | 'Finance' | 'Entrepreneurship' | 'Inspiration';
-
-export interface Category {
-  id: string;
-  name: string;
-  contentIds: string[];
+  trending: boolean;
+  videoUrl?: string;
 }
 
 export const mockContent: Content[] = [
-  // Original content with empty image URLs
   {
     id: '1',
-    title: 'Code & Quills',
-    description: 'Max, a brilliant hedgehog programmer, embarks on a thrilling journey to create the ultimate app, while navigating the quirks and joys of coding from his cozy home office.',
-    posterUrl: '',
-    backdropUrl: '',
+    title: 'Stranger Things',
+    description: 'When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces and one strange little girl.',
     type: 'series',
-    releaseYear: '2022',
+    posterUrl: '/stranger_things_poster.jpg',
+    backdropUrl: '/stranger_things_backdrop.jpg',
+    genre: ['Drama', 'Fantasy', 'Horror'],
+    releaseYear: '2016',
     ageRating: 'TV-14',
-    duration: '3 Seasons',
-    genre: ['Technology', 'Comedy', 'Drama'],
-    trending: true
+    duration: '4 Seasons',
+    trending: true,
+    videoUrl: 'https://www.youtube.com/embed/X7KtnsrViai'
   },
   {
     id: '2',
-    title: 'Palette of Prickles',
-    description: 'In his vibrant studio, Max, the creative hedgehog, brings his imaginative designs to life with colorful sketches and digital artistry, aiming to win a prestigious design contest.',
-    posterUrl: '',
-    backdropUrl: '',
+    title: 'The Queen\'s Gambit',
+    description: 'Orphaned at a young age, Beth Harmon discovers she possesses an astonishing gift for chess while struggling with addiction.',
     type: 'series',
-    releaseYear: '2021',
-    ageRating: 'TV-PG',
-    duration: '2 Seasons',
-    genre: ['Design', 'Arts', 'Creativity']
+    posterUrl: '/queens_gambit_poster.jpg',
+    backdropUrl: '/queens_gambit_backdrop.jpg',
+    genre: ['Drama'],
+    releaseYear: '2020',
+    ageRating: 'TV-MA',
+    duration: '1 Season',
+    trending: true,
+    videoUrl: 'https://www.youtube.com/embed/CDjieWsFFFw'
   },
   {
     id: '3',
-    title: 'Data Spikes',
-    description: 'Donning his lab coat, Max delves into the world of data analysis, uncovering fascinating insights and solving complex problems, all from his sleek, modern office.',
-    posterUrl: '',
-    backdropUrl: '',
-    type: 'movie',
-    releaseYear: '2023',
-    ageRating: 'PG-13',
-    duration: '1h 45m',
-    genre: ['Data', 'Technology', 'Science']
+    title: 'Bridgerton',
+    description: 'Wealth, lust, and betrayal set against the backdrop of Regency-era England, seen through the eyes of the powerful Bridgerton family.',
+    type: 'series',
+    posterUrl: '/bridgerton_poster.jpg',
+    backdropUrl: '/bridgerton_backdrop.jpg',
+    genre: ['Drama', 'Romance'],
+    releaseYear: '2020',
+    ageRating: 'TV-MA',
+    duration: '2 Seasons',
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/gpv7ayf_tyE'
   },
   {
     id: '4',
-    title: 'Hedge Your Bets',
-    description: 'A family of hedgehogs navigates the digital age, with their spiky little ones constantly getting into tech-related mischief.',
-    posterUrl: '',
-    backdropUrl: '',
-    type: 'movie',
-    releaseYear: '2020',
-    ageRating: 'PG',
-    duration: '1h 30m',
-    genre: ['Comedy', 'Family']
+    title: 'The Crown',
+    description: 'Follows the political rivalries and romance of Queen Elizabeth II\'s reign and the events that shaped the second half of the 20th century.',
+    type: 'series',
+    posterUrl: '/the_crown_poster.jpg',
+    backdropUrl: '/the_crown_backdrop.jpg',
+    genre: ['Drama', 'History'],
+    releaseYear: '2016',
+    ageRating: 'TV-MA',
+    duration: '5 Seasons',
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/vwkpJuxVwJc'
   },
   {
     id: '5',
-    title: 'Prickly Surveillance',
-    description: 'In this psychological thriller, a hedgehog becomes convinced he is being tracked through his digital devices, leading to a web of paranoia and discovery.',
-    posterUrl: '',
-    backdropUrl: '',
-    type: 'movie',
-    releaseYear: '2022',
-    ageRating: 'TV-14',
-    duration: '2h 10m',
-    genre: ['Thriller', 'Mystery'],
-    trending: true
+    title: 'Formula 1: Drive to Survive',
+    description: 'A behind-the-scenes look at the drivers and races of the Formula One World Championship.',
+    type: 'series',
+    posterUrl: '/drive_to_survive_poster.jpg',
+    backdropUrl: '/drive_to_survive_backdrop.jpg',
+    genre: ['Documentary', 'Sport'],
+    releaseYear: '2019',
+    ageRating: 'TV-MA',
+    duration: '4 Seasons',
+    trending: true,
+    videoUrl: 'https://www.youtube.com/embed/WTgn9qqCGLg'
   },
   {
     id: '6',
-    title: 'Hogstream',
-    description: 'A reality show about hedgehog families living their daily lives under constant streaming, revealing the true nature of spiky celebrity.',
-    posterUrl: '',
-    backdropUrl: '',
+    title: 'Our Planet',
+    description: 'Experience our planet\'s natural beauty and examine how climate change impacts all living creatures in this ambitious documentary.',
     type: 'series',
-    releaseYear: '2023',
-    ageRating: 'TV-14',
+    posterUrl: '/our_planet_poster.jpg',
+    backdropUrl: '/our_planet_backdrop.jpg',
+    genre: ['Documentary', 'Nature'],
+    releaseYear: '2019',
+    ageRating: 'TV-G',
     duration: '1 Season',
-    genre: ['Reality', 'Comedy']
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/93UqgcR7wes'
   },
   {
     id: '7',
-    title: 'The Quill Algorithm',
-    description: 'A brilliant hedgehog mathematician discovers an algorithm that can predict behavior with frightening accuracy, changing how we understand spiny creatures forever.',
-    posterUrl: '',
-    backdropUrl: '',
+    title: 'The Social Dilemma',
+    description: 'Explores the dangerous human impact of social networking, with tech experts sounding the alarm on their own creations.',
     type: 'movie',
-    releaseYear: '2021',
+    posterUrl: '/social_dilemma_poster.jpg',
+    backdropUrl: '/social_dilemma_backdrop.jpg',
+    genre: ['Documentary', 'Technology'],
+    releaseYear: '2020',
     ageRating: 'PG-13',
-    duration: '1h 55m',
-    genre: ['Sci-Fi', 'Drama']
+    duration: '1h 34m',
+    trending: true,
+    videoUrl: 'https://www.youtube.com/embed/aWycg9nS5Jk'
   },
   {
     id: '8',
-    title: 'Virtual Hedge',
-    description: 'When virtual reality becomes indistinguishable from the real world, a hedgehog fights to remember what is real and what is digital.',
-    posterUrl: '',
-    backdropUrl: '',
+    title: 'The Imitation Game',
+    description: 'During World War II, mathematician Alan Turing tries to crack the enigma code with help from fellow mathematicians.',
     type: 'movie',
-    releaseYear: '2020',
+    posterUrl: '/imitation_game_poster.jpg',
+    backdropUrl: '/imitation_game_backdrop.jpg',
+    genre: ['Drama', 'History'],
+    releaseYear: '2014',
     ageRating: 'PG-13',
-    duration: '2h 15m',
-    genre: ['Sci-Fi', 'Action']
+    duration: '1h 54m',
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/S5CjKEFb-sM'
   },
   {
     id: '9',
-    title: 'Modern Hedgehog 2.0',
-    description: 'A mockumentary following the lives of a hedgehog family where technology plays a central role in their spiky interactions.',
-    posterUrl: '',
-    backdropUrl: '',
-    type: 'series',
-    releaseYear: '2022',
-    ageRating: 'TV-PG',
-    duration: '4 Seasons',
-    genre: ['Comedy', 'Family']
+    title: 'Arrival',
+    description: 'A linguist works with the military to communicate with alien lifeforms who have arrived on Earth.',
+    type: 'movie',
+    posterUrl: '/arrival_poster.jpg',
+    backdropUrl: '/arrival_backdrop.jpg',
+    genre: ['Sci-Fi', 'Mystery'],
+    releaseYear: '2016',
+    ageRating: 'PG-13',
+    duration: '1h 56m',
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/tFMo3UJ4B4g'
   },
   {
     id: '10',
-    title: 'Hog Network',
-    description: 'A gripping drama about the rise and fall of a social media network for hedgehogs and its controversial founder.',
-    posterUrl: '',
-    backdropUrl: '',
-    type: 'series',
-    releaseYear: '2023',
-    ageRating: 'TV-MA',
-    duration: '1 Season',
-    genre: ['Drama', 'Biography']
+    title: 'Ex Machina',
+    description: 'A young programmer is selected to participate in a ground-breaking experiment in artificial intelligence by evaluating the human qualities of a highly advanced humanoid A.I.',
+    type: 'movie',
+    posterUrl: '/ex_machina_poster.jpg',
+    backdropUrl: '/ex_machina_backdrop.jpg',
+    genre: ['Sci-Fi', 'Thriller'],
+    releaseYear: '2014',
+    ageRating: 'R',
+    duration: '1h 48m',
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/EoMRA83SQlA'
   },
   {
     id: '11',
-    title: 'Digital Detox for Hogs',
-    description: 'A group of technology-addicted hedgehogs are sent to a remote retreat to overcome their dependencies and rediscover their natural instincts.',
-    posterUrl: '',
-    backdropUrl: '',
+    title: 'Black Mirror',
+    description: 'A British science fiction anthology series that examines how technology is shaping our lives.',
     type: 'series',
-    releaseYear: '2021',
-    ageRating: 'TV-14',
-    duration: '1 Season',
-    genre: ['Reality', 'Drama']
+    posterUrl: '/black_mirror_poster.jpg',
+    backdropUrl: '/black_mirror_backdrop.jpg',
+    genre: ['Sci-Fi', 'Thriller', 'Technology'],
+    releaseYear: '2011',
+    ageRating: 'TV-MA',
+    duration: '5 Seasons',
+    trending: true,
+    videoUrl: 'https://www.youtube.com/embed/jDiYGjp5KjI'
   },
   {
     id: '12',
-    title: 'Smart Burrow',
-    description: 'A family\'s new AI-powered smart home burrow develops a mind of its own with sinister intentions toward its spiky inhabitants.',
-    posterUrl: '',
-    backdropUrl: '',
-    type: 'movie',
-    releaseYear: '2022',
-    ageRating: 'PG-13',
-    duration: '1h 50m',
-    genre: ['Horror', 'Sci-Fi']
+    title: 'Abstract: The Art of Design',
+    description: 'Step inside the minds of the world\'s most innovative designers and see how design impacts every aspect of life.',
+    type: 'series',
+    posterUrl: '/abstract_poster.jpg',
+    backdropUrl: '/abstract_backdrop.jpg',
+    genre: ['Documentary', 'Design', 'Arts'],
+    releaseYear: '2017',
+    ageRating: 'TV-PG',
+    duration: '2 Seasons',
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/5VBWvjQjWzA'
   },
-  
-  // New content with better images
   {
     id: '13',
-    title: 'Spiky SQL',
-    description: 'A documentary series about a hedgehog who becomes obsessed with databases and builds the world\'s first hedgehog-operated data center.',
-    posterUrl: '',
-    backdropUrl: '',
+    title: 'Chef\'s Table',
+    description: 'A documentary series that profiles some of the most renowned chefs in the world.',
     type: 'series',
-    releaseYear: '2023',
-    ageRating: 'TV-PG',
-    duration: '1 Season',
-    genre: ['Technology', 'Documentary', 'Business'],
-    trending: true
+    posterUrl: '/chefs_table_poster.jpg',
+    backdropUrl: '/chefs_table_backdrop.jpg',
+    genre: ['Documentary'],
+    releaseYear: '2015',
+    ageRating: 'TV-MA',
+    duration: '6 Seasons',
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/m_WmpZM0K6k'
   },
   {
     id: '14',
-    title: 'Hedgehog\'s Gambit',
-    description: 'A prodigy hedgehog rises to the top of the international chess circuit while battling childhood trauma and addiction.',
-    posterUrl: '',
-    backdropUrl: '',
+    title: 'Explained',
+    description: 'This enlightening series explores a variety of topics and current events in an accessible and engaging way.',
     type: 'series',
-    releaseYear: '2023',
+    posterUrl: '/explained_poster.jpg',
+    backdropUrl: '/explained_backdrop.jpg',
+    genre: ['Documentary'],
+    releaseYear: '2018',
     ageRating: 'TV-MA',
-    duration: '1 Season',
-    genre: ['Drama', 'Sports', 'Biography']
+    duration: '3 Seasons',
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/u5h2oDrHeqk'
   },
   {
     id: '15',
-    title: 'Prickly Heist',
-    description: 'A band of hedgehog thieves plans the perfect garden heist to steal the neighborhood\'s prized vegetables in this animated comedy.',
-    posterUrl: '',
-    backdropUrl: '',
+    title: 'The Minimalists: Less Is Now',
+    description: 'A documentary about the benefits of living a minimalist lifestyle.',
     type: 'movie',
-    releaseYear: '2023',
-    ageRating: 'PG',
-    duration: '1h 42m',
-    genre: ['Animation', 'Comedy', 'Crime']
+    posterUrl: '/the_minimalists_poster.jpg',
+    backdropUrl: '/the_minimalists_backdrop.jpg',
+    genre: ['Documentary'],
+    releaseYear: '2021',
+    ageRating: 'TV-14',
+    duration: '1h 0m',
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/w9WG-5ZFG-k'
   },
   {
     id: '16',
-    title: 'Quills of Fury',
-    description: 'A martial arts master hedgehog defends his forest against invasive species using his legendary quill techniques.',
-    posterUrl: '',
-    backdropUrl: '',
+    title: 'Citizenfour',
+    description: 'A documentary about Edward Snowden and the NSA spying scandal.',
     type: 'movie',
-    releaseYear: '2022',
-    ageRating: 'PG-13',
-    duration: '2h 05m',
-    genre: ['Action', 'Adventure', 'Fantasy']
+    posterUrl: '/citizenfour_poster.jpg',
+    backdropUrl: '/citizenfour_backdrop.jpg',
+    genre: ['Documentary', 'Thriller'],
+    releaseYear: '2014',
+    ageRating: 'R',
+    duration: '1h 54m',
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
   },
   {
     id: '17',
-    title: 'Hogwarts: A Hedgehog Tale',
-    description: 'When a hedgehog accidentally gets an acceptance letter to a famous school of witchcraft, he must pretend to be a wizard to fit in.',
-    posterUrl: '',
-    backdropUrl: '',
+    title: 'Icarus',
+    description: 'When Bryan Fogel sets out to uncover the truth about doping in sports, he accidentally unearths a major international scandal.',
     type: 'movie',
-    releaseYear: '2021',
-    ageRating: 'PG',
-    duration: '1h 55m',
-    genre: ['Fantasy', 'Comedy', 'Family'],
-    trending: true
+    posterUrl: '/icarus_poster.jpg',
+    backdropUrl: '/icarus_backdrop.jpg',
+    genre: ['Documentary', 'Thriller', 'Sports'],
+    releaseYear: '2017',
+    ageRating: 'TV-MA',
+    duration: '2h 0m',
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
   },
   {
     id: '18',
-    title: 'Midnight Forager',
-    description: 'A nocturnal hedgehog detective solves mysteries in the garden while the humans sleep, using his sharp senses and sharper quills.',
-    posterUrl: '',
-    backdropUrl: '',
-    type: 'series',
-    releaseYear: '2022',
-    ageRating: 'TV-14',
-    duration: '2 Seasons',
-    genre: ['Mystery', 'Crime', 'Drama']
+    title: 'Free Solo',
+    description: 'Alex Honnold attempts to conquer El Capitan\'s 3,000-foot vertical rock face in Yosemite National Park without ropes or safety gear.',
+    type: 'movie',
+    posterUrl: '/free_solo_poster.jpg',
+    backdropUrl: '/free_solo_backdrop.jpg',
+    genre: ['Documentary', 'Sports'],
+    releaseYear: '2018',
+    ageRating: 'PG-13',
+    duration: '1h 40m',
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
   },
   {
     id: '19',
-    title: 'Hedge Fund',
-    description: 'A financial genius hedgehog builds a wall street empire using acorn futures and berry commodities trading.',
-    posterUrl: '',
-    backdropUrl: '',
-    type: 'movie',
-    releaseYear: '2023',
-    ageRating: 'R',
-    duration: '2h 32m',
-    genre: ['Drama', 'Biography', 'Finance']
+    title: 'The Last Dance',
+    description: 'A 10-part documentary series about Michael Jordan and the Chicago Bulls dynasty of the 1990s.',
+    type: 'series',
+    posterUrl: '/the_last_dance_poster.jpg',
+    backdropUrl: '/the_last_dance_backdrop.jpg',
+    genre: ['Documentary', 'Sports'],
+    releaseYear: '2020',
+    ageRating: 'TV-MA',
+    duration: '1 Season',
+    trending: true,
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
   },
   {
     id: '20',
-    title: 'Prickles in Paris',
-    description: 'A country hedgehog moves to the fashion capital of the world and becomes an unlikely style icon with his unique quill arrangements.',
-    posterUrl: '',
-    backdropUrl: '',
-    type: 'series',
-    releaseYear: '2021',
-    ageRating: 'TV-PG',
-    duration: '3 Seasons',
-    genre: ['Comedy', 'Fashion', 'Romance']
+    title: 'Senna',
+    description: 'A documentary about the life and death of Brazilian Formula One champion Ayrton Senna.',
+    type: 'movie',
+    posterUrl: '/senna_poster.jpg',
+    backdropUrl: '/senna_backdrop.jpg',
+    genre: ['Documentary', 'Sports'],
+    releaseYear: '2010',
+    ageRating: 'PG-13',
+    duration: '1h 46m',
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
   },
-  
-  // Additional new content with high-quality images
   {
     id: '21',
-    title: 'Spikes & Bytes',
-    description: 'A hedgehog cybersecurity expert fights digital threats and hackers to protect the forest\'s sensitive data from falling into the wrong paws.',
-    posterUrl: '',
-    backdropUrl: '',
-    type: 'series',
-    releaseYear: '2024',
-    ageRating: 'TV-14',
-    duration: '1 Season',
-    genre: ['Technology', 'Thriller', 'Action']
+    title: 'Into the Inferno',
+    description: 'Werner Herzog explores active volcanoes around the world and the cultures that surround them.',
+    type: 'movie',
+    posterUrl: '/into_the_inferno_poster.jpg',
+    backdropUrl: '/into_the_inferno_backdrop.jpg',
+    genre: ['Documentary', 'Nature'],
+    releaseYear: '2016',
+    ageRating: 'TV-MA',
+    duration: '1h 44m',
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
   },
   {
     id: '22',
-    title: 'The Hedgehog Algorithm',
-    description: 'When a hedgehog creates an AI that can predict the future, he must navigate ethical dilemmas and corporate espionage to keep his invention from being misused.',
-    posterUrl: '',
-    backdropUrl: '',
-    type: 'movie',
-    releaseYear: '2023',
-    ageRating: 'PG-13',
-    duration: '2h 12m',
-    genre: ['Sci-Fi', 'Drama', 'Ethics']
+    title: 'Planet Earth II',
+    description: 'David Attenborough returns to present a documentary series exploring the planet\'s diverse habitats.',
+    type: 'series',
+    posterUrl: '/planet_earth_ii_poster.jpg',
+    backdropUrl: '/planet_earth_ii_backdrop.jpg',
+    genre: ['Documentary', 'Nature'],
+    releaseYear: '2016',
+    ageRating: 'TV-G',
+    duration: '1 Season',
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
   },
   {
     id: '23',
-    title: 'Wild Coders',
-    description: 'A documentary following hedgehogs who leave their corporate jobs to become independent developers, building apps that change how animals interact with technology.',
-    posterUrl: '',
-    backdropUrl: '',
+    title: 'Blue Planet II',
+    description: 'A documentary series exploring the world\'s oceans.',
     type: 'series',
-    releaseYear: '2023',
-    ageRating: 'TV-PG',
+    posterUrl: '/blue_planet_ii_poster.jpg',
+    backdropUrl: '/blue_planet_ii_backdrop.jpg',
+    genre: ['Documentary', 'Nature'],
+    releaseYear: '2017',
+    ageRating: 'TV-G',
     duration: '1 Season',
-    genre: ['Documentary', 'Technology', 'Entrepreneurship']
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
   },
   {
     id: '24',
-    title: 'Quill & Keyboard',
-    description: 'A heartwarming story about a rural hedgehog who teaches coding to underprivileged woodland creatures, changing their lives forever.',
-    posterUrl: '',
-    backdropUrl: '',
+    title: 'Moving Art',
+    description: 'Experience the beauty of nature through stunning time-lapse photography.',
+    type: 'series',
+    posterUrl: '/moving_art_poster.jpg',
+    backdropUrl: '/moving_art_backdrop.jpg',
+    genre: ['Documentary', 'Nature'],
+    releaseYear: '2013',
+    ageRating: 'TV-G',
+    duration: '3 Seasons',
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
+  },
+  {
+    id: '25',
+    title: 'Minimalism: A Documentary About the Important Things',
+    description: 'How might your life be better with less?',
     type: 'movie',
-    releaseYear: '2022',
-    ageRating: 'G',
-    duration: '1h 48m',
-    genre: ['Drama', 'Family', 'Inspiration'],
-    trending: true
-  }
-];
-
-// Update the mockCategories to include new content
-export const mockCategories: Category[] = [
-  {
-    id: 'trending',
-    name: 'Trending Now',
-    contentIds: ['1', '5', '10', '13', '17', '24']
+    posterUrl: '/minimalism_poster.jpg',
+    backdropUrl: '/minimalism_backdrop.jpg',
+    genre: ['Documentary'],
+    releaseYear: '2015',
+    ageRating: 'TV-14',
+    duration: '1h 18m',
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
   },
   {
-    id: 'new-releases',
-    name: 'New Releases',
-    contentIds: ['3', '6', '10', '13', '15', '19', '21', '22']
+    id: '26',
+    title: 'Tidying Up with Marie Kondo',
+    description: 'Japanese organizing consultant Marie Kondo helps people declutter their homes and transform their lives.',
+    type: 'series',
+    posterUrl: '/tidying_up_poster.jpg',
+    backdropUrl: '/tidying_up_backdrop.jpg',
+    genre: ['Reality', 'Lifestyle'],
+    releaseYear: '2019',
+    ageRating: 'TV-G',
+    duration: '1 Season',
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
   },
   {
-    id: 'tech',
-    name: 'Tech Adventures',
-    contentIds: ['1', '3', '7', '8', '13', '21', '22']
+    id: '27',
+    title: 'Queer Eye',
+    description: 'The Fab Five travel the U.S. to transform the lives of everyday people.',
+    type: 'series',
+    posterUrl: '/queer_eye_poster.jpg',
+    backdropUrl: '/queer_eye_backdrop.jpg',
+    genre: ['Reality', 'Lifestyle'],
+    releaseYear: '2018',
+    ageRating: 'TV-MA',
+    duration: '6 Seasons',
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
   },
   {
-    id: 'comedies',
-    name: 'Spiky Comedies',
-    contentIds: ['4', '6', '9', '15', '17', '20']
+    id: '28',
+    title: 'Nailed It!',
+    description: 'Home bakers with a terrible track record attempt to recreate edible masterpieces for a $10,000 prize.',
+    type: 'series',
+    posterUrl: '/nailed_it_poster.jpg',
+    backdropUrl: '/nailed_it_backdrop.jpg',
+    genre: ['Reality', 'Comedy'],
+    releaseYear: '2018',
+    ageRating: 'TV-G',
+    duration: '7 Seasons',
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
   },
   {
-    id: 'data',
-    name: 'Data Stories',
-    contentIds: ['3', '5', '7', '13', '19', '21']
+    id: '29',
+    title: 'Selling Sunset',
+    description: 'The elite real estate brokers at The Oppenheim Group sell the luxe life to affluent buyers in Los Angeles.',
+    type: 'series',
+    posterUrl: '/selling_sunset_poster.jpg',
+    backdropUrl: '/selling_sunset_backdrop.jpg',
+    genre: ['Reality', 'Business'],
+    releaseYear: '2019',
+    ageRating: 'TV-MA',
+    duration: '5 Seasons',
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
   },
   {
-    id: 'dramas',
-    name: 'Hedgehog Dramas',
-    contentIds: ['2', '10', '11', '14', '18', '24']
-  },
-  {
-    id: 'action',
-    name: 'Action & Adventure',
-    contentIds: ['8', '16', '17', '18', '21']
-  },
-  {
-    id: 'fantasy',
-    name: 'Fantasy Tales',
-    contentIds: ['12', '16', '17', '22']
-  },
-  {
-    id: 'documentaries',
-    name: 'Documentaries',
-    contentIds: ['13', '23']
-  },
-  {
-    id: 'nature',
-    name: 'Nature & Wildlife',
-    contentIds: ['11', '15', '18', '23']
+    id: '30',
+    title: 'Get Organized with The Home Edit',
+    description: 'Clea Shearer and Joanna Teplin of The Home Edit bring their skills to organize celebrity and everyday clients\' homes.',
+    type: 'series',
+    posterUrl: '/get_organized_poster.jpg',
+    backdropUrl: '/get_organized_backdrop.jpg',
+    genre: ['Reality', 'Lifestyle'],
+    releaseYear: '2020',
+    ageRating: 'TV-G',
+    duration: '2 Seasons',
+    trending: false,
+    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
   }
 ];
 
 export const getFeaturedContent = (): Content => {
   const trendingContent = mockContent.filter(content => content.trending);
-  return trendingContent[Math.floor(Math.random() * trendingContent.length)];
-};
-
-export const getContentById = (id: string): Content | undefined => {
-  return mockContent.find(item => item.id === id);
-};
-
-export const getContentByCategory = (categoryId: string): Content[] => {
-  const category = mockCategories.find(cat => cat.id === categoryId);
-  if (!category) return [];
-  return category.contentIds.map(id => mockContent.find(content => content.id === id)!).filter(Boolean);
-};
-
-export const getAllCategories = (): Category[] => {
-  return mockCategories;
+  if (trendingContent.length > 0) {
+    return trendingContent[Math.floor(Math.random() * trendingContent.length)];
+  } else {
+    return mockContent[Math.floor(Math.random() * mockContent.length)];
+  }
 };

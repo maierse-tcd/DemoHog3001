@@ -24,6 +24,46 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
   onUpdateFormData,
   onToggleGenre
 }) => {
+  // Helper to validate YouTube URL
+  const isValidYouTubeUrl = (url: string): boolean => {
+    if (!url) return true; // Allow empty value
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/embed\/|youtu\.be\/)[a-zA-Z0-9_-]{11}($|[?&].*$)/;
+    return youtubeRegex.test(url);
+  };
+
+  // Helper to convert standard YouTube URL to embed URL
+  const convertToEmbedUrl = (url: string): string => {
+    if (!url) return '';
+    
+    // If already an embed URL, return as is
+    if (url.includes('youtube.com/embed/')) {
+      return url;
+    }
+    
+    // Extract video ID from various YouTube URL formats
+    const match = url.match(/(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/);
+    
+    if (match && match[1]) {
+      return `https://www.youtube.com/embed/${match[1]}`;
+    }
+    
+    // Return original if not matching any YouTube URL pattern
+    return url;
+  };
+
+  // Handle video URL change with validation and conversion
+  const handleVideoUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputUrl = e.target.value;
+    
+    // Auto-convert to embed format if it's a valid YouTube URL
+    if (inputUrl && inputUrl.includes('youtube.com') || inputUrl.includes('youtu.be')) {
+      const embedUrl = convertToEmbedUrl(inputUrl);
+      onUpdateFormData('videoUrl', embedUrl);
+    } else {
+      onUpdateFormData('videoUrl', inputUrl);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -65,6 +105,23 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
           rows={4}
           className="bg-black/40 border-netflix-gray/40"
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="videoUrl">
+          YouTube Video URL
+          <span className="ml-2 text-xs text-gray-400">(enter a YouTube URL - will be auto-converted to embed format)</span>
+        </Label>
+        <Input 
+          id="videoUrl" 
+          value={formData.videoUrl || ''} 
+          onChange={handleVideoUrlChange}
+          placeholder="https://www.youtube.com/watch?v=..." 
+          className={`bg-black/40 ${!isValidYouTubeUrl(formData.videoUrl || '') ? 'border-red-500' : 'border-netflix-gray/40'}`}
+        />
+        {!isValidYouTubeUrl(formData.videoUrl || '') && (
+          <p className="text-red-500 text-xs mt-1">Please enter a valid YouTube URL</p>
+        )}
       </div>
       
       <GenreSelector

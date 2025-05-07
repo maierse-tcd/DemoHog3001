@@ -3,10 +3,11 @@ import { useState } from 'react';
 import { Play, Info, Plus } from 'lucide-react';
 import { Content } from '../data/mockData';
 import { Button } from './ui/button';
-import { getRandomVideo } from '../utils/videoUtils';
 import { DEFAULT_IMAGES } from '../utils/imageUtils';
 import { safeCapture } from '../utils/posthog';
 import { useToast } from '../hooks/use-toast';
+import { Dialog, DialogContent } from './ui/dialog';
+import { X } from 'lucide-react';
 
 interface HeroSectionProps {
   content: Content;
@@ -19,6 +20,9 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
   
   // Use backdrop if available, otherwise fall back to default image
   const backdropUrl = content.backdropUrl || DEFAULT_IMAGES.backdrop;
+  
+  // Get video URL - use content's specific URL or default
+  const videoUrl = content.videoUrl || 'https://www.youtube.com/embed/dQw4w9WgXcQ';
   
   const handlePlayClick = () => {
     setIsPlaying(true);
@@ -61,19 +65,25 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
       <div className="absolute inset-0">
         {isPlaying ? (
           <div className="w-full h-full">
-            <iframe 
-              src={getRandomVideo()}
-              className="w-full h-full" 
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-              allowFullScreen
-              title={content.title}
-            />
-            <button 
-              className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full"
-              onClick={() => setIsPlaying(false)}
-            >
-              Close
-            </button>
+            <Dialog open={isPlaying} onOpenChange={setIsPlaying}>
+              <DialogContent className="bg-black border-none max-w-5xl w-[90vw] p-0">
+                <div className="relative aspect-video">
+                  <button 
+                    onClick={() => setIsPlaying(false)}
+                    className="absolute top-4 right-4 z-50 p-2 bg-black/70 text-white rounded-full hover:bg-black"
+                  >
+                    <X size={24} />
+                  </button>
+                  <iframe 
+                    src={videoUrl}
+                    className="w-full h-full" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowFullScreen
+                    title={content.title}
+                  />
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         ) : (
           <>
@@ -129,15 +139,14 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
       
       {/* Info Modal */}
       {isInfoModalOpen && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="relative bg-netflix-darkgray rounded-lg max-w-3xl w-full">
+        <Dialog open={isInfoModalOpen} onOpenChange={setIsInfoModalOpen}>
+          <DialogContent className="bg-netflix-darkgray border-netflix-darkgray text-white max-w-3xl w-[90vw]">
             <button 
               onClick={() => setIsInfoModalOpen(false)}
-              className="absolute top-4 right-4 text-white hover:text-netflix-red"
+              className="absolute top-4 right-4 z-50 p-2 text-white hover:text-netflix-red"
             >
-              Close
+              <X size={24} />
             </button>
-            
             <div className="p-6">
               <h2 className="text-2xl font-bold mb-4">{content.title}</h2>
               
@@ -184,8 +193,8 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
