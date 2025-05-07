@@ -12,16 +12,6 @@
   margin-bottom: 2.5rem;
 }
 
-/* Content card hover effects */
-.content-card {
-  transition: transform 0.3s ease-out;
-}
-
-.content-card:hover {
-  transform: scale(1.05);
-  z-index: 10;
-}
-
 /* Content scroll area */
 .content-row .scrollbar-none {
   -ms-overflow-style: none;

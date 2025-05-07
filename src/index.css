@@ -31,9 +31,8 @@ nav .text-sm {
   align-items: center;
 }
 
-/* Content card hover effects */
+/* Content card styling */
 .content-card {
-  transition: all 0.3s ease-out;
   position: relative;
   z-index: 1;
 }
@@ -42,15 +41,21 @@ nav .text-sm {
   z-index: 20;
 }
 
-.content-card .card-base {
+/* Card container transitions */
+.content-card .card-container {
   transform-origin: center;
   will-change: transform;
 }
 
-/* Expanded card */
-.content-card .expanded-card {
+/* Base and expanded card styles */
+.content-card .base-card {
+  transition: all 0.3s ease;
+}
+
+.content-card .expanded-content {
   transform-origin: center;
   will-change: transform;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
 }
 
 /* Make sure modals and dialogs are above other content */
@@ -78,16 +83,6 @@ button, a {
 .modal-backdrop {
   background-color: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(2px);
-}
-
-/* Better card animations */
-@keyframes scaleUp {
-  from { transform: scale(1); }
-  to { transform: scale(1.1); }
-}
-
-.scale-animation {
-  animation: scaleUp 0.2s forwards;
 }
 
 /* Custom scroll styling */

@@ -43,28 +43,27 @@ export const ContentCard = ({ content }: ContentCardProps) => {
   return (
     <>
       <div className="content-card group relative">
-        <div className="relative overflow-hidden transition-transform duration-300 ease-in-out group-hover:z-50">
+        <div className="card-container relative transition-transform duration-300 group-hover:scale-[1.1] group-hover:z-50">
           {/* Base card that is always visible */}
-          <div className="card-base w-[180px] md:w-[240px] h-[130px] md:h-[160px] rounded-md overflow-hidden transition-all duration-300 ease-out">
+          <div className="base-card w-[180px] md:w-[240px] h-[130px] md:h-[160px] rounded-md overflow-hidden">
             <img 
               src={displayImage}
               alt={content.title}
-              className="w-full h-full object-cover rounded-md transition-all duration-300 ease-out"
+              className="w-full h-full object-cover rounded-md"
               onError={(e) => {
                 e.currentTarget.src = DEFAULT_IMAGES.backdrop;
               }}
             />
             
             {/* Base title overlay */}
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-2 rounded-b-md transition-opacity duration-300 group-hover:opacity-0">
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-2 rounded-b-md opacity-100 group-hover:opacity-0 transition-opacity duration-200">
               <div className="text-white text-sm font-medium line-clamp-1">{content.title}</div>
             </div>
           </div>
 
-          {/* Expanded card that appears on hover */}
-          <div className="expanded-card absolute top-0 left-0 z-50 w-[180px] md:w-[240px] bg-netflix-darkgray rounded-md shadow-xl overflow-hidden 
-                        scale-0 origin-center opacity-0 
-                        group-hover:scale-110 group-hover:opacity-100 
+          {/* Expanded content that appears on hover */}
+          <div className="expanded-content absolute top-0 left-0 w-[180px] md:w-[240px] bg-netflix-darkgray rounded-md shadow-xl overflow-hidden 
+                        opacity-0 invisible group-hover:opacity-100 group-hover:visible 
                         transition-all duration-300 ease-out">
             <div className="relative">
               <Link to={`/content/${content.id}`}>
