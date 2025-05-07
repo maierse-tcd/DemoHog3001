@@ -1,11 +1,11 @@
 
 import { useState, useEffect } from 'react';
 import { Check, ChevronDown, Play } from 'lucide-react';
-import { GenreSelector } from './GenreSelector';
 import { useToast } from '../../hooks/use-toast';
 import { Button } from '../ui/button';
 import { Progress } from '../ui/progress';
 import { Content, Genre } from '../../data/mockData';
+import { GenreSelector } from './GenreSelector';
 
 interface DetailsTabProps {
   content: Content;
