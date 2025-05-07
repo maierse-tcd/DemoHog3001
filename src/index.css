@@ -69,3 +69,25 @@ body {
   background-color: #141414; /* Netflix black */
   color: #ffffff;
 }
+
+/* Additional fixes for navigation */
+nav a {
+  text-decoration: none;
+}
+
+nav a svg {
+  vertical-align: middle;
+  margin-right: 5px;
+}
+
+/* Content row fixes */
+.content-row-title {
+  text-align: left !important;
+  padding-left: 1.5rem;
+}
+
+/* Fix for navbar text alignment */
+nav .text-sm {
+  display: flex;
+  align-items: center;
+}

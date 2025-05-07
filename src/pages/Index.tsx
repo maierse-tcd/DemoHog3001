@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Navbar } from '../components/Navbar';
 import { HeroSection } from '../components/HeroSection';
@@ -17,7 +16,7 @@ const Index = () => {
   const [content, setContent] = useState<Content[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Feature flag checks
+  // Feature flag checks - keeping isAdmin but removing my_list_override
   const isAdmin = useFeatureFlag('is_admin');
   const hasPasswordProtection = useFeatureFlag('access_password');
   

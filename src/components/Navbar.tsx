@@ -15,7 +15,6 @@ export const Navbar = () => {
   const { isLoggedIn } = useAuth();
   const isDarkTheme = location.pathname !== '/login' && location.pathname !== '/signup';
   const isAdmin = useFeatureFlag('is_admin');
-  const showMyListToAll = useFeatureFlag('my_list_override');
   
   // Handle scroll events to change navbar appearance
   useEffect(() => {
@@ -30,9 +29,6 @@ export const Navbar = () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
-  
-  // Determine if My List should be shown
-  const showMyList = isLoggedIn || showMyListToAll;
   
   return (
     <nav
@@ -81,15 +77,13 @@ export const Navbar = () => {
               <CreditCard size={16} />
               Plans
             </Link>
-            {showMyList && (
-              <Link 
-                to="/my-list" 
-                className={`text-sm font-medium flex items-center gap-2 ${location.pathname === '/my-list' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
-              >
-                <Bookmark size={16} />
-                My List
-              </Link>
-            )}
+            <Link 
+              to="/my-list" 
+              className={`text-sm font-medium flex items-center gap-2 ${location.pathname === '/my-list' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
+            >
+              <Bookmark size={16} />
+              My List
+            </Link>
             {isAdmin && (
               <Link 
                 to="/image-manager" 
@@ -168,16 +162,14 @@ export const Navbar = () => {
             <CreditCard size={16} />
             Plans
           </Link>
-          {showMyList && (
-            <Link 
-              to="/my-list" 
-              className={`flex items-center gap-2 px-4 py-2 ${location.pathname === '/my-list' ? 'text-netflix-white' : 'text-netflix-gray'}`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <Bookmark size={16} />
-              My List
-            </Link>
-          )}
+          <Link 
+            to="/my-list" 
+            className={`flex items-center gap-2 px-4 py-2 ${location.pathname === '/my-list' ? 'text-netflix-white' : 'text-netflix-gray'}`}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <Bookmark size={16} />
+            My List
+          </Link>
           {isAdmin && (
             <Link 
               to="/image-manager" 
