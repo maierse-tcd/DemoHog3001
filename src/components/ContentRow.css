@@ -10,6 +10,7 @@
 /* Set proper spacing for content rows */
 .content-row {
   margin-bottom: 2.5rem;
+  position: relative; /* Ensure proper positioning context */
 }
 
 /* Content scroll area */
