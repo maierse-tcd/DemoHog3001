@@ -22,7 +22,7 @@ export type Genre =
   | 'Technology' | 'Design' | 'Arts' | 'Creativity' | 'Data' 
   | 'Science' | 'Biography' | 'Sports' | 'Reality' | 'Fashion' 
   | 'Ethics' | 'Business' | 'Finance' | 'Entrepreneurship' 
-  | 'Inspiration' | 'Nature';
+  | 'Inspiration' | 'Nature' | 'Lifestyle';
 
 export interface Content {
   id: string;
