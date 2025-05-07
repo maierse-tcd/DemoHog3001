@@ -1,8 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Navbar } from '../components/Navbar';
-import { Footer } from '../components/Footer';
 import { supabase } from '../integrations/supabase/client';
 import { Skeleton } from '../components/ui/skeleton';
 import { Play, Plus, ChevronLeft, X } from 'lucide-react';
@@ -144,7 +142,7 @@ const ContentDetail = () => {
             {/* Close button */}
             <button 
               onClick={handleCloseModal}
-              className="absolute top-2 right-2 p-2 bg-netflix-black/80 rounded-full text-white hover:bg-netflix-black"
+              className="absolute top-4 right-4 p-2 bg-netflix-black/80 rounded-full text-white hover:bg-netflix-black z-50"
             >
               <X size={20} />
             </button>
@@ -152,44 +150,42 @@ const ContentDetail = () => {
           
           {/* Content details */}
           <div className="p-6">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold mb-3">{content.title}</h1>
-              
-              <div className="flex items-center space-x-4 text-sm text-netflix-gray mb-4">
-                <span>{content.release_year}</span>
-                {content.age_rating && <span>{content.age_rating}</span>}
-                {content.duration && <span>{content.duration}</span>}
-              </div>
-              
-              <div className="flex flex-wrap gap-2 mb-6">
-                {content.genre && content.genre.map((g: string) => (
-                  <span 
-                    key={g}
-                    className="px-3 py-1 bg-[#333] text-white text-xs rounded-full"
-                  >
-                    {g}
-                  </span>
-                ))}
-              </div>
-              
-              <div className="flex space-x-4 mb-6">
-                <button className="bg-netflix-red hover:bg-netflix-red/90 text-white py-2 px-6 rounded flex items-center gap-2">
-                  <Play size={20} />
-                  Play
-                </button>
-                
-                {/* Purely visual My List button with no functionality */}
-                <button 
-                  className="bg-[#333] hover:bg-[#444] text-white py-2 px-6 rounded flex items-center gap-2"
-                  onClick={handleMyListClick}
-                >
-                  <Plus size={20} />
-                  Add to My List
-                </button>
-              </div>
-              
-              <p className="text-netflix-white max-w-3xl">{content.description}</p>
+            <h1 className="text-2xl md:text-3xl font-bold mb-3">{content.title}</h1>
+            
+            <div className="flex items-center space-x-4 text-sm text-netflix-gray mb-4">
+              <span>{content.release_year}</span>
+              {content.age_rating && <span>{content.age_rating}</span>}
+              {content.duration && <span>{content.duration}</span>}
             </div>
+            
+            <div className="flex flex-wrap gap-2 mb-6">
+              {content.genre && content.genre.map((g: string) => (
+                <span 
+                  key={g}
+                  className="px-3 py-1 bg-[#333] text-white text-xs rounded-full"
+                >
+                  {g}
+                </span>
+              ))}
+            </div>
+            
+            <div className="flex space-x-4 mb-6">
+              <button className="bg-netflix-red hover:bg-netflix-red/90 text-white py-2 px-6 rounded flex items-center gap-2">
+                <Play size={20} />
+                Play
+              </button>
+              
+              {/* Purely visual My List button with no functionality */}
+              <button 
+                className="bg-[#333] hover:bg-[#444] text-white py-2 px-6 rounded flex items-center gap-2"
+                onClick={handleMyListClick}
+              >
+                <Plus size={20} />
+                Add to My List
+              </button>
+            </div>
+            
+            <p className="text-netflix-white max-w-3xl">{content.description}</p>
           </div>
         </div>
       </DialogContent>

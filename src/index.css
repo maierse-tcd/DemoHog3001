@@ -33,12 +33,17 @@ nav .text-sm {
 
 /* Content card hover effects */
 .content-card {
-  transition: transform 0.3s ease-out;
+  transition: all 0.3s ease-out;
 }
 
 .content-card:hover {
-  transform: scale(1.05);
   z-index: 10;
+}
+
+/* Make sure modals and dialogs are above other content */
+.dialog-overlay,
+.dialog-content {
+  z-index: 50;
 }
 
 /* Fix for scroll buttons */
@@ -49,4 +54,44 @@ nav .text-sm {
 
 .content-row .group:hover button {
   opacity: 1;
+}
+
+/* Smooth transitions for all interactive elements */
+button, a {
+  transition: all 0.2s ease-out;
+}
+
+/* Netflix-style modal overlays */
+.modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(2px);
+}
+
+/* Better card animations */
+@keyframes scaleUp {
+  from { transform: scale(1); }
+  to { transform: scale(1.1); }
+}
+
+.scale-animation {
+  animation: scaleUp 0.2s forwards;
+}
+
+/* Custom scroll styling */
+.netflix-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.netflix-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.netflix-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.netflix-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.5);
 }

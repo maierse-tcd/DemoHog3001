@@ -1,11 +1,13 @@
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { Content } from '../data/mockData';
 import { Play, Plus, ThumbsUp, ChevronDown, X, Info } from 'lucide-react';
 import { getRandomVideo } from '../utils/videoUtils';
 import { DEFAULT_IMAGES } from '../utils/imageUtils';
 import { safeCapture } from '../utils/posthog';
 import { useToast } from '../hooks/use-toast';
+import { Dialog, DialogContent } from './ui/dialog';
 
 interface ContentCardProps {
   content: Content;
@@ -17,6 +19,7 @@ export const ContentCard = ({ content }: ContentCardProps) => {
   const [showDetails, setShowDetails] = useState(false);
   const [videoUrl] = useState(getRandomVideo());
   const { toast } = useToast();
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Use backdrop image if available, otherwise fallback to poster, then default image
   const displayImage = content.backdropUrl || content.posterUrl || DEFAULT_IMAGES.backdrop;
@@ -24,6 +27,7 @@ export const ContentCard = ({ content }: ContentCardProps) => {
   // Visual-only handler for My List button (no functionality)
   const handleMyListClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     
     // Track the click event without actually adding to a list
     safeCapture('my_list_button_clicked', {
@@ -37,42 +41,69 @@ export const ContentCard = ({ content }: ContentCardProps) => {
       description: 'My List functionality is purely visual in this demo.',
     });
   };
+
+  const handleMouseEnter = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    hoverTimeoutRef.current = setTimeout(() => {
+      setIsHovered(true);
+    }, 300); // Add a slight delay to prevent jittery behavior
+  };
+  
+  const handleMouseLeave = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    hoverTimeoutRef.current = setTimeout(() => {
+      setIsHovered(false);
+    }, 300); // Add a slight delay to prevent jittery behavior
+  };
   
   return (
     <>
       <div 
-        className="content-card w-[180px] md:w-[240px] h-[130px] md:h-[160px] relative"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        className="content-card relative group"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
-        <img 
-          src={displayImage}
-          alt={content.title}
-          className="w-full h-full object-cover rounded-md"
-          onError={(e) => {
-            e.currentTarget.src = DEFAULT_IMAGES.backdrop;
-          }}
-        />
-        
-        {/* Always visible title overlay */}
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-2 rounded-b-md">
-          <div className="text-white text-sm font-medium line-clamp-1">{content.title}</div>
-        </div>
+        <Link to={`/content/${content.id}`}>
+          <div className="w-[180px] md:w-[240px] h-[130px] md:h-[160px] relative overflow-hidden rounded-md transition-all duration-300 ease-in-out">
+            <img 
+              src={displayImage}
+              alt={content.title}
+              className="w-full h-full object-cover rounded-md group-hover:opacity-90 transition-opacity"
+              onError={(e) => {
+                e.currentTarget.src = DEFAULT_IMAGES.backdrop;
+              }}
+            />
+            
+            {/* Always visible title overlay */}
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-2 rounded-b-md">
+              <div className="text-white text-sm font-medium line-clamp-1">{content.title}</div>
+            </div>
+          </div>
+        </Link>
         
         {isHovered && (
-          <div className="absolute inset-0 bg-black/70 rounded-md p-3 flex flex-col justify-between animate-fade-in z-10">
-            <div className="text-white text-sm font-medium line-clamp-1">{content.title}</div>
+          <div className="absolute top-0 left-0 z-20 w-[180px] md:w-[240px] bg-netflix-darkgray shadow-xl rounded-md overflow-hidden transform scale-110 origin-center transition-all duration-300 ease-in-out">
+            <Link to={`/content/${content.id}`}>
+              <img 
+                src={displayImage}
+                alt={content.title} 
+                className="w-full h-[130px] md:h-[160px] object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = DEFAULT_IMAGES.backdrop;
+                }}
+              />
+            </Link>
             
-            <div>
-              <div className="flex space-x-1 mb-2">
-                {content.genre.slice(0, 2).map((genre, index) => (
-                  <span key={index} className="text-xs text-netflix-white/80">{genre}{index < Math.min(content.genre.length, 2) - 1 ? ' •' : ''}</span>
-                ))}
-              </div>
+            <div className="p-3">
+              <div className="text-white text-sm font-medium mb-2 line-clamp-1">{content.title}</div>
               
-              <div className="flex space-x-2">
+              <div className="flex space-x-2 mb-3">
                 <button 
-                  className="p-1 bg-white rounded-full hover:bg-white/90"
+                  className="p-1 bg-white rounded-full hover:bg-white/90 transition-colors"
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowVideo(true);
@@ -85,22 +116,26 @@ export const ContentCard = ({ content }: ContentCardProps) => {
                   <Play size={16} className="text-black" />
                 </button>
                 
-                {/* Purely visual My List button with no functionality */}
                 <button 
-                  className="p-1 bg-netflix-darkgray/80 rounded-full hover:bg-netflix-darkgray"
+                  className="p-1 bg-netflix-darkgray/80 rounded-full hover:bg-netflix-darkgray border border-white/20 transition-colors"
                   onClick={handleMyListClick}
                 >
                   <Plus size={16} className="text-white" />
                 </button>
                 
-                <button className="p-1 bg-netflix-darkgray/80 rounded-full hover:bg-netflix-darkgray">
+                <button 
+                  className="p-1 bg-netflix-darkgray/80 rounded-full hover:bg-netflix-darkgray border border-white/20 transition-colors"
+                >
                   <ThumbsUp size={16} className="text-white" />
                 </button>
+                
                 <div className="flex-grow"></div>
+                
                 <button 
-                  className="p-1 bg-netflix-darkgray/80 rounded-full hover:bg-netflix-darkgray"
+                  className="p-1 bg-netflix-darkgray/80 rounded-full hover:bg-netflix-darkgray border border-white/20 transition-colors"
                   onClick={(e) => {
                     e.stopPropagation();
+                    e.preventDefault();
                     setShowDetails(true);
                     safeCapture('content_details_opened', { 
                       contentId: content.id,
@@ -111,44 +146,76 @@ export const ContentCard = ({ content }: ContentCardProps) => {
                   <ChevronDown size={16} className="text-white" />
                 </button>
               </div>
+              
+              <div className="flex space-x-1 mb-2 text-xs">
+                <span className="text-green-500 font-medium">{content.releaseYear}</span>
+                <span className="text-white/50">•</span>
+                <span className="border border-white/30 px-1 text-[10px] leading-4">{content.ageRating}</span>
+                <span className="text-white/50">•</span>
+                <span>{content.duration}</span>
+              </div>
+              
+              <div className="flex flex-wrap gap-1 text-xs text-white/70">
+                {content.genre.slice(0, 3).map((genre, index) => (
+                  <span key={index}>
+                    {genre}{index < Math.min(content.genre.length, 3) - 1 ? ', ' : ''}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         )}
       </div>
 
       {/* Video Modal */}
-      {showVideo && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
-          <div className="relative w-full max-w-4xl">
+      <Dialog open={showVideo} onOpenChange={setShowVideo}>
+        <DialogContent className="bg-black border-none max-w-4xl w-[90vw] p-0">
+          <div className="relative aspect-video">
             <button 
               onClick={() => setShowVideo(false)}
-              className="absolute -top-10 right-0 text-white hover:text-netflix-red"
+              className="absolute top-4 right-4 z-50 p-2 bg-black/70 text-white rounded-full hover:bg-black"
             >
-              <X size={24} />
+              <X size={20} />
             </button>
-            <div className="aspect-video">
-              <iframe 
-                src={videoUrl}
-                className="w-full h-full" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                allowFullScreen
-                title={content.title}
-              />
-            </div>
+            <iframe 
+              src={videoUrl}
+              className="w-full h-full" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowFullScreen
+              title={content.title}
+            />
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* Details Modal */}
-      {showDetails && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="relative bg-netflix-darkgray rounded-lg max-w-2xl w-full">
-            <button 
-              onClick={() => setShowDetails(false)}
-              className="absolute top-4 right-4 text-white hover:text-netflix-red"
-            >
-              <X size={24} />
-            </button>
+      <Dialog open={showDetails} onOpenChange={setShowDetails}>
+        <DialogContent className="bg-netflix-darkgray border-netflix-darkgray text-white max-w-3xl w-[90vw]">
+          <div className="relative">
+            <div className="w-full h-[30vh] relative">
+              {content.backdropUrl ? (
+                <img 
+                  src={content.backdropUrl} 
+                  alt={content.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/placeholder.svg';
+                  }}
+                />
+              ) : (
+                <img 
+                  src={content.posterUrl || DEFAULT_IMAGES.backdrop} 
+                  alt={content.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/placeholder.svg';
+                  }}
+                />
+              )}
+              
+              {/* Gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-netflix-darkgray via-netflix-darkgray/70 to-transparent"></div>
+            </div>
             
             <div className="p-6">
               <h2 className="text-2xl font-bold mb-4">{content.title}</h2>
@@ -181,23 +248,25 @@ export const ContentCard = ({ content }: ContentCardProps) => {
                     setShowDetails(false);
                     setShowVideo(true);
                   }}
-                  className="btn-primary flex items-center justify-center px-6 py-2 rounded bg-white hover:bg-white/80 text-black transition-colors"
+                  className="bg-white hover:bg-white/90 text-black py-2 px-6 rounded flex items-center gap-2 transition-colors"
                 >
-                  <Play size={20} className="mr-2" /> Play
+                  <Play size={20} />
+                  Play
                 </button>
                 
                 {/* Purely visual My List button with no functionality */}
                 <button 
-                  className="flex items-center justify-center px-6 py-2 rounded border border-white/30 hover:bg-white/10 text-white transition-colors"
+                  className="bg-[#333] hover:bg-[#444] text-white py-2 px-6 rounded flex items-center gap-2 transition-colors"
                   onClick={handleMyListClick}
                 >
-                  <Plus size={20} className="mr-2" /> Add to My List
+                  <Plus size={20} />
+                  Add to My List
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

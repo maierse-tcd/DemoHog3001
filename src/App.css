@@ -86,3 +86,39 @@ body {
 .animate-scale-in {
   animation: scaleIn 0.2s ease-out;
 }
+
+/* Modal styling */
+.dialog-content {
+  animation: fadeIn 0.3s, scaleIn 0.2s;
+}
+
+/* Fix for dialog component to match Netflix style */
+.radix-dialog-overlay {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+.radix-dialog-content {
+  background-color: #181818 !important;
+  border-color: #333 !important;
+}
+
+/* Z-index fixes for proper stacking */
+.dialog-overlay {
+  z-index: 40;
+}
+
+.dialog-content {
+  z-index: 50;
+}
+
+/* Card hover fix */
+.content-card .hover-content {
+  visibility: hidden;
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.content-card:hover .hover-content {
+  visibility: visible;
+  opacity: 1;
+}
