@@ -34,10 +34,23 @@ nav .text-sm {
 /* Content card hover effects */
 .content-card {
   transition: all 0.3s ease-out;
+  position: relative;
+  z-index: 1;
 }
 
 .content-card:hover {
-  z-index: 10;
+  z-index: 20;
+}
+
+.content-card .card-base {
+  transform-origin: center;
+  will-change: transform;
+}
+
+/* Expanded card */
+.content-card .expanded-card {
+  transform-origin: center;
+  will-change: transform;
 }
 
 /* Make sure modals and dialogs are above other content */

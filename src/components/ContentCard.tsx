@@ -14,12 +14,10 @@ interface ContentCardProps {
 }
 
 export const ContentCard = ({ content }: ContentCardProps) => {
-  const [isHovered, setIsHovered] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [videoUrl] = useState(getRandomVideo());
   const { toast } = useToast();
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Use backdrop image if available, otherwise fallback to poster, then default image
   const displayImage = content.backdropUrl || content.posterUrl || DEFAULT_IMAGES.backdrop;
@@ -42,65 +40,46 @@ export const ContentCard = ({ content }: ContentCardProps) => {
     });
   };
 
-  const handleMouseEnter = () => {
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
-    hoverTimeoutRef.current = setTimeout(() => {
-      setIsHovered(true);
-    }, 300); // Add a slight delay to prevent jittery behavior
-  };
-  
-  const handleMouseLeave = () => {
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
-    hoverTimeoutRef.current = setTimeout(() => {
-      setIsHovered(false);
-    }, 300); // Add a slight delay to prevent jittery behavior
-  };
-  
   return (
     <>
-      <div 
-        className="content-card relative group"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-      >
-        <Link to={`/content/${content.id}`}>
-          <div className="w-[180px] md:w-[240px] h-[130px] md:h-[160px] relative overflow-hidden rounded-md transition-all duration-300 ease-in-out">
+      <div className="content-card group relative">
+        <div className="relative overflow-hidden transition-transform duration-300 ease-in-out group-hover:z-50">
+          {/* Base card that is always visible */}
+          <div className="card-base w-[180px] md:w-[240px] h-[130px] md:h-[160px] rounded-md overflow-hidden transition-all duration-300 ease-out">
             <img 
               src={displayImage}
               alt={content.title}
-              className="w-full h-full object-cover rounded-md group-hover:opacity-90 transition-opacity"
+              className="w-full h-full object-cover rounded-md transition-all duration-300 ease-out"
               onError={(e) => {
                 e.currentTarget.src = DEFAULT_IMAGES.backdrop;
               }}
             />
             
-            {/* Always visible title overlay */}
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-2 rounded-b-md">
+            {/* Base title overlay */}
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-2 rounded-b-md transition-opacity duration-300 group-hover:opacity-0">
               <div className="text-white text-sm font-medium line-clamp-1">{content.title}</div>
             </div>
           </div>
-        </Link>
-        
-        {isHovered && (
-          <div className="absolute top-0 left-0 z-20 w-[180px] md:w-[240px] bg-netflix-darkgray shadow-xl rounded-md overflow-hidden transform scale-110 origin-center transition-all duration-300 ease-in-out">
-            <Link to={`/content/${content.id}`}>
-              <img 
-                src={displayImage}
-                alt={content.title} 
-                className="w-full h-[130px] md:h-[160px] object-cover"
-                onError={(e) => {
-                  e.currentTarget.src = DEFAULT_IMAGES.backdrop;
-                }}
-              />
-            </Link>
+
+          {/* Expanded card that appears on hover */}
+          <div className="expanded-card absolute top-0 left-0 z-50 w-[180px] md:w-[240px] bg-netflix-darkgray rounded-md shadow-xl overflow-hidden 
+                        scale-0 origin-center opacity-0 
+                        group-hover:scale-110 group-hover:opacity-100 
+                        transition-all duration-300 ease-out">
+            <div className="relative">
+              <Link to={`/content/${content.id}`}>
+                <img 
+                  src={displayImage}
+                  alt={content.title} 
+                  className="w-full h-[130px] md:h-[160px] object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = DEFAULT_IMAGES.backdrop;
+                  }}
+                />
+              </Link>
+            </div>
             
             <div className="p-3">
-              <div className="text-white text-sm font-medium mb-2 line-clamp-1">{content.title}</div>
-              
               <div className="flex space-x-2 mb-3">
                 <button 
                   className="p-1 bg-white rounded-full hover:bg-white/90 transition-colors"
@@ -147,6 +126,8 @@ export const ContentCard = ({ content }: ContentCardProps) => {
                 </button>
               </div>
               
+              <div className="text-white text-sm font-medium mb-2 line-clamp-1">{content.title}</div>
+              
               <div className="flex space-x-1 mb-2 text-xs">
                 <span className="text-green-500 font-medium">{content.releaseYear}</span>
                 <span className="text-white/50">•</span>
@@ -164,7 +145,7 @@ export const ContentCard = ({ content }: ContentCardProps) => {
               </div>
             </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Video Modal */}
