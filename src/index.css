@@ -19,59 +19,16 @@ body {
   padding: 0;
 }
 
-/* Content row fixes */
-.content-row-title {
-  text-align: left;
-  padding-left: 1.5rem;
-}
-
 /* Fix for navbar text alignment */
 nav .text-sm {
   display: flex;
   align-items: center;
 }
 
-/* Content card styling */
-.content-card {
-  position: relative;
-  z-index: 1;
-}
-
-.content-card:hover {
-  z-index: 20;
-}
-
-/* Card container transitions */
-.content-card .card-container {
-  transform-origin: center;
-  will-change: transform;
-}
-
-/* Base and expanded card styles */
-.content-card .base-card {
-  transition: all 0.3s ease;
-}
-
-.content-card .expanded-content {
-  transform-origin: center;
-  will-change: transform;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-}
-
 /* Make sure modals and dialogs are above other content */
 .dialog-overlay,
 .dialog-content {
   z-index: 50;
-}
-
-/* Fix for scroll buttons */
-.content-row .group button {
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.content-row .group:hover button {
-  opacity: 1;
 }
 
 /* Smooth transitions for all interactive elements */

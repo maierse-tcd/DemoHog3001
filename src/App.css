@@ -50,16 +50,6 @@ body {
   background-color: #c81018;
 }
 
-/* Content scroll area */
-.content-row .scrollbar-none {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.content-row .scrollbar-none::-webkit-scrollbar {
-  display: none;
-}
-
 /* Animation utilities */
 @keyframes fadeIn {
   from { opacity: 0; }

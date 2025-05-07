@@ -1,5 +1,5 @@
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Content } from '../data/mockData';
 import { Play, Plus, ThumbsUp, ChevronDown, X, Info } from 'lucide-react';
@@ -8,6 +8,7 @@ import { DEFAULT_IMAGES } from '../utils/imageUtils';
 import { safeCapture } from '../utils/posthog';
 import { useToast } from '../hooks/use-toast';
 import { Dialog, DialogContent } from './ui/dialog';
+import './ContentCard.css';
 
 interface ContentCardProps {
   content: Content;
@@ -42,89 +43,86 @@ export const ContentCard = ({ content }: ContentCardProps) => {
 
   return (
     <>
-      <div className="content-card group relative">
-        <div className="card-container relative transition-transform duration-300 group-hover:scale-[1.1] group-hover:z-50">
-          {/* Base card that is always visible */}
-          <div className="base-card w-[180px] md:w-[240px] h-[130px] md:h-[160px] rounded-md overflow-hidden">
+      <div className="content-card">
+        <div className="card-container">
+          {/* Base card - always visible */}
+          <div className="base-card">
             <img 
               src={displayImage}
               alt={content.title}
-              className="w-full h-full object-cover rounded-md"
               onError={(e) => {
                 e.currentTarget.src = DEFAULT_IMAGES.backdrop;
               }}
             />
-            
-            {/* Base title overlay */}
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-2 rounded-b-md opacity-100 group-hover:opacity-0 transition-opacity duration-200">
+            {/* Title overlay on base card */}
+            <div className="title-overlay">
               <div className="text-white text-sm font-medium line-clamp-1">{content.title}</div>
             </div>
           </div>
-
-          {/* Expanded content that appears on hover */}
-          <div className="expanded-content absolute top-0 left-0 w-[180px] md:w-[240px] bg-netflix-darkgray rounded-md shadow-xl overflow-hidden 
-                        opacity-0 invisible group-hover:opacity-100 group-hover:visible 
-                        transition-all duration-300 ease-out">
-            <div className="relative">
-              <Link to={`/content/${content.id}`}>
-                <img 
-                  src={displayImage}
-                  alt={content.title} 
-                  className="w-full h-[130px] md:h-[160px] object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src = DEFAULT_IMAGES.backdrop;
-                  }}
-                />
-              </Link>
+          
+          {/* Expanded content - shown on hover */}
+          <div className="expanded-content">
+            {/* Preview image */}
+            <Link to={`/content/${content.id}`}>
+              <img 
+                src={displayImage}
+                alt={content.title} 
+                className="w-full h-[135px] md:h-[135px] object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = DEFAULT_IMAGES.backdrop;
+                }}
+              />
+            </Link>
+            
+            {/* Control buttons */}
+            <div className="button-controls">
+              <button 
+                className="control-button play-button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowVideo(true);
+                  safeCapture('content_play_clicked', { 
+                    contentId: content.id,
+                    contentTitle: content.title
+                  });
+                }}
+              >
+                <Play size={16} />
+              </button>
+              
+              <button 
+                className="control-button"
+                onClick={handleMyListClick}
+              >
+                <Plus size={16} />
+              </button>
+              
+              <button 
+                className="control-button"
+              >
+                <ThumbsUp size={16} />
+              </button>
+              
+              <div className="flex-grow"></div>
+              
+              <button 
+                className="control-button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setShowDetails(true);
+                  safeCapture('content_details_opened', { 
+                    contentId: content.id,
+                    contentTitle: content.title
+                  });
+                }}
+              >
+                <ChevronDown size={16} />
+              </button>
             </div>
             
+            {/* Content info */}
             <div className="p-3">
-              <div className="flex space-x-2 mb-3">
-                <button 
-                  className="p-1 bg-white rounded-full hover:bg-white/90 transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowVideo(true);
-                    safeCapture('content_play_clicked', { 
-                      contentId: content.id,
-                      contentTitle: content.title
-                    });
-                  }}
-                >
-                  <Play size={16} className="text-black" />
-                </button>
-                
-                <button 
-                  className="p-1 bg-netflix-darkgray/80 rounded-full hover:bg-netflix-darkgray border border-white/20 transition-colors"
-                  onClick={handleMyListClick}
-                >
-                  <Plus size={16} className="text-white" />
-                </button>
-                
-                <button 
-                  className="p-1 bg-netflix-darkgray/80 rounded-full hover:bg-netflix-darkgray border border-white/20 transition-colors"
-                >
-                  <ThumbsUp size={16} className="text-white" />
-                </button>
-                
-                <div className="flex-grow"></div>
-                
-                <button 
-                  className="p-1 bg-netflix-darkgray/80 rounded-full hover:bg-netflix-darkgray border border-white/20 transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    setShowDetails(true);
-                    safeCapture('content_details_opened', { 
-                      contentId: content.id,
-                      contentTitle: content.title
-                    });
-                  }}
-                >
-                  <ChevronDown size={16} className="text-white" />
-                </button>
-              </div>
-              
               <div className="text-white text-sm font-medium mb-2 line-clamp-1">{content.title}</div>
               
               <div className="flex space-x-1 mb-2 text-xs">

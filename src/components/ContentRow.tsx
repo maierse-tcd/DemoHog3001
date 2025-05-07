@@ -63,13 +63,13 @@ export const ContentRow = ({ title, contentList }: ContentRowProps) => {
         {/* Content row with ScrollArea - Hide scrollbar */}
         <ScrollArea className="w-full overflow-x-auto pb-4 scrollbar-none" hideScrollbar={true}>
           <div 
-            className="flex items-start space-x-3 px-4 md:px-8 lg:px-12 pt-2"
+            className="flex items-start space-x-1 px-4 md:px-8 lg:px-12 pt-2"
             ref={rowRef}
             onScroll={handleScroll}
             style={{ minWidth: "100%" }}
           >
             {contentList.map((content) => (
-              <div key={content.id} className="content-card">
+              <div key={content.id}>
                 <ContentCard content={content} />
               </div>
             ))}
