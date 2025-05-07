@@ -44,11 +44,4 @@ export {
   formatSubscriptionGroupProps
 } from './helpers';
 
-// Re-export MyList utilities
-export { 
-  useMyList, 
-  addToMyList, 
-  removeFromMyList, 
-  isInMyList,
-  getMyList 
-} from './myList';
+// MyList is now a purely visual feature with no functionality

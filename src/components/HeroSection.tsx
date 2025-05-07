@@ -1,12 +1,11 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Play, Info, Plus, Check } from 'lucide-react';
+
+import { useState } from 'react';
+import { Play, Info, Plus } from 'lucide-react';
 import { Content } from '../data/mockData';
 import { Button } from './ui/button';
 import { getRandomVideo } from '../utils/videoUtils';
 import { DEFAULT_IMAGES } from '../utils/imageUtils';
 import { safeCapture } from '../utils/posthog';
-import { useMyList, isInMyList } from '../utils/posthog/myList';
 
 interface HeroSectionProps {
   content: Content;
@@ -15,28 +14,7 @@ interface HeroSectionProps {
 export const HeroSection = ({ content }: HeroSectionProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
-  const [isAddedToList, setIsAddedToList] = useState(false);
-  const { addToList, removeFromList } = useMyList();
-  const navigate = useNavigate();
-
-  // Check if content is in My List (visual only)
-  useEffect(() => {
-    const checkMyList = async () => {
-      const inList = await isInMyList(content.id);
-      setIsAddedToList(inList);
-    };
-    
-    checkMyList();
-    
-    // Listen for my list updates
-    const handleMyListUpdate = () => checkMyList();
-    window.addEventListener('my-list-updated', handleMyListUpdate);
-    
-    return () => {
-      window.removeEventListener('my-list-updated', handleMyListUpdate);
-    };
-  }, [content.id]);
-
+  
   // Use backdrop if available, otherwise fall back to default image
   const backdropUrl = content.backdropUrl || DEFAULT_IMAGES.backdrop;
   
@@ -57,21 +35,6 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
     safeCapture('hero_info_clicked', {
       contentId: content.id,
       contentTitle: content.title
-    });
-  };
-  
-  const handleMyListClick = async () => {
-    if (isAddedToList) {
-      await removeFromList(content.id);
-    } else {
-      await addToList(content.id);
-    }
-    
-    // Track list action in PostHog
-    safeCapture(isAddedToList ? 'remove_from_list' : 'add_to_list', {
-      contentId: content.id,
-      contentTitle: content.title,
-      location: 'hero'
     });
   };
   
@@ -134,20 +97,12 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
                 <Info className="mr-2 h-5 w-5" /> More Info
               </Button>
               
+              {/* Purely visual My List button with no functionality */}
               <Button
                 variant="outline" 
                 className="border-gray-400 hover:bg-white/10"
-                onClick={handleMyListClick}
               >
-                {isAddedToList ? (
-                  <>
-                    <Check className="mr-2 h-5 w-5" /> Added
-                  </>
-                ) : (
-                  <>
-                    <Plus className="mr-2 h-5 w-5" /> My List
-                  </>
-                )}
+                <Plus className="mr-2 h-5 w-5" /> My List
               </Button>
             </div>
           </div>
@@ -200,20 +155,13 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
                 >
                   <Play className="mr-2 h-5 w-5" /> Play
                 </Button>
+                
+                {/* Purely visual My List button with no functionality */}
                 <Button
                   variant="outline" 
                   className="border-gray-400 hover:bg-white/10"
-                  onClick={handleMyListClick}
                 >
-                  {isAddedToList ? (
-                    <>
-                      <Check className="mr-2 h-5 w-5" /> Added to List
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="mr-2 h-5 w-5" /> Add to My List
-                    </>
-                  )}
+                  <Plus className="mr-2 h-5 w-5" /> Add to My List
                 </Button>
               </div>
             </div>

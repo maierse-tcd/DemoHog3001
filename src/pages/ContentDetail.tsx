@@ -1,18 +1,16 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { supabase } from '../integrations/supabase/client';
 import { Skeleton } from '../components/ui/skeleton';
-import { Play, Plus, Check, ChevronLeft } from 'lucide-react';
+import { Play, Plus, ChevronLeft } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 
 const ContentDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [content, setContent] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isInMyList, setIsInMyList] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -145,20 +143,13 @@ const ContentDetail = () => {
                   <Play size={20} />
                   Play
                 </button>
+                
+                {/* Purely visual My List button with no functionality */}
                 <button 
                   className="bg-[#333] hover:bg-[#444] text-white py-2 px-6 rounded flex items-center gap-2"
-                  onClick={() => {
-                    setIsInMyList(!isInMyList);
-                    toast({
-                      title: isInMyList ? 'Removed from My List' : 'Added to My List',
-                      description: isInMyList 
-                        ? `"${content.title}" has been removed from your list` 
-                        : `"${content.title}" has been added to your list`
-                    });
-                  }}
                 >
-                  {isInMyList ? <Check size={20} /> : <Plus size={20} />}
-                  {isInMyList ? 'In My List' : 'Add to My List'}
+                  <Plus size={20} />
+                  Add to My List
                 </button>
               </div>
               
