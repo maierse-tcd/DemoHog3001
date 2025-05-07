@@ -60,3 +60,94 @@ button, a {
 .netflix-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: rgba(255, 255, 255, 0.5);
 }
+
+/* Netflix-specific UI elements */
+.netflix-shadow {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* Make sure select and dropdown menus look like Netflix */
+[data-radix-popper-content-wrapper] {
+  z-index: 100 !important;
+}
+
+/* Fix for dropdown-menu transparency issue */
+.radix-dropdown-content, 
+[data-radix-popper-content-wrapper] {
+  background-color: #181818 !important;
+}
+
+/* Fix for dialog close button */
+[data-radix-dialog-close] {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 60;
+}
+
+/* Fix for radix select dropdown transparency issue */
+[data-radix-select-content] {
+  background-color: #181818 !important;
+}
+
+/* Netflix pulse animation */
+@keyframes netflixPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(229, 9, 20, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(229, 9, 20, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(229, 9, 20, 0);
+  }
+}
+
+.netflix-pulse {
+  animation: netflixPulse 2s infinite;
+}
+
+/* Netflix fade up animation */
+@keyframes netflixFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.netflix-fade-up {
+  animation: netflixFadeUp 0.5s forwards;
+}
+
+/* Make sure toast notifications are properly styled */
+[data-radix-toast-root] {
+  background-color: #181818 !important;
+  border-color: #333 !important;
+  color: white !important;
+}
+
+/* Netflix hover effect for buttons */
+.netflix-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.netflix-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease-out;
+}
+
+.netflix-btn:hover::before {
+  transform: translateX(0);
+}

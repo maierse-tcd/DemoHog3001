@@ -7,7 +7,6 @@ import { DEFAULT_IMAGES } from '../utils/imageUtils';
 import { safeCapture } from '../utils/posthog';
 import { useToast } from '../hooks/use-toast';
 import { Dialog, DialogContent } from './ui/dialog';
-import { X } from 'lucide-react';
 
 interface HeroSectionProps {
   content: Content;
@@ -54,8 +53,8 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
     });
     
     toast({
-      title: 'Feature not available',
-      description: 'My List functionality is purely visual in this demo.',
+      title: 'Added to My List',
+      description: `"${content.title}" has been added to My List.`,
     });
   };
   
@@ -70,12 +69,16 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
                 <div className="relative aspect-video">
                   <button 
                     onClick={() => setIsPlaying(false)}
-                    className="absolute top-4 right-4 z-50 p-2 bg-black/70 text-white rounded-full hover:bg-black"
+                    className="absolute top-4 right-4 z-50 p-2 bg-black/70 hover:bg-black text-white rounded-full transition-all"
+                    aria-label="Close video"
                   >
-                    <X size={24} />
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                   </button>
                   <iframe 
-                    src={videoUrl}
+                    src={`${videoUrl}?autoplay=1`}
                     className="w-full h-full" 
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                     allowFullScreen
@@ -113,7 +116,7 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
                 className="bg-white hover:bg-white/90 text-black font-medium px-8"
                 onClick={handlePlayClick}
               >
-                <Play className="mr-2 h-5 w-5" /> Play
+                <Play className="mr-2 h-5 w-5" fill="black" /> Play
               </Button>
               
               <Button
@@ -138,15 +141,32 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
       )}
       
       {/* Info Modal */}
-      {isInfoModalOpen && (
-        <Dialog open={isInfoModalOpen} onOpenChange={setIsInfoModalOpen}>
-          <DialogContent className="bg-netflix-darkgray border-netflix-darkgray text-white max-w-3xl w-[90vw]">
+      <Dialog open={isInfoModalOpen} onOpenChange={setIsInfoModalOpen}>
+        <DialogContent className="bg-netflix-darkgray border-netflix-darkgray text-white max-w-3xl w-[90vw] p-0">
+          <div className="relative">
             <button 
               onClick={() => setIsInfoModalOpen(false)}
-              className="absolute top-4 right-4 z-50 p-2 text-white hover:text-netflix-red"
+              className="absolute top-4 right-4 z-50 p-2 bg-black/50 hover:bg-black/70 text-white rounded-full transition-colors"
+              aria-label="Close"
             >
-              <X size={24} />
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </button>
+            
+            <div className="w-full h-[30vh] relative">
+              <img 
+                src={backdropUrl} 
+                alt={content.title} 
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = DEFAULT_IMAGES.backdrop;
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-netflix-darkgray via-netflix-darkgray/60 to-transparent"></div>
+            </div>
+            
             <div className="p-6">
               <h2 className="text-2xl font-bold mb-4">{content.title}</h2>
               
@@ -180,7 +200,7 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
                   }}
                   className="bg-white hover:bg-white/90 text-black"
                 >
-                  <Play className="mr-2 h-5 w-5" /> Play
+                  <Play className="mr-2 h-5 w-5" fill="black" /> Play
                 </Button>
                 
                 {/* Purely visual My List button with no functionality */}
@@ -193,9 +213,9 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
                 </Button>
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
-      )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

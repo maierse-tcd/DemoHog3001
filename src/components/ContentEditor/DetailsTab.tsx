@@ -27,7 +27,9 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
   // Helper to validate YouTube URL
   const isValidYouTubeUrl = (url: string): boolean => {
     if (!url) return true; // Allow empty value
-    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/embed\/|youtu\.be\/)[a-zA-Z0-9_-]{11}($|[?&].*$)/;
+    
+    // More comprehensive regex to handle various YouTube URL formats
+    const youtubeRegex = /^(https?:\/\/)?(www\.|m\.)?(youtube\.com\/watch\?v=|youtube\.com\/embed\/|youtu\.be\/)[a-zA-Z0-9_-]{11}($|[?&].*$)/;
     return youtubeRegex.test(url);
   };
 
@@ -56,13 +58,23 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
     const inputUrl = e.target.value;
     
     // Auto-convert to embed format if it's a valid YouTube URL
-    if (inputUrl && inputUrl.includes('youtube.com') || inputUrl.includes('youtu.be')) {
+    if (inputUrl && (inputUrl.includes('youtube.com') || inputUrl.includes('youtu.be'))) {
       const embedUrl = convertToEmbedUrl(inputUrl);
       onUpdateFormData('videoUrl', embedUrl);
     } else {
       onUpdateFormData('videoUrl', inputUrl);
     }
   };
+
+  // Helper to extract video ID for thumbnail preview
+  const getYouTubeVideoId = (url: string): string | null => {
+    if (!url) return null;
+    
+    const match = url.match(/(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/);
+    return match && match[1] ? match[1] : null;
+  };
+  
+  const videoId = getYouTubeVideoId(formData.videoUrl || '');
 
   return (
     <div className="space-y-4">
@@ -121,6 +133,25 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
         />
         {!isValidYouTubeUrl(formData.videoUrl || '') && (
           <p className="text-red-500 text-xs mt-1">Please enter a valid YouTube URL</p>
+        )}
+        
+        {/* YouTube thumbnail preview */}
+        {videoId && (
+          <div className="mt-2">
+            <p className="text-xs text-gray-400 mb-1">Video Preview:</p>
+            <div className="relative aspect-video w-full max-w-[240px] bg-black/40">
+              <img 
+                src={`https://img.youtube.com/vi/${videoId}/0.jpg`}
+                alt="Video thumbnail"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-netflix-red/80 flex items-center justify-center">
+                  <Play fill="white" className="w-6 h-6 text-white ml-1" />
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
       
