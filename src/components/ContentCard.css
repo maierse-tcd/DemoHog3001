@@ -12,7 +12,7 @@
   transition-delay: 0ms; /* Remove delay when hovering */
 }
 
-/* Card container - handles the scaling */
+/* Card container - removed scaling for a more subtle effect */
 .content-card .card-container {
   transform-origin: center center;
   transition: all 450ms cubic-bezier(0.2, 0.1, 0.1, 1);
@@ -20,7 +20,7 @@
 }
 
 .content-card:hover .card-container {
-  transform: scale(1.05); /* Reduced from 1.3 to 1.05 for subtle effect */
+  /* Removed transform: scale() to eliminate zoom effect */
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.7);
 }
 
@@ -76,7 +76,7 @@
   overflow: hidden;
   opacity: 0;
   visibility: hidden;
-  transform: translateY(-5%);
+  transform: translateY(0); /* Removed negative transform to avoid jerky animation */
   transition: all 450ms cubic-bezier(0.2, 0.1, 0.1, 1);
   box-shadow: 0 15px 30px rgba(0, 0, 0, 0.75);
   z-index: 10;
@@ -96,7 +96,7 @@
   left: 0;
   right: 0;
   height: 135px;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.7)); /* Darker gradient for better contrast */
   z-index: 1;
   opacity: 0;
   transition: opacity 450ms cubic-bezier(0.2, 0.1, 0.1, 1);
@@ -106,7 +106,7 @@
   opacity: 1;
 }
 
-/* Control buttons */
+/* Control buttons - improved visibility */
 .content-card .button-controls {
   position: absolute;
   bottom: 70px;
@@ -127,23 +127,23 @@
   transition-delay: 150ms; /* Staggered animation effect */
 }
 
-/* Button styling */
+/* Button styling - improved visibility */
 .content-card .control-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 36px; /* Increased size */
+  height: 36px; /* Increased size */
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.7);
-  background-color: rgba(30, 30, 30, 0.7);
+  border: 2px solid rgba(255, 255, 255, 0.9); /* Brighter border */
+  background-color: rgba(30, 30, 30, 0.85); /* Darker background for better contrast */
   color: white;
   transition: transform 150ms ease, background-color 150ms ease;
 }
 
 .content-card .control-button:hover {
-  transform: scale(1.2);
-  background-color: rgba(20, 20, 20, 0.9);
+  transform: scale(1.1); /* Reduced scale for subtle effect */
+  background-color: rgba(40, 40, 40, 0.95); /* Lighter background on hover */
   border-color: white;
 }
 
@@ -157,7 +157,7 @@
 }
 
 .content-card .play-button:hover {
-  background-color: rgba(255, 255, 255, 0.85);
+  background-color: rgba(255, 255, 255, 0.9); /* Slightly transparent on hover */
 }
 
 /* Content info */
@@ -184,8 +184,8 @@
   }
   
   .content-card .control-button {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
   }
 }
 
@@ -206,7 +206,7 @@
   animation: netflixPulse 2s infinite;
 }
 
-/* Fix for title animation */
+/* Fix for title animation - smooth movement up instead of disappearing */
 .content-card .title-text {
   transform: translateY(0);
   transition: transform 300ms ease;
@@ -214,4 +214,23 @@
 
 .content-card:hover .title-text {
   transform: translateY(-8px);
+}
+
+/* Enhanced overlay for better readability */
+.content-card .expanded-content .overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, 
+    rgba(0,0,0,0.1) 0%, 
+    rgba(0,0,0,0.3) 40%, 
+    rgba(0,0,0,0.7) 80%, 
+    rgba(0,0,0,0.9) 100%);
+  z-index: 1;
+}
+
+/* Fix for index.css styles to ensure dropdowns have solid backgrounds */
+.radix-dropdown-content,
+[data-radix-popper-content-wrapper] {
+  background-color: #181818 !important;
+  opacity: 1 !important;
 }

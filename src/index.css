@@ -71,10 +71,19 @@ button, a {
   z-index: 100 !important;
 }
 
-/* Fix for dropdown-menu transparency issue */
+/* Fix for dropdown-menu transparency issue - IMPORTANT! */
 .radix-dropdown-content, 
 [data-radix-popper-content-wrapper] {
   background-color: #181818 !important;
+}
+
+/* Ensuring solid background color for all dropdown menus */
+[data-radix-select-content],
+[data-radix-dropdown-menu-content],
+[data-radix-popover-content],
+[data-radix-tooltip-content] {
+  background-color: #181818 !important;
+  border-color: #333 !important;
 }
 
 /* Fix for dialog close button */
@@ -88,6 +97,7 @@ button, a {
 /* Fix for radix select dropdown transparency issue */
 [data-radix-select-content] {
   background-color: #181818 !important;
+  opacity: 1 !important;
 }
 
 /* Netflix pulse animation */

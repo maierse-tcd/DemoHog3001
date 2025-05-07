@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -8,6 +7,7 @@ import { Switch } from '../ui/switch';
 import { Content } from '../../data/mockData';
 import { GenreSelector } from './GenreSelector';
 import { Genre } from '../../data/mockData';
+import { Play } from 'lucide-react'; // Import Play icon from lucide-react
 
 interface DetailsTabProps {
   formData: Content;
