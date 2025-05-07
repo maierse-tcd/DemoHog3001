@@ -4,24 +4,26 @@
   position: relative;
   z-index: 1;
   margin: 0 2px; /* Add small margin between cards */
-  transition: z-index 0ms 0.3s; /* Delay z-index change until after hover */
+  transition: transform 300ms ease, z-index 0ms 0.3s; /* Delay z-index change until after hover */
 }
 
 .content-card:hover {
+  transform: translateY(-8px); /* Subtle lift effect instead of scaling */
   z-index: 50; /* Ensure hovered card is above others */
-  transition-delay: 0ms; /* Remove delay when hovering */
+  transition: transform 300ms ease, z-index 0ms; /* No delay when hovering */
 }
 
-/* Card container - removed scaling for a more subtle effect */
+/* Card container styling */
 .content-card .card-container {
-  transform-origin: center center;
-  transition: all 450ms cubic-bezier(0.2, 0.1, 0.1, 1);
-  will-change: transform;
+  position: relative;
+  border-radius: 4px;
+  overflow: hidden;
+  transition: all 300ms ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .content-card:hover .card-container {
-  /* Removed transform: scale() to eliminate zoom effect */
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5); /* Enhanced shadow on hover */
 }
 
 /* Base card styles */
@@ -30,13 +32,7 @@
   height: 135px;
   border-radius: 4px;
   overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-  transition: all 450ms cubic-bezier(0.2, 0.1, 0.1, 1);
-}
-
-.content-card:hover .base-card {
-  border-radius: 4px 4px 0 0; /* Only round top corners when expanded */
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+  transition: all 300ms ease;
 }
 
 /* Base card image */
@@ -45,6 +41,12 @@
   height: 100%;
   object-fit: cover;
   border-radius: 4px;
+  transition: transform 300ms ease;
+}
+
+/* Netflix-style subtle scale effect on the image */
+.content-card:hover .base-card img {
+  transform: scale(1.05);
 }
 
 /* Title overlay for base card */
@@ -53,16 +55,15 @@
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 8px 12px;
-  background: linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0));
+  padding: 12px;
+  background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0) 100%);
   border-radius: 0 0 4px 4px;
-  transform: translateY(0);
-  transition: transform 450ms cubic-bezier(0.2, 0.1, 0.1, 1);
+  transition: transform 300ms ease, opacity 300ms ease;
 }
 
 .content-card:hover .title-overlay {
-  transform: translateY(100%);
-  opacity: 0;
+  transform: translateY(-20px); /* Move title up instead of hiding it */
+  opacity: 0; /* Fade out when expanded content becomes visible */
 }
 
 /* Expanded content that shows on hover */
@@ -70,14 +71,14 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 240px;
+  width: 100%;
   background-color: #181818;
   border-radius: 4px;
   overflow: hidden;
   opacity: 0;
   visibility: hidden;
-  transform: translateY(0); /* Removed negative transform to avoid jerky animation */
-  transition: all 450ms cubic-bezier(0.2, 0.1, 0.1, 1);
+  transform: translateY(0);
+  transition: all 300ms ease;
   box-shadow: 0 15px 30px rgba(0, 0, 0, 0.75);
   z-index: 10;
 }
@@ -85,7 +86,7 @@
 .content-card:hover .expanded-content {
   opacity: 1;
   visibility: visible;
-  transform: translateY(0);
+  transform: translateY(-8px); /* Match the card lift effect */
 }
 
 /* Netflix style overlay gradient on hover */
@@ -96,75 +97,91 @@
   left: 0;
   right: 0;
   height: 135px;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.7)); /* Darker gradient for better contrast */
+  background: linear-gradient(to bottom, 
+    rgba(0,0,0,0.1) 0%, 
+    rgba(0,0,0,0.3) 40%, 
+    rgba(0,0,0,0.7) 80%, 
+    rgba(0,0,0,0.9) 100%);
   z-index: 1;
   opacity: 0;
-  transition: opacity 450ms cubic-bezier(0.2, 0.1, 0.1, 1);
+  transition: opacity 300ms ease;
 }
 
 .content-card:hover .expanded-content::before {
   opacity: 1;
 }
 
-/* Control buttons - improved visibility */
+/* Control buttons - centered layout with improved visibility */
 .content-card .button-controls {
   position: absolute;
-  bottom: 70px;
+  top: 50%;
   left: 0;
   width: 100%;
   display: flex;
-  gap: 8px;
-  padding: 0 12px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 16px;
+  transform: translateY(-50%);
   z-index: 2;
   opacity: 0;
-  transform: translateY(8px);
-  transition: all 450ms cubic-bezier(0.2, 0.1, 0.1, 1);
+  transition: opacity 300ms ease;
 }
 
 .content-card:hover .button-controls {
   opacity: 1;
-  transform: translateY(0);
-  transition-delay: 150ms; /* Staggered animation effect */
+  transition-delay: 100ms; /* Small delay for smoother appearance */
 }
 
-/* Button styling - improved visibility */
+/* Play button styling - larger and centered */
+.content-card .play-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px; /* Larger play button */
+  height: 48px;
+  border-radius: 50%;
+  background-color: white;
+  color: black;
+  border: none;
+  transition: transform 150ms ease, background-color 150ms ease;
+}
+
+.content-card .play-button:hover {
+  transform: scale(1.1);
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+.content-card .play-button svg {
+  width: 24px;
+  height: 24px;
+  color: black;
+}
+
+/* Secondary control buttons styling */
 .content-card .control-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px; /* Increased size */
-  height: 36px; /* Increased size */
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.9); /* Brighter border */
-  background-color: rgba(30, 30, 30, 0.85); /* Darker background for better contrast */
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  background-color: rgba(30, 30, 30, 0.7);
   color: white;
-  transition: transform 150ms ease, background-color 150ms ease;
+  transition: transform 150ms ease, background-color 150ms ease, border-color 150ms ease;
 }
 
 .content-card .control-button:hover {
-  transform: scale(1.1); /* Reduced scale for subtle effect */
-  background-color: rgba(40, 40, 40, 0.95); /* Lighter background on hover */
+  transform: scale(1.1);
+  background-color: rgba(40, 40, 40, 0.9);
   border-color: white;
 }
 
-.content-card .play-button {
-  background-color: white;
-  border: none;
-}
-
-.content-card .play-button svg {
-  color: black;
-}
-
-.content-card .play-button:hover {
-  background-color: rgba(255, 255, 255, 0.9); /* Slightly transparent on hover */
-}
-
-/* Content info */
+/* Content info section */
 .content-card .expanded-content .content-info {
-  padding: 12px;
+  padding: 12px 16px;
   background-color: #181818;
-  transition: transform 450ms cubic-bezier(0.2, 0.1, 0.1, 1);
 }
 
 /* Media responsiveness */
@@ -178,9 +195,14 @@
     width: 180px;
   }
   
-  .content-card .button-controls {
-    padding: 0 8px;
-    bottom: 60px;
+  .content-card .play-button {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .content-card .play-button svg {
+    width: 20px;
+    height: 20px;
   }
   
   .content-card .control-button {
@@ -189,48 +211,16 @@
   }
 }
 
-/* Netflix Pulse Animation for buttons */
-@keyframes netflixPulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(229, 9, 20, 0.4);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(229, 9, 20, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(229, 9, 20, 0);
-  }
-}
-
-.content-card .play-button {
-  animation: netflixPulse 2s infinite;
-}
-
-/* Fix for title animation - smooth movement up instead of disappearing */
-.content-card .title-text {
-  transform: translateY(0);
-  transition: transform 300ms ease;
-}
-
-.content-card:hover .title-text {
-  transform: translateY(-8px);
-}
-
-/* Enhanced overlay for better readability */
-.content-card .expanded-content .overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, 
-    rgba(0,0,0,0.1) 0%, 
-    rgba(0,0,0,0.3) 40%, 
-    rgba(0,0,0,0.7) 80%, 
-    rgba(0,0,0,0.9) 100%);
-  z-index: 1;
-}
-
-/* Fix for index.css styles to ensure dropdowns have solid backgrounds */
+/* Fix for dropdowns and dialogs to ensure they have solid backgrounds */
 .radix-dropdown-content,
-[data-radix-popper-content-wrapper] {
+.radix-toast-root,
+[data-radix-popper-content-wrapper],
+[data-radix-dialog-content],
+[data-radix-select-content],
+[data-radix-dropdown-menu-content],
+[data-radix-popover-content],
+[data-radix-tooltip-content] {
   background-color: #181818 !important;
   opacity: 1 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }

@@ -66,24 +66,23 @@ button, a {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
-/* Make sure select and dropdown menus look like Netflix */
+/* Make sure select and dropdown menus are solid - IMPORTANT! */
 [data-radix-popper-content-wrapper] {
   z-index: 100 !important;
-}
-
-/* Fix for dropdown-menu transparency issue - IMPORTANT! */
-.radix-dropdown-content, 
-[data-radix-popper-content-wrapper] {
   background-color: #181818 !important;
 }
 
-/* Ensuring solid background color for all dropdown menus */
+/* Critical fix for dropdown/modal transparency issues */
+.radix-dropdown-content, 
+[data-radix-popper-content-wrapper],
+[data-radix-dialog-content],
 [data-radix-select-content],
 [data-radix-dropdown-menu-content],
 [data-radix-popover-content],
 [data-radix-tooltip-content] {
   background-color: #181818 !important;
   border-color: #333 !important;
+  opacity: 1 !important;
 }
 
 /* Fix for dialog close button */
@@ -92,12 +91,6 @@ button, a {
   top: 16px;
   right: 16px;
   z-index: 60;
-}
-
-/* Fix for radix select dropdown transparency issue */
-[data-radix-select-content] {
-  background-color: #181818 !important;
-  opacity: 1 !important;
 }
 
 /* Netflix pulse animation */

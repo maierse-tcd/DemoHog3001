@@ -17,18 +17,17 @@ export const ContentCard = ({ content }: ContentCardProps) => {
   const [showVideo, setShowVideo] = useState(false);
   const { toast } = useToast();
   
-  // Use backdrop image if available, otherwise fallback to poster, then default image
+  // Use backdrop image if available, otherwise fallback to poster or default
   const displayImage = content.backdropUrl || content.posterUrl || DEFAULT_IMAGES.backdrop;
   
-  // Get video URL - use content's specific URL or default
+  // Video URL - use content's specific URL or default
   const videoUrl = content.videoUrl || 'https://www.youtube.com/embed/dQw4w9WgXcQ';
   
-  // Visual-only handler for My List button (no functionality)
+  // Handler for My List button
   const handleMyListClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     
-    // Track the click event without actually adding to a list
     safeCapture('my_list_button_clicked', {
       contentId: content.id,
       contentTitle: content.title,
@@ -41,6 +40,7 @@ export const ContentCard = ({ content }: ContentCardProps) => {
     });
   };
   
+  // Handler for Play button
   const handlePlayClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -52,6 +52,7 @@ export const ContentCard = ({ content }: ContentCardProps) => {
     });
   };
   
+  // Handler for Like button
   const handleThumbsUp = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -61,9 +62,8 @@ export const ContentCard = ({ content }: ContentCardProps) => {
     });
   };
 
+  // Handler for More Info button
   const handleDetailClick = (e: React.MouseEvent) => {
-    // Don't need to prevent default or stop propagation here,
-    // as we want the Link to navigate to the content detail page
     safeCapture('content_details_opened', { 
       contentId: content.id,
       contentTitle: content.title
@@ -86,7 +86,7 @@ export const ContentCard = ({ content }: ContentCardProps) => {
               />
               {/* Title overlay on base card */}
               <div className="title-overlay">
-                <div className="title-text text-white text-sm font-medium line-clamp-1">{content.title}</div>
+                <div className="text-white text-sm font-medium line-clamp-1">{content.title}</div>
               </div>
             </div>
             
@@ -102,14 +102,14 @@ export const ContentCard = ({ content }: ContentCardProps) => {
                 }}
               />
               
-              {/* Control buttons */}
+              {/* Control buttons - centered on content */}
               <div className="button-controls">
                 <button 
-                  className="control-button play-button"
+                  className="play-button"
                   onClick={handlePlayClick}
                   aria-label="Play"
                 >
-                  <Play size={16} />
+                  <Play />
                 </button>
                 
                 <button 
@@ -128,8 +128,6 @@ export const ContentCard = ({ content }: ContentCardProps) => {
                   <ThumbsUp size={16} />
                 </button>
                 
-                <div className="flex-grow"></div>
-                
                 <button 
                   className="control-button"
                   onClick={handleDetailClick}
@@ -139,9 +137,9 @@ export const ContentCard = ({ content }: ContentCardProps) => {
                 </button>
               </div>
               
-              {/* Content info */}
-              <div className="content-info p-3">
-                <div className="text-white text-sm font-medium mb-2 line-clamp-1">{content.title}</div>
+              {/* Content info - shown at the bottom of expanded card */}
+              <div className="content-info">
+                <div className="text-white text-sm font-bold mb-2 line-clamp-1">{content.title}</div>
                 
                 <div className="flex space-x-1 mb-2 text-xs">
                   <span className="text-green-500 font-medium">{content.releaseYear}</span>
@@ -172,13 +170,13 @@ export const ContentCard = ({ content }: ContentCardProps) => {
         </div>
       </div>
 
-      {/* Video Modal */}
+      {/* Video Modal - Netflix-style fullscreen player */}
       <Dialog open={showVideo} onOpenChange={setShowVideo}>
         <DialogContent className="bg-black border-none max-w-4xl w-[90vw] p-0">
           <div className="relative aspect-video">
             <button 
               onClick={() => setShowVideo(false)}
-              className="absolute top-4 right-4 z-50 p-2 bg-black/70 text-white rounded-full hover:bg-black"
+              className="absolute top-4 right-4 z-50 p-2 bg-black/70 hover:bg-black text-white rounded-full transition-colors"
               aria-label="Close"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

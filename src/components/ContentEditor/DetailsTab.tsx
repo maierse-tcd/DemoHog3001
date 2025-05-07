@@ -1,221 +1,195 @@
-import React from 'react';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Switch } from '../ui/switch';
-import { Content } from '../../data/mockData';
+import { useState, useEffect } from 'react';
+import { Check, ChevronDown, Play } from 'lucide-react';
 import { GenreSelector } from './GenreSelector';
-import { Genre } from '../../data/mockData';
-import { Play } from 'lucide-react'; // Import Play icon from lucide-react
+import { useToast } from '../../hooks/use-toast';
+import { Button } from '../ui/button';
+import { Progress } from '../ui/progress';
 
-interface DetailsTabProps {
-  formData: Content;
-  selectedGenres: Set<Genre>;
-  availableGenres: Genre[];
-  onUpdateFormData: (field: keyof Content, value: any) => void;
-  onToggleGenre: (genre: Genre) => void;
-}
+// import missing Play icon
 
-export const DetailsTab: React.FC<DetailsTabProps> = ({ 
-  formData,
-  selectedGenres,
-  availableGenres,
-  onUpdateFormData,
-  onToggleGenre
-}) => {
-  // Helper to validate YouTube URL
-  const isValidYouTubeUrl = (url: string): boolean => {
-    if (!url) return true; // Allow empty value
-    
-    // More comprehensive regex to handle various YouTube URL formats
-    const youtubeRegex = /^(https?:\/\/)?(www\.|m\.)?(youtube\.com\/watch\?v=|youtube\.com\/embed\/|youtu\.be\/)[a-zA-Z0-9_-]{11}($|[?&].*$)/;
-    return youtubeRegex.test(url);
-  };
+export const DetailsTab = ({ content, onChange, isLoading, onSave, onPreview }) => {
+  const [title, setTitle] = useState(content?.title || '');
+  const [description, setDescription] = useState(content?.description || '');
+  const [releaseYear, setReleaseYear] = useState(content?.release_year || '');
+  const [ageRating, setAgeRating] = useState(content?.age_rating || '');
+  const [duration, setDuration] = useState(content?.duration || '');
+  const [videoUrl, setVideoUrl] = useState(content?.video_url || '');
+  const [selectedGenres, setSelectedGenres] = useState<string[]>(content?.genre || []);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
-  // Helper to convert standard YouTube URL to embed URL
-  const convertToEmbedUrl = (url: string): string => {
-    if (!url) return '';
-    
-    // If already an embed URL, return as is
-    if (url.includes('youtube.com/embed/')) {
-      return url;
+  useEffect(() => {
+    if (content) {
+      setTitle(content.title || '');
+      setDescription(content.description || '');
+      setReleaseYear(content.release_year || '');
+      setAgeRating(content.age_rating || '');
+      setDuration(content.duration || '');
+      setVideoUrl(content.video_url || '');
+      setSelectedGenres(content.genre || []);
     }
-    
-    // Extract video ID from various YouTube URL formats
-    const match = url.match(/(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/);
-    
-    if (match && match[1]) {
-      return `https://www.youtube.com/embed/${match[1]}`;
-    }
-    
-    // Return original if not matching any YouTube URL pattern
-    return url;
+  }, [content]);
+
+  const handleTitleChange = (e) => {
+    const newTitle = e.target.value;
+    setTitle(newTitle);
+    onChange({ ...content, title: newTitle });
   };
 
-  // Handle video URL change with validation and conversion
-  const handleVideoUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputUrl = e.target.value;
-    
-    // Auto-convert to embed format if it's a valid YouTube URL
-    if (inputUrl && (inputUrl.includes('youtube.com') || inputUrl.includes('youtu.be'))) {
-      const embedUrl = convertToEmbedUrl(inputUrl);
-      onUpdateFormData('videoUrl', embedUrl);
-    } else {
-      onUpdateFormData('videoUrl', inputUrl);
-    }
+  const handleDescriptionChange = (e) => {
+    const newDescription = e.target.value;
+    setDescription(newDescription);
+    onChange({ ...content, description: newDescription });
   };
 
-  // Helper to extract video ID for thumbnail preview
-  const getYouTubeVideoId = (url: string): string | null => {
-    if (!url) return null;
-    
-    const match = url.match(/(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/);
-    return match && match[1] ? match[1] : null;
+  const handleReleaseYearChange = (e) => {
+    const newReleaseYear = e.target.value;
+    setReleaseYear(newReleaseYear);
+    onChange({ ...content, release_year: newReleaseYear });
   };
-  
-  const videoId = getYouTubeVideoId(formData.videoUrl || '');
+
+  const handleAgeRatingChange = (e) => {
+    const newAgeRating = e.target.value;
+    setAgeRating(newAgeRating);
+    onChange({ ...content, age_rating: newAgeRating });
+  };
+
+  const handleDurationChange = (e) => {
+    const newDuration = e.target.value;
+    setDuration(newDuration);
+    onChange({ ...content, duration: newDuration });
+  };
+
+  const handleVideoUrlChange = (e) => {
+    const newVideoUrl = e.target.value;
+    setVideoUrl(newVideoUrl);
+    onChange({ ...content, video_url: newVideoUrl });
+  };
+
+  const handleGenreChange = (newGenres) => {
+    setSelectedGenres(newGenres);
+    onChange({ ...content, genre: newGenres });
+  };
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="title">Title *</Label>
-          <Input 
-            id="title" 
-            value={formData.title} 
-            onChange={(e) => onUpdateFormData('title', e.target.value)}
-            placeholder="Enter title" 
-            className="bg-black/40 border-netflix-gray/40"
+    <div className="space-y-6">
+      <div>
+        <label htmlFor="title" className="block text-sm font-medium text-white">
+          Title
+        </label>
+        <div className="mt-1">
+          <input
+            type="text"
+            id="title"
+            className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md bg-gray-700 text-white"
+            value={title}
+            onChange={handleTitleChange}
           />
         </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="type">Content Type *</Label>
-          <Select 
-            value={formData.type} 
-            onValueChange={(value: 'movie' | 'series') => onUpdateFormData('type', value)}
-          >
-            <SelectTrigger className="bg-black/40 border-netflix-gray/40">
-              <SelectValue placeholder="Select type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="movie">Movie</SelectItem>
-              <SelectItem value="series">TV Series</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <Textarea 
-          id="description" 
-          value={formData.description} 
-          onChange={(e) => onUpdateFormData('description', e.target.value)}
-          placeholder="Enter a description" 
-          rows={4}
-          className="bg-black/40 border-netflix-gray/40"
-        />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="videoUrl">
-          YouTube Video URL
-          <span className="ml-2 text-xs text-gray-400">(enter a YouTube URL - will be auto-converted to embed format)</span>
-        </Label>
-        <Input 
-          id="videoUrl" 
-          value={formData.videoUrl || ''} 
-          onChange={handleVideoUrlChange}
-          placeholder="https://www.youtube.com/watch?v=..." 
-          className={`bg-black/40 ${!isValidYouTubeUrl(formData.videoUrl || '') ? 'border-red-500' : 'border-netflix-gray/40'}`}
-        />
-        {!isValidYouTubeUrl(formData.videoUrl || '') && (
-          <p className="text-red-500 text-xs mt-1">Please enter a valid YouTube URL</p>
-        )}
-        
-        {/* YouTube thumbnail preview */}
-        {videoId && (
-          <div className="mt-2">
-            <p className="text-xs text-gray-400 mb-1">Video Preview:</p>
-            <div className="relative aspect-video w-full max-w-[240px] bg-black/40">
-              <img 
-                src={`https://img.youtube.com/vi/${videoId}/0.jpg`}
-                alt="Video thumbnail"
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-12 h-12 rounded-full bg-netflix-red/80 flex items-center justify-center">
-                  <Play fill="white" className="w-6 h-6 text-white ml-1" />
-                </div>
-              </div>
-            </div>
+      <div>
+        <label htmlFor="description" className="block text-sm font-medium text-white">
+          Description
+        </label>
+        <div className="mt-1">
+          <textarea
+            id="description"
+            rows={3}
+            className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md bg-gray-700 text-white"
+            value={description}
+            onChange={handleDescriptionChange}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+        <div className="sm:col-span-3">
+          <label htmlFor="releaseYear" className="block text-sm font-medium text-white">
+            Release Year
+          </label>
+          <div className="mt-1">
+            <input
+              type="text"
+              id="releaseYear"
+              className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md bg-gray-700 text-white"
+              value={releaseYear}
+              onChange={handleReleaseYearChange}
+            />
           </div>
-        )}
-      </div>
-      
-      <GenreSelector
-        selectedGenres={selectedGenres}
-        availableGenres={availableGenres}
-        onToggleGenre={onToggleGenre}
-      />
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
-        <div className="space-y-2">
-          <Label htmlFor="releaseYear">Release Year</Label>
-          <Input 
-            id="releaseYear" 
-            value={formData.releaseYear} 
-            onChange={(e) => onUpdateFormData('releaseYear', e.target.value)}
-            placeholder="YYYY" 
-            className="bg-black/40 border-netflix-gray/40"
-          />
         </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="ageRating">Age Rating</Label>
-          <Select 
-            value={formData.ageRating} 
-            onValueChange={(value) => onUpdateFormData('ageRating', value)}
-          >
-            <SelectTrigger className="bg-black/40 border-netflix-gray/40">
-              <SelectValue placeholder="Select rating" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="G">G</SelectItem>
-              <SelectItem value="PG">PG</SelectItem>
-              <SelectItem value="PG-13">PG-13</SelectItem>
-              <SelectItem value="R">R</SelectItem>
-              <SelectItem value="NC-17">NC-17</SelectItem>
-              <SelectItem value="TV-Y">TV-Y</SelectItem>
-              <SelectItem value="TV-G">TV-G</SelectItem>
-              <SelectItem value="TV-PG">TV-PG</SelectItem>
-              <SelectItem value="TV-14">TV-14</SelectItem>
-              <SelectItem value="TV-MA">TV-MA</SelectItem>
-            </SelectContent>
-          </Select>
+
+        <div className="sm:col-span-3">
+          <label htmlFor="ageRating" className="block text-sm font-medium text-white">
+            Age Rating
+          </label>
+          <div className="mt-1">
+            <input
+              type="text"
+              id="ageRating"
+              className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md bg-gray-700 text-white"
+              value={ageRating}
+              onChange={handleAgeRatingChange}
+            />
+          </div>
         </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="duration">Duration</Label>
-          <Input 
-            id="duration" 
-            value={formData.duration} 
-            onChange={(e) => onUpdateFormData('duration', e.target.value)}
-            placeholder="1h 30m" 
-            className="bg-black/40 border-netflix-gray/40"
-          />
+
+        <div className="sm:col-span-3">
+          <label htmlFor="duration" className="block text-sm font-medium text-white">
+            Duration
+          </label>
+          <div className="mt-1">
+            <input
+              type="text"
+              id="duration"
+              className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md bg-gray-700 text-white"
+              value={duration}
+              onChange={handleDurationChange}
+            />
+          </div>
+        </div>
+
+        <div className="sm:col-span-3">
+          <label htmlFor="videoUrl" className="block text-sm font-medium text-white">
+            Video URL
+          </label>
+          <div className="mt-1">
+            <input
+              type="text"
+              id="videoUrl"
+              className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md bg-gray-700 text-white"
+              value={videoUrl}
+              onChange={handleVideoUrlChange}
+            />
+          </div>
         </div>
       </div>
-      
-      <div className="flex items-center space-x-2 pt-4">
-        <Switch 
-          id="trending"
-          checked={formData.trending}
-          onCheckedChange={(checked) => onUpdateFormData('trending', checked)}
-        />
-        <Label htmlFor="trending">Mark as trending content</Label>
+
+      <div>
+        <label className="block text-sm font-medium text-white">
+          Genres
+        </label>
+        <div className="mt-1">
+          <GenreSelector selectedGenres={selectedGenres} onChange={handleGenreChange} />
+        </div>
+      </div>
+
+      <div className="flex justify-end">
+        <Button variant="secondary" onClick={onPreview}>
+          Preview
+        </Button>
+        <Button
+          disabled={isLoading}
+          onClick={onSave}
+        >
+          {isLoading ? (
+            <>
+              Saving...
+              <Progress className="w-5 h-5 ml-2" value={uploadProgress} />
+            </>
+          ) : (
+            "Save"
+          )}
+        </Button>
       </div>
     </div>
   );
