@@ -10,6 +10,13 @@ import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 interface DetailsTabProps {
   content: Content;
@@ -82,112 +89,151 @@ export const DetailsTab = ({ content, onChange, isLoading, onSave, onPreview }: 
     onChange({ ...content, genre: newGenres });
   };
 
+  // Current year for release year options
+  const currentYear = new Date().getFullYear();
+  const yearsArray = Array.from({ length: 50 }, (_, i) => (currentYear - i).toString());
+
+  // Common age ratings
+  const ratings = ["G", "PG", "PG-13", "R", "NC-17", "TV-Y", "TV-Y7", "TV-G", "TV-PG", "TV-14", "TV-MA"];
+
   return (
     <div className="space-y-6">
-      <div className="space-y-3">
-        <Label htmlFor="title" className="text-sm font-semibold text-white">
+      {/* Title field with floating label effect */}
+      <div className="space-y-2">
+        <Label htmlFor="title" className="text-sm font-medium text-white/90">
           Title
         </Label>
         <Input
           id="title"
           value={title}
           onChange={handleTitleChange}
-          className="bg-gray-800 border-gray-700 text-white focus:ring-netflix-red focus:border-netflix-red"
+          className="bg-gray-800/60 border-gray-700/50 text-white rounded-lg focus-within:ring-2 focus-within:ring-netflix-red/50 focus-within:border-netflix-red transition-all backdrop-blur-sm"
           placeholder="Enter title"
         />
       </div>
 
-      <div className="space-y-3">
-        <Label htmlFor="description" className="text-sm font-semibold text-white">
+      {/* Description field with expanded height */}
+      <div className="space-y-2">
+        <Label htmlFor="description" className="text-sm font-medium text-white/90">
           Description
         </Label>
         <Textarea
           id="description"
           value={description}
           onChange={handleDescriptionChange}
-          rows={3}
-          className="bg-gray-800 border-gray-700 text-white focus:ring-netflix-red focus:border-netflix-red resize-none"
+          rows={4}
+          className="bg-gray-800/60 border-gray-700/50 text-white rounded-lg focus-within:ring-2 focus-within:ring-netflix-red/50 focus-within:border-netflix-red transition-all backdrop-blur-sm resize-none"
           placeholder="Enter description"
         />
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <div className="space-y-3">
-          <Label htmlFor="releaseYear" className="text-sm font-semibold text-white">
+        {/* Release Year Dropdown */}
+        <div className="space-y-2">
+          <Label htmlFor="releaseYear" className="text-sm font-medium text-white/90">
             Release Year
           </Label>
-          <Input
-            id="releaseYear"
+          <Select 
             value={releaseYear}
-            onChange={handleReleaseYearChange}
-            className="bg-gray-800 border-gray-700 text-white focus:ring-netflix-red focus:border-netflix-red"
-            placeholder="e.g. 2023"
-          />
+            onValueChange={(value) => {
+              setReleaseYear(value);
+              onChange({ ...content, releaseYear: value });
+            }}
+          >
+            <SelectTrigger className="bg-gray-800/60 border-gray-700/50 text-white rounded-lg focus-within:ring-2 focus-within:ring-netflix-red/50 focus-within:border-netflix-red transition-all backdrop-blur-sm">
+              <SelectValue placeholder="Select year" />
+            </SelectTrigger>
+            <SelectContent className="max-h-[200px]">
+              {yearsArray.map((year) => (
+                <SelectItem key={year} value={year}>{year}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        <div className="space-y-3">
-          <Label htmlFor="ageRating" className="text-sm font-semibold text-white">
+        {/* Age Rating Dropdown */}
+        <div className="space-y-2">
+          <Label htmlFor="ageRating" className="text-sm font-medium text-white/90">
             Age Rating
           </Label>
-          <Input
-            id="ageRating"
+          <Select 
             value={ageRating}
-            onChange={handleAgeRatingChange}
-            className="bg-gray-800 border-gray-700 text-white focus:ring-netflix-red focus:border-netflix-red"
-            placeholder="e.g. PG-13"
-          />
+            onValueChange={(value) => {
+              setAgeRating(value);
+              onChange({ ...content, ageRating: value });
+            }}
+          >
+            <SelectTrigger className="bg-gray-800/60 border-gray-700/50 text-white rounded-lg focus-within:ring-2 focus-within:ring-netflix-red/50 focus-within:border-netflix-red transition-all backdrop-blur-sm">
+              <SelectValue placeholder="Select rating" />
+            </SelectTrigger>
+            <SelectContent>
+              {ratings.map((rating) => (
+                <SelectItem key={rating} value={rating}>{rating}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        <div className="space-y-3">
-          <Label htmlFor="duration" className="text-sm font-semibold text-white">
+        {/* Duration field */}
+        <div className="space-y-2">
+          <Label htmlFor="duration" className="text-sm font-medium text-white/90">
             Duration
           </Label>
           <Input
             id="duration"
             value={duration}
             onChange={handleDurationChange}
-            className="bg-gray-800 border-gray-700 text-white focus:ring-netflix-red focus:border-netflix-red"
+            className="bg-gray-800/60 border-gray-700/50 text-white rounded-lg focus-within:ring-2 focus-within:ring-netflix-red/50 focus-within:border-netflix-red transition-all backdrop-blur-sm"
             placeholder="e.g. 1h 30m"
           />
         </div>
 
-        <div className="space-y-3">
-          <Label htmlFor="videoUrl" className="text-sm font-semibold text-white">
+        {/* Video URL field */}
+        <div className="space-y-2">
+          <Label htmlFor="videoUrl" className="text-sm font-medium text-white/90">
             Video URL
           </Label>
           <Input
             id="videoUrl"
             value={videoUrl}
             onChange={handleVideoUrlChange}
-            className="bg-gray-800 border-gray-700 text-white focus:ring-netflix-red focus:border-netflix-red"
+            className="bg-gray-800/60 border-gray-700/50 text-white rounded-lg focus-within:ring-2 focus-within:ring-netflix-red/50 focus-within:border-netflix-red transition-all backdrop-blur-sm"
             placeholder="YouTube embed URL"
           />
           {videoUrl && (
-            <p className="text-xs text-gray-400 mt-1">
-              <span className="text-netflix-red">✓</span> Video URL set
+            <p className="text-xs text-netflix-red mt-1 flex items-center">
+              <Check className="h-3 w-3 mr-1" /> Video URL set
             </p>
           )}
         </div>
       </div>
 
+      {/* Genres selection - modern chips design */}
       <div className="space-y-3">
-        <Label className="text-sm font-semibold text-white">
+        <Label className="text-sm font-medium text-white/90">
           Genres
         </Label>
         <GenreSelector selectedGenres={selectedGenres} onChange={handleGenreChange} />
         <div className="flex flex-wrap gap-2 mt-2">
           {selectedGenres.map((genre) => (
-            <Badge key={genre} className="bg-netflix-red/80 hover:bg-netflix-red text-white">{genre}</Badge>
+            <Badge 
+              key={genre} 
+              className="bg-netflix-red hover:bg-netflix-red/90 text-white px-2.5 py-1 rounded-full text-xs font-medium"
+            >
+              {genre}
+            </Badge>
           ))}
         </div>
       </div>
 
-      <div className="flex justify-end space-x-3 pt-4 mt-6 border-t border-gray-700">
+      {/* Action buttons */}
+      <div className="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-700/30">
         <Button 
           variant="outline" 
           onClick={onPreview}
-          className="border-gray-600 text-gray-300 hover:bg-gray-700"
+          className="border-gray-600 text-gray-300 hover:bg-gray-700 bg-gray-800/60 backdrop-blur-sm"
         >
+          <Play className="h-4 w-4 mr-2" />
           Preview
         </Button>
         <Button
@@ -201,7 +247,7 @@ export const DetailsTab = ({ content, onChange, isLoading, onSave, onPreview }: 
               <Progress className="w-8 h-1" value={uploadProgress} />
             </div>
           ) : (
-            "Save"
+            "Save Changes"
           )}
         </Button>
       </div>

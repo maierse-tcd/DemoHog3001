@@ -5,7 +5,7 @@ export const youtubeVideos = {
     "https://www.youtube.com/embed/9mCWbVNzn4c",
     "https://www.youtube.com/embed/3afzkLS-zQA",
     "https://www.youtube.com/embed/1QhMvLs27yk",
-    "https://www.youtube.com/embed/2jQco8hEvTI",
+    "https://www.youtube.com/embed/2jQco8hEvTI", 
     "https://www.youtube.com/embed/U2Ac4w5flJQ",
     "https://www.youtube.com/embed/nmQS5EOgalU",
     "https://www.youtube.com/embed/KSzLc80FIx4",

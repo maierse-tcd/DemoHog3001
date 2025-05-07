@@ -2,6 +2,7 @@
 import React from 'react';
 import { Genre } from '../../data/mockData';
 import { Label } from '../ui/label';
+import { Check } from 'lucide-react';
 
 interface GenreSelectorProps {
   selectedGenres: string[];
@@ -37,12 +38,15 @@ export const GenreSelector: React.FC<GenreSelectorProps> = ({
           key={genre}
           type="button"
           onClick={() => toggleGenre(genre)}
-          className={`px-3 py-1 text-sm rounded-full transition-colors ${
+          className={`px-4 py-1.5 text-sm rounded-full transition-all duration-200 flex items-center gap-1.5 ${
             selectedGenres.includes(genre)
-              ? 'bg-netflix-red text-white'
-              : 'bg-netflix-gray/20 text-netflix-gray hover:bg-netflix-gray/30'
+              ? 'bg-netflix-red text-white shadow-lg shadow-netflix-red/20'
+              : 'bg-gray-800/60 backdrop-blur-sm text-gray-300 hover:bg-gray-700/80 border border-gray-700/30'
           }`}
         >
+          {selectedGenres.includes(genre) && (
+            <Check className="h-3 w-3" />
+          )}
           {genre}
         </button>
       ))}

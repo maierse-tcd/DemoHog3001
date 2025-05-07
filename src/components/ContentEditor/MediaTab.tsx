@@ -37,62 +37,60 @@ export const MediaTab: React.FC<MediaTabProps> = ({
     onBackdropChange('');
   };
 
-  // Log the available images for debugging
-  console.log('MediaTab - Available images:', availableImages.length);
-  console.log('MediaTab - Selected backdrop URL:', backdropUrl);
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium">Content Image</h3>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={onRefreshImages}
-              disabled={isLoadingImages}
-            >
-              <RefreshCcw className={`h-4 w-4 mr-1 ${isLoadingImages ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
+        <div className="flex justify-between items-center mb-5">
+          <h3 className="text-lg font-medium text-white">Featured Image</h3>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onRefreshImages}
+            disabled={isLoadingImages}
+            className="bg-gray-800/60 border-gray-700/30 hover:bg-gray-700 backdrop-blur-sm"
+          >
+            <RefreshCcw className={`h-4 w-4 mr-1.5 ${isLoadingImages ? 'animate-spin' : ''}`} />
+            Refresh Images
+          </Button>
+        </div>
+        
+        {/* Selected image preview with card-like design */}
+        <div className="mb-8">
+          <Label className="block mb-2 text-sm font-medium text-white/90">Preview</Label>
+          <div className="aspect-video relative rounded-xl overflow-hidden bg-gradient-to-br from-gray-800/60 to-gray-900/60 backdrop-blur-sm border border-gray-700/30">
+            {backdropUrl ? (
+              <div className="relative h-full">
+                <img 
+                  src={backdropUrl} 
+                  alt="Selected backdrop" 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error('Preview image failed to load:', backdropUrl);
+                    e.currentTarget.src = DEFAULT_IMAGES.backdrop;
+                  }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                <button
+                  onClick={clearBackdrop}
+                  className="absolute top-3 right-3 bg-black/70 p-2 rounded-full hover:bg-red-600 transition-colors"
+                  aria-label="Remove image"
+                >
+                  <X className="h-4 w-4 text-white" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-400">
+                <ImageIcon className="h-16 w-16 text-gray-600" />
+                <p>No image selected</p>
+              </div>
+            )}
           </div>
         </div>
         
-        {/* Selected image preview */}
-        <div className="mb-6 flex flex-col sm:flex-row gap-6">
-          <div className="w-full sm:w-1/2">
-            <Label className="block mb-2">Preview</Label>
-            <div className="aspect-video relative bg-black/40 rounded-md overflow-hidden">
-              {backdropUrl ? (
-                <div className="relative h-full">
-                  <img 
-                    src={backdropUrl} 
-                    alt="Selected backdrop" 
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      console.error('Preview image failed to load:', backdropUrl);
-                      e.currentTarget.src = DEFAULT_IMAGES.backdrop;
-                    }}
-                  />
-                  <button
-                    onClick={clearBackdrop}
-                    className="absolute top-2 right-2 bg-black/70 p-1.5 rounded-full hover:bg-black"
-                    aria-label="Remove image"
-                  >
-                    <X className="h-4 w-4 text-white" />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <ImageIcon className="h-12 w-12 text-netflix-gray/30" />
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <div className="w-full sm:w-1/2">
-            <Label className="block mb-2">Upload New Image</Label>
+        {/* Image uploader with improved design */}
+        <div className="mb-8">
+          <Label className="block mb-2 text-sm font-medium text-white/90">Upload New Image</Label>
+          <div className="bg-gradient-to-br from-gray-800/60 to-gray-900/60 backdrop-blur-sm border border-gray-700/30 rounded-xl p-5">
             <ImageUploader 
               contentId={contentId}
               imageType="backdrop"
@@ -102,7 +100,6 @@ export const MediaTab: React.FC<MediaTabProps> = ({
                 onBackdropChange(url);
                 onImageUploaded(url);
                 
-                // Show confirmation toast
                 toast({
                   title: "Image uploaded",
                   description: "Your new image has been uploaded and selected."
@@ -112,26 +109,27 @@ export const MediaTab: React.FC<MediaTabProps> = ({
           </div>
         </div>
         
-        {/* Image gallery */}
+        {/* Image gallery with improved design */}
         <div>
-          <Label className="block mb-2">Choose from existing images</Label>
-          <MediaGallery
-            isLoadingImages={isLoadingImages}
-            availableImages={availableImages}
-            selectedImageUrl={backdropUrl}
-            onImageSelect={(url) => {
-              console.log('Selected image URL from gallery:', url);
-              onBackdropChange(url);
-              
-              // Show confirmation toast
-              toast({
-                title: "Image selected",
-                description: "Your image selection has been updated."
-              });
-            }}
-            onImageDelete={onImageDelete}
-            isDeleting={isDeleting}
-          />
+          <Label className="block mb-3 text-sm font-medium text-white/90">Image Library</Label>
+          <div className="bg-gradient-to-br from-gray-800/40 to-gray-900/40 backdrop-blur-sm border border-gray-700/20 rounded-xl p-4">
+            <MediaGallery
+              isLoadingImages={isLoadingImages}
+              availableImages={availableImages}
+              selectedImageUrl={backdropUrl}
+              onImageSelect={(url) => {
+                console.log('Selected image URL from gallery:', url);
+                onBackdropChange(url);
+                
+                toast({
+                  title: "Image selected",
+                  description: "Your image selection has been updated."
+                });
+              }}
+              onImageDelete={onImageDelete}
+              isDeleting={isDeleting}
+            />
+          </div>
         </div>
       </div>
     </div>
