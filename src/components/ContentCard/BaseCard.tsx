@@ -10,8 +10,8 @@ interface BaseCardProps {
 
 export const BaseCard: React.FC<BaseCardProps> = ({ title, imageUrl, onClick }) => {
   return (
-    <div className="base-card" onClick={onClick} style={{ backgroundColor: "#000" }}>
-      <div className="bg-black w-full h-full absolute inset-0"></div> {/* Add solid black background */}
+    <div className="base-card" onClick={onClick}>
+      <div className="bg-black w-full h-full absolute inset-0"></div> {/* Solid black background */}
       <img 
         src={imageUrl}
         alt={title}

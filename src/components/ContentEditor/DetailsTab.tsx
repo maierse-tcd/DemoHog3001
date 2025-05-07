@@ -6,6 +6,10 @@ import { Button } from '../ui/button';
 import { Progress } from '../ui/progress';
 import { Content, Genre } from '../../data/mockData';
 import { GenreSelector } from './GenreSelector';
+import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
+import { Label } from '../ui/label';
+import { Badge } from '../ui/badge';
 
 interface DetailsTabProps {
   content: Content;
@@ -80,120 +84,122 @@ export const DetailsTab = ({ content, onChange, isLoading, onSave, onPreview }: 
 
   return (
     <div className="space-y-6">
-      <div>
-        <label htmlFor="title" className="block text-sm font-medium text-white">
+      <div className="space-y-3">
+        <Label htmlFor="title" className="text-sm font-semibold text-white">
           Title
-        </label>
-        <div className="mt-1">
-          <input
-            type="text"
-            id="title"
-            className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md bg-gray-700 text-white"
-            value={title}
-            onChange={handleTitleChange}
-          />
-        </div>
+        </Label>
+        <Input
+          id="title"
+          value={title}
+          onChange={handleTitleChange}
+          className="bg-gray-800 border-gray-700 text-white focus:ring-netflix-red focus:border-netflix-red"
+          placeholder="Enter title"
+        />
       </div>
 
-      <div>
-        <label htmlFor="description" className="block text-sm font-medium text-white">
+      <div className="space-y-3">
+        <Label htmlFor="description" className="text-sm font-semibold text-white">
           Description
-        </label>
-        <div className="mt-1">
-          <textarea
-            id="description"
-            rows={3}
-            className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md bg-gray-700 text-white"
-            value={description}
-            onChange={handleDescriptionChange}
+        </Label>
+        <Textarea
+          id="description"
+          value={description}
+          onChange={handleDescriptionChange}
+          rows={3}
+          className="bg-gray-800 border-gray-700 text-white focus:ring-netflix-red focus:border-netflix-red resize-none"
+          placeholder="Enter description"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="space-y-3">
+          <Label htmlFor="releaseYear" className="text-sm font-semibold text-white">
+            Release Year
+          </Label>
+          <Input
+            id="releaseYear"
+            value={releaseYear}
+            onChange={handleReleaseYearChange}
+            className="bg-gray-800 border-gray-700 text-white focus:ring-netflix-red focus:border-netflix-red"
+            placeholder="e.g. 2023"
           />
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-        <div className="sm:col-span-3">
-          <label htmlFor="releaseYear" className="block text-sm font-medium text-white">
-            Release Year
-          </label>
-          <div className="mt-1">
-            <input
-              type="text"
-              id="releaseYear"
-              className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md bg-gray-700 text-white"
-              value={releaseYear}
-              onChange={handleReleaseYearChange}
-            />
-          </div>
-        </div>
-
-        <div className="sm:col-span-3">
-          <label htmlFor="ageRating" className="block text-sm font-medium text-white">
+        <div className="space-y-3">
+          <Label htmlFor="ageRating" className="text-sm font-semibold text-white">
             Age Rating
-          </label>
-          <div className="mt-1">
-            <input
-              type="text"
-              id="ageRating"
-              className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md bg-gray-700 text-white"
-              value={ageRating}
-              onChange={handleAgeRatingChange}
-            />
-          </div>
+          </Label>
+          <Input
+            id="ageRating"
+            value={ageRating}
+            onChange={handleAgeRatingChange}
+            className="bg-gray-800 border-gray-700 text-white focus:ring-netflix-red focus:border-netflix-red"
+            placeholder="e.g. PG-13"
+          />
         </div>
 
-        <div className="sm:col-span-3">
-          <label htmlFor="duration" className="block text-sm font-medium text-white">
+        <div className="space-y-3">
+          <Label htmlFor="duration" className="text-sm font-semibold text-white">
             Duration
-          </label>
-          <div className="mt-1">
-            <input
-              type="text"
-              id="duration"
-              className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md bg-gray-700 text-white"
-              value={duration}
-              onChange={handleDurationChange}
-            />
-          </div>
+          </Label>
+          <Input
+            id="duration"
+            value={duration}
+            onChange={handleDurationChange}
+            className="bg-gray-800 border-gray-700 text-white focus:ring-netflix-red focus:border-netflix-red"
+            placeholder="e.g. 1h 30m"
+          />
         </div>
 
-        <div className="sm:col-span-3">
-          <label htmlFor="videoUrl" className="block text-sm font-medium text-white">
+        <div className="space-y-3">
+          <Label htmlFor="videoUrl" className="text-sm font-semibold text-white">
             Video URL
-          </label>
-          <div className="mt-1">
-            <input
-              type="text"
-              id="videoUrl"
-              className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md bg-gray-700 text-white"
-              value={videoUrl}
-              onChange={handleVideoUrlChange}
-            />
-          </div>
+          </Label>
+          <Input
+            id="videoUrl"
+            value={videoUrl}
+            onChange={handleVideoUrlChange}
+            className="bg-gray-800 border-gray-700 text-white focus:ring-netflix-red focus:border-netflix-red"
+            placeholder="YouTube embed URL"
+          />
+          {videoUrl && (
+            <p className="text-xs text-gray-400 mt-1">
+              <span className="text-netflix-red">✓</span> Video URL set
+            </p>
+          )}
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-white">
+      <div className="space-y-3">
+        <Label className="text-sm font-semibold text-white">
           Genres
-        </label>
-        <div className="mt-1">
-          <GenreSelector selectedGenres={selectedGenres} onChange={handleGenreChange} />
+        </Label>
+        <GenreSelector selectedGenres={selectedGenres} onChange={handleGenreChange} />
+        <div className="flex flex-wrap gap-2 mt-2">
+          {selectedGenres.map((genre) => (
+            <Badge key={genre} className="bg-netflix-red/80 hover:bg-netflix-red text-white">{genre}</Badge>
+          ))}
         </div>
       </div>
 
-      <div className="flex justify-end space-x-3">
-        <Button variant="secondary" onClick={onPreview}>
+      <div className="flex justify-end space-x-3 pt-4 mt-6 border-t border-gray-700">
+        <Button 
+          variant="outline" 
+          onClick={onPreview}
+          className="border-gray-600 text-gray-300 hover:bg-gray-700"
+        >
           Preview
         </Button>
         <Button
           disabled={isLoading}
           onClick={onSave}
+          className="bg-netflix-red hover:bg-netflix-red/90 text-white font-medium"
         >
           {isLoading ? (
-            <>
-              Saving...
-              <Progress className="w-5 h-5 ml-2" value={uploadProgress} />
-            </>
+            <div className="flex items-center">
+              <span className="mr-2">Saving...</span>
+              <Progress className="w-8 h-1" value={uploadProgress} />
+            </div>
           ) : (
             "Save"
           )}
