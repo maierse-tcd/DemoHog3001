@@ -1,0 +1,51 @@
+
+/* ContentRow styling to override the center alignment */
+.content-row-title {
+  text-align: left;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+/* Set proper spacing for content rows */
+.content-row {
+  margin-bottom: 2.5rem;
+}
+
+/* Content card hover effects */
+.content-card {
+  transition: transform 0.3s ease-out;
+}
+
+.content-card:hover {
+  transform: scale(1.05);
+  z-index: 10;
+}
+
+/* Content scroll area */
+.content-row .scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.content-row .scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Fix for scroll buttons */
+.content-row .group button {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.content-row .group:hover button {
+  opacity: 1;
+}
+
+/* Ensure Netflix-styled card thumbnails */
+.content-card img {
+  border-radius: 4px;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
