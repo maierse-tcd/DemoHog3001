@@ -66,23 +66,21 @@ button, a {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
-/* Make sure select and dropdown menus are solid - IMPORTANT! */
-[data-radix-popper-content-wrapper] {
-  z-index: 100 !important;
-  background-color: #181818 !important;
-}
-
-/* Critical fix for dropdown/modal transparency issues */
-.radix-dropdown-content, 
+/* Fix for dropdowns, popovers, tooltips, and all Radix UI components */
 [data-radix-popper-content-wrapper],
+.radix-dropdown-content, 
 [data-radix-dialog-content],
 [data-radix-select-content],
 [data-radix-dropdown-menu-content],
 [data-radix-popover-content],
-[data-radix-tooltip-content] {
+[data-radix-tooltip-content],
+[data-radix-toast-root] {
+  z-index: 100 !important;
   background-color: #181818 !important;
-  border-color: #333 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
   opacity: 1 !important;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5) !important;
 }
 
 /* Fix for dialog close button */
@@ -124,13 +122,6 @@ button, a {
 
 .netflix-fade-up {
   animation: netflixFadeUp 0.5s forwards;
-}
-
-/* Make sure toast notifications are properly styled */
-[data-radix-toast-root] {
-  background-color: #181818 !important;
-  border-color: #333 !important;
-  color: white !important;
 }
 
 /* Netflix hover effect for buttons */

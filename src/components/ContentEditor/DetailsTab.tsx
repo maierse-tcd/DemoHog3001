@@ -1,19 +1,27 @@
+
 import { useState, useEffect } from 'react';
 import { Check, ChevronDown, Play } from 'lucide-react';
 import { GenreSelector } from './GenreSelector';
 import { useToast } from '../../hooks/use-toast';
 import { Button } from '../ui/button';
 import { Progress } from '../ui/progress';
+import { Content, Genre } from '../../data/mockData';
 
-// import missing Play icon
+interface DetailsTabProps {
+  content: Content;
+  onChange: (content: Content) => void;
+  isLoading: boolean;
+  onSave: () => void;
+  onPreview: () => void;
+}
 
-export const DetailsTab = ({ content, onChange, isLoading, onSave, onPreview }) => {
+export const DetailsTab = ({ content, onChange, isLoading, onSave, onPreview }: DetailsTabProps) => {
   const [title, setTitle] = useState(content?.title || '');
   const [description, setDescription] = useState(content?.description || '');
-  const [releaseYear, setReleaseYear] = useState(content?.release_year || '');
-  const [ageRating, setAgeRating] = useState(content?.age_rating || '');
+  const [releaseYear, setReleaseYear] = useState(content?.releaseYear || '');
+  const [ageRating, setAgeRating] = useState(content?.ageRating || '');
   const [duration, setDuration] = useState(content?.duration || '');
-  const [videoUrl, setVideoUrl] = useState(content?.video_url || '');
+  const [videoUrl, setVideoUrl] = useState(content?.videoUrl || '');
   const [selectedGenres, setSelectedGenres] = useState<string[]>(content?.genre || []);
   const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -21,10 +29,10 @@ export const DetailsTab = ({ content, onChange, isLoading, onSave, onPreview }) 
     if (content) {
       setTitle(content.title || '');
       setDescription(content.description || '');
-      setReleaseYear(content.release_year || '');
-      setAgeRating(content.age_rating || '');
+      setReleaseYear(content.releaseYear || '');
+      setAgeRating(content.ageRating || '');
       setDuration(content.duration || '');
-      setVideoUrl(content.video_url || '');
+      setVideoUrl(content.videoUrl || '');
       setSelectedGenres(content.genre || []);
     }
   }, [content]);
@@ -44,13 +52,13 @@ export const DetailsTab = ({ content, onChange, isLoading, onSave, onPreview }) 
   const handleReleaseYearChange = (e) => {
     const newReleaseYear = e.target.value;
     setReleaseYear(newReleaseYear);
-    onChange({ ...content, release_year: newReleaseYear });
+    onChange({ ...content, releaseYear: newReleaseYear });
   };
 
   const handleAgeRatingChange = (e) => {
     const newAgeRating = e.target.value;
     setAgeRating(newAgeRating);
-    onChange({ ...content, age_rating: newAgeRating });
+    onChange({ ...content, ageRating: newAgeRating });
   };
 
   const handleDurationChange = (e) => {
@@ -62,7 +70,7 @@ export const DetailsTab = ({ content, onChange, isLoading, onSave, onPreview }) 
   const handleVideoUrlChange = (e) => {
     const newVideoUrl = e.target.value;
     setVideoUrl(newVideoUrl);
-    onChange({ ...content, video_url: newVideoUrl });
+    onChange({ ...content, videoUrl: newVideoUrl });
   };
 
   const handleGenreChange = (newGenres) => {
@@ -173,7 +181,7 @@ export const DetailsTab = ({ content, onChange, isLoading, onSave, onPreview }) 
         </div>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end space-x-3">
         <Button variant="secondary" onClick={onPreview}>
           Preview
         </Button>

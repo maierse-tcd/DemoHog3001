@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -183,6 +182,14 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
     }
   };
   
+  // Handle preview
+  const handlePreview = () => {
+    toast({
+      title: "Preview Mode",
+      description: "This would open a preview of the content."
+    });
+  };
+  
   // Handle form submission
   const handleSave = async () => {
     setSaving(true);
@@ -272,6 +279,11 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
     updateFormData('backdropUrl', url);
   };
 
+  // Handle content change from DetailsTab
+  const handleContentChange = (updatedContent: Content) => {
+    setFormData(updatedContent);
+  };
+
   return (
     <Card className="bg-netflix-darkgray border-netflix-gray/20">
       <CardHeader>
@@ -293,11 +305,11 @@ export const ContentEditor = ({ content, onSave, onCancel, isEdit = false }: Con
           {/* Basic Details Tab */}
           <TabsContent value="details">
             <DetailsTab 
-              formData={formData}
-              selectedGenres={selectedGenres}
-              availableGenres={AVAILABLE_GENRES}
-              onUpdateFormData={updateFormData}
-              onToggleGenre={toggleGenre}
+              content={formData}
+              onChange={handleContentChange}
+              isLoading={saving}
+              onSave={handleSave}
+              onPreview={handlePreview}
             />
           </TabsContent>
           
