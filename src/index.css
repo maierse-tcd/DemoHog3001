@@ -1,111 +1,61 @@
+#root {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+}
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
-  :root {
-    --background: 0 0% 8%; /* #141414 */
-    --foreground: 0 0% 98%; /* #fafafa */
-
-    --card: 0 0% 10%;
-    --card-foreground: 0 0% 98%;
-
-    --popover: 0 0% 10%;
-    --popover-foreground: 0 0% 98%;
-
-    --primary: 357 92% 47%; /* Netflix red */
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 0 0% 98%;
-
-    --muted: 0 0% 25%;
-    --muted-foreground: 0 0% 65%;
-
-    --accent: 357 92% 47%; /* Netflix red */
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 357 92% 47%;
-
-    --radius: 0.5rem;
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  
-  body {
-    @apply bg-netflix-black text-netflix-white font-sans;
-    font-family: 'Inter', sans-serif;
-  }
-
-  /* Scrollbar styling */
-  ::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: #555;
-    border-radius: 5px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: #888;
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
   }
 }
 
-@layer utilities {
-  .scrollbar-none {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  
-  .scrollbar-none::-webkit-scrollbar {
-    display: none;
-  }
-  
-  .scrollbar-thin {
-    scrollbar-width: thin;
-  }
-  
-  .scrollbar-thumb-gray-800::-webkit-scrollbar-thumb {
-    background: #1f2937;
-  }
-  
-  .scrollbar-track-transparent::-webkit-scrollbar-track {
-    background: transparent;
-  }
+.card {
+  padding: 2em;
 }
 
-@layer components {
-  .content-row {
-    @apply flex items-start space-x-2 overflow-x-auto pb-8 pt-2 px-4 md:px-8 lg:px-12 scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent;
-  }
+.read-the-docs {
+  color: #888;
+}
 
-  .content-card {
-    @apply relative flex-none rounded-md overflow-hidden transition-transform duration-300 hover:scale-105 hover:z-10 shadow-lg;
-  }
+/* Override for content titles */
+h2, h3, h4 {
+  text-align: left;
+}
 
-  .navbar-link {
-    @apply text-netflix-gray hover:text-netflix-white transition-colors;
-  }
+.content-row h2,
+.content-row h3 {
+  text-align: left;
+  padding-left: 1.5rem;
+}
 
-  .btn-primary {
-    @apply bg-netflix-red hover:bg-red-700 text-white px-4 py-1 rounded font-medium transition-colors;
-  }
+/* Additional alignment for section titles */
+section > h2,
+section > h3 {
+  text-align: left;
+  padding-left: 1.5rem;
 }

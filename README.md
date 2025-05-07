@@ -1,8 +1,15 @@
-# Welcome to your Lovable project
+
+# HogFlix - A PostHog Demo Application
 
 ## Project info
 
 **URL**: https://lovable.dev/projects/72261356-0985-4c62-b16f-98e6f929c81d
+
+## Feature Flags and A/B Testing Documentation
+
+For detailed documentation on how feature flags and A/B testing are implemented in this application, please see:
+
+[Feature Flags and A/B Testing Guide](./src/docs/FeatureFlagsAndABTesting.md)
 
 ## How can I edit this code?
 
@@ -59,6 +66,7 @@ This project is built with:
 - React
 - shadcn-ui
 - Tailwind CSS
+- PostHog for analytics, feature flags and A/B testing
 
 ## How can I deploy this project?
 
