@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { safeCapture } from './events';
 import { safeGetDistinctId } from './identity';
 import { Content } from '../../data/mockData';
@@ -176,8 +176,13 @@ export const isInMyList = async (contentId: string): Promise<boolean> => {
 export const useMyList = () => {
   const [myList, setMyList] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const fetchedRef = useRef(false);
   
   useEffect(() => {
+    // Prevent multiple fetches
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
+    
     const loadMyList = async () => {
       setIsLoading(true);
       try {
@@ -195,10 +200,14 @@ export const useMyList = () => {
     loadMyList();
     
     // Add listener for my list changes
-    window.addEventListener('my-list-updated', loadMyList);
+    const handleMyListUpdated = () => {
+      loadMyList();
+    };
+    
+    window.addEventListener('my-list-updated', handleMyListUpdated);
     
     return () => {
-      window.removeEventListener('my-list-updated', loadMyList);
+      window.removeEventListener('my-list-updated', handleMyListUpdated);
     };
   }, []);
   

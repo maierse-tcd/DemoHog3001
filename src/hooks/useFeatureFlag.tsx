@@ -15,11 +15,6 @@ export function useFeatureFlag(flagName: string): boolean {
     console.log(`Feature flag ${flagName} value:`, enabled);
   }, [flagName, enabled]);
   
-  // Always show My List
-  if (flagName === 'my_list_override') {
-    return true;
-  }
-  
   return enabled || false;
 }
 
