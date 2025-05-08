@@ -11,13 +11,13 @@ import { useAuth } from '../hooks/useAuth';
 export const AdminNavItems = () => {
   // Use the standard PostHog hook for feature flags
   const isAdmin = useFeatureFlagEnabled('is_admin');
-  const { userEmail } = useAuth();
+  const { isLoggedIn, userEmail } = useAuth();
   
   // Check if the user has a posthog.com email
   const isPosthogEmail = userEmail && userEmail.toLowerCase().endsWith('@posthog.com');
   
-  // Only render the admin nav item if the user has the is_admin flag enabled OR has a posthog.com email
-  const showAdminLink = isAdmin || isPosthogEmail;
+  // Only render the admin nav item if the user is logged in AND (has the is_admin flag enabled OR has a posthog.com email)
+  const showAdminLink = isLoggedIn && (isAdmin || isPosthogEmail);
   
   if (!showAdminLink) {
     return null;

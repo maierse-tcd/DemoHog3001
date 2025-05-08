@@ -20,8 +20,8 @@ export const Navbar = () => {
   // Check if the user has a posthog.com email
   const isPosthogEmail = userEmail && userEmail.toLowerCase().endsWith('@posthog.com');
   
-  // Determine if we should show the Admin menu item (if they have the isAdmin flag OR posthog.com email)
-  const showAdminMenuItem = isAdmin || isPosthogEmail;
+  // Determine if we should show the Admin menu item (if they are logged in AND have the isAdmin flag OR posthog.com email)
+  const showAdminMenuItem = isLoggedIn && (isAdmin || isPosthogEmail);
   
   // Determine if we should show the Plans menu item
   const showPlansMenuItem = !(isLoggedIn && hidePlan);
