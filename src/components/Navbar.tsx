@@ -24,7 +24,8 @@ export const Navbar = () => {
   const showAdminMenuItem = isLoggedIn && (isAdmin || isPosthogEmail);
   
   // Determine if we should show the Plans menu item
-  const showPlansMenuItem = !(isLoggedIn && hidePlan);
+  // Only hide plans when the user is logged in AND the hidePlan flag is true
+  const showPlansMenuItem = !isLoggedIn || (isLoggedIn && !hidePlan);
   
   // Handle scroll events to change navbar appearance
   useEffect(() => {
