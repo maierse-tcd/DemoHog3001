@@ -1,3 +1,4 @@
+
 /**
  * PostHog identity management utilities
  */
@@ -8,7 +9,7 @@ import posthog from 'posthog-js';
 // Local storage keys for caching
 const LAST_GROUPS_STORAGE_KEY = 'posthog_last_groups';
 const POSTHOG_LAST_ID_KEY = 'posthog_last_identified_user';
-const POSTHOG_EMAIL_CACHE_KEY = 'posthog_email_cache'; // New key for email caching
+const POSTHOG_EMAIL_CACHE_KEY = 'posthog_email_cache'; // Key for email caching
 
 // Prevent overly frequent identifications
 const MIN_IDENTIFY_INTERVAL = 10000; // 10 seconds

@@ -9,7 +9,7 @@ import { usePostHog } from 'posthog-js/react';
 import { useFeatureFlag } from '../../hooks/useFeatureFlag';
 
 // Minimum time between feature flag reloads (in ms)
-const MIN_RELOAD_INTERVAL = 120000; // Increased to 2 minutes (from 60 seconds)
+const MIN_RELOAD_INTERVAL = 120000; // 2 minutes
 
 // Use a shared last reload time across all instances
 let lastReloadTimeGlobal = 0;
@@ -61,6 +61,11 @@ export function useFeatureFlags() {
       if (isMounted.current) {
         setFlagsLoaded(true);
         console.log('PostHog feature flags reloaded successfully');
+        
+        // Print out current feature flag status for debugging
+        const isAdmin = safeIsFeatureEnabled('is_admin');
+        const accessPassword = safeIsFeatureEnabled('access_password');
+        console.log(`Feature flags status: {is_admin: ${isAdmin}, access_password: ${accessPassword}}`);
       }
     } catch (err) {
       console.error('Error reloading feature flags:', err);

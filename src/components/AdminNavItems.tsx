@@ -12,15 +12,6 @@ const ADMIN_STATUS_CACHE_KEY = 'admin_status_cache';
 const ADMIN_CACHE_DURATION = 5 * 60 * 1000;
 
 /**
- * Check if a string is a PostHog email
- */
-const isPostHogEmail = (email: string | null): boolean => {
-  return typeof email === 'string' && 
-         email.includes('@') && 
-         email.toLowerCase().endsWith('@posthog.com');
-};
-
-/**
  * Cache admin status to avoid flickering
  */
 const cacheAdminStatus = (isAdmin: boolean): void => {
@@ -55,7 +46,6 @@ const getCachedAdminStatus = (): boolean | null => {
 
 /**
  * Admin navigation items that are only shown when the user has the is_admin feature flag enabled
- * or has a posthog.com email domain
  */
 export const AdminNavItems = () => {
   // Use our enhanced feature flag hook
@@ -65,22 +55,8 @@ export const AdminNavItems = () => {
   // Track if we've already logged debugging info
   const hasLoggedInfo = useRef(false);
   
-  // Get the currently identified PostHog user email which might be different from Supabase email
+  // Get the currently identified PostHog user email
   const posthogDistinctId = safeGetDistinctId();
-  
-  // Memoize email checks to prevent recalculation on each render
-  const { isPosthogEmailUser, isSupabasePosthogEmailUser } = useMemo(() => {
-    // Only consider email from posthog if it looks like a valid email
-    const isPosthogEmail = isPostHogEmail(posthogDistinctId);
-    
-    // Check if the Supabase user has a posthog.com email
-    const isSupabaseEmail = isPostHogEmail(userEmail);
-      
-    return { 
-      isPosthogEmailUser: isPosthogEmail,
-      isSupabasePosthogEmailUser: isSupabaseEmail 
-    };
-  }, [posthogDistinctId, userEmail]);
   
   // Check cached admin status first
   const cachedAdminStatus = useMemo(() => {
@@ -97,14 +73,14 @@ export const AdminNavItems = () => {
       return cachedAdminStatus;
     }
     
-    // Otherwise calculate based on flags and email domains
-    const shouldShow = isLoggedIn && (isAdmin || isPosthogEmailUser || isSupabasePosthogEmailUser);
+    // Otherwise calculate based on flags only
+    const shouldShow = isLoggedIn && isAdmin;
     
     // Cache the result to avoid flickering
     cacheAdminStatus(shouldShow);
     
     return shouldShow;
-  }, [isLoggedIn, isAdmin, isPosthogEmailUser, isSupabasePosthogEmailUser, cachedAdminStatus]);
+  }, [isLoggedIn, isAdmin, cachedAdminStatus]);
   
   // Log debug info on mount or when values change, but limit to once
   useEffect(() => {

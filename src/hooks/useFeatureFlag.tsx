@@ -5,18 +5,9 @@ import { safeGetDistinctId } from '../utils/posthog';
 /**
  * Configuration constants for flag behavior
  */
-const MAX_RETRIES = 2; // Reduced from 3
+const MAX_RETRIES = 2;
 const CACHE_DURATION_MS = 5 * 60000; // Cache flag value for 5 minutes
 const POSTHOG_FLAG_CACHE_PREFIX = 'ph_flag_';
-
-/**
- * Check if a string is a PostHog email (ends with @posthog.com)
- */
-const isPostHogEmail = (value: string | null): boolean => {
-  return typeof value === 'string' && 
-         value.includes('@') && 
-         value.toLowerCase().endsWith('@posthog.com');
-};
 
 /**
  * Save flag value to cache
@@ -77,37 +68,14 @@ export function useFeatureFlag(flagName: string): boolean {
   // Track if component is still mounted
   const isMounted = useRef(true);
   
-  // Special handling for is_admin flag based on email domain
-  const handleIsAdminFlag = useCallback(() => {
-    if (flagName !== 'is_admin') return null;
-    
-    // For is_admin flag, check if the user has a posthog.com email
-    const distinctId = safeGetDistinctId();
-    
-    // If the user has a PostHog email domain, enable the flag regardless of PostHog
-    if (isPostHogEmail(distinctId)) {
-      console.log('Email domain check: User has @posthog.com email, enabling admin flag');
-      return true;
-    }
-    
-    return null; // Let regular flag checking continue
-  }, [flagName]);
-  
   // Initial check for cached values
   useEffect(() => {
-    // First check special case for is_admin
-    const specialCaseValue = handleIsAdminFlag();
-    if (specialCaseValue !== null) {
-      setFlagValue(specialCaseValue);
-      return;
-    }
-    
-    // Then check cache
+    // Check cache
     const cachedValue = getCachedFlagValue(flagName);
     if (cachedValue !== null) {
       setFlagValue(cachedValue);
     }
-  }, [flagName, handleIsAdminFlag]);
+  }, [flagName]);
   
   // Check if user is identified, as feature flags are only reliable after identification
   useEffect(() => {
@@ -130,14 +98,6 @@ export function useFeatureFlag(flagName: string): boolean {
       
       if (hasValidId) {
         setIsIdentified(true);
-        
-        // Special case for is_admin flag based on email domain
-        const specialCaseValue = handleIsAdminFlag();
-        if (specialCaseValue !== null) {
-          setFlagValue(specialCaseValue);
-          cacheFlagValue(flagName, specialCaseValue);
-          return;
-        }
         
         // Update with current value from PostHog
         setFlagValue(enabled);
@@ -170,36 +130,20 @@ export function useFeatureFlag(flagName: string): boolean {
         timeoutRef.current = null;
       }
     };
-  }, [flagName, enabled, handleIsAdminFlag]);
+  }, [flagName, enabled]);
 
   // Update flag value when PostHog value changes (for identified users)
   useEffect(() => {
     if (isIdentified) {
-      // Special case for is_admin flag based on email domain
-      const specialCaseValue = handleIsAdminFlag();
-      if (specialCaseValue !== null) {
-        setFlagValue(specialCaseValue);
-        cacheFlagValue(flagName, specialCaseValue);
-        return;
-      }
-      
       // Update cache and state with current value
       setFlagValue(enabled);
       cacheFlagValue(flagName, enabled);
     }
-  }, [enabled, isIdentified, flagName, handleIsAdminFlag]);
+  }, [enabled, isIdentified, flagName]);
   
   // If we have a value, return it
   if (flagValue !== null) {
     return flagValue;
-  }
-  
-  // Special case for is_admin - check email domain as fallback
-  if (flagName === 'is_admin') {
-    const specialCaseValue = handleIsAdminFlag();
-    if (specialCaseValue !== null) {
-      return specialCaseValue;
-    }
   }
   
   // Try to get cached value as a last resort
