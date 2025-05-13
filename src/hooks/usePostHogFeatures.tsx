@@ -19,8 +19,8 @@ export {
   useActiveFeatureFlags
 };
 
-// Alias for backward compatibility with existing components
-export const useFeatureFlag = useFeatureFlagEnabled;
+// Re-export our enhanced feature flag hook
+export { useFeatureFlag };
 
 /**
  * Enhanced hook for tracking and managing PostHog features
