@@ -8,7 +8,7 @@ import posthog from 'posthog-js';
 
 // Keep track of feature flag reloads to prevent excessive calls
 let lastFeatureFlagReload = 0;
-const MIN_RELOAD_INTERVAL = 10000; // 10 seconds - increased from 5s
+const MIN_RELOAD_INTERVAL = 60000; // 60 seconds - increased from 10s
 let featureFlagReloadPromise: Promise<boolean> | null = null;
 
 /**
@@ -89,11 +89,67 @@ export const captureTestEvent = (
   });
 };
 
+// Storage key for reload state
+const FF_RELOAD_STORAGE_KEY = 'ph_ff_reload_state';
+
+/**
+ * Record a feature flag reload in localStorage
+ */
+const recordFlagReload = (): void => {
+  try {
+    localStorage.setItem(FF_RELOAD_STORAGE_KEY, JSON.stringify({
+      timestamp: Date.now(),
+      inProgress: true
+    }));
+  } catch (err) {
+    // Ignore storage errors
+  }
+};
+
+/**
+ * Complete a feature flag reload in localStorage
+ */
+const completeFlagReload = (success: boolean): void => {
+  try {
+    localStorage.setItem(FF_RELOAD_STORAGE_KEY, JSON.stringify({
+      timestamp: Date.now(),
+      inProgress: false,
+      success
+    }));
+  } catch (err) {
+    // Ignore storage errors
+  }
+};
+
+/**
+ * Check if a feature flag reload is in progress or was recent
+ */
+const isReloadActiveOrRecent = (): boolean => {
+  try {
+    const data = localStorage.getItem(FF_RELOAD_STORAGE_KEY);
+    if (!data) return false;
+    
+    const { timestamp, inProgress } = JSON.parse(data);
+    const now = Date.now();
+    
+    // If a reload is in progress, or was completed very recently
+    return inProgress || (now - timestamp < 5000);
+  } catch (err) {
+    return false;
+  }
+};
+
 /**
  * Safely reload feature flags with rate limiting and singleton promise
  */
 export const safeReloadFeatureFlags = async (): Promise<boolean> => {
   const now = Date.now();
+  
+  // If a reload is active or was very recent, return early
+  if (isReloadActiveOrRecent()) {
+    console.log("Feature flag reload skipped - another reload is in progress or just completed");
+    return false;
+  }
   
   // Check if we've reloaded too recently
   if (now - lastFeatureFlagReload < MIN_RELOAD_INTERVAL) {
@@ -111,6 +167,7 @@ export const safeReloadFeatureFlags = async (): Promise<boolean> => {
   if (posthogInstance) {
     try {
       lastFeatureFlagReload = now;
+      recordFlagReload();
       
       // Create a new promise for this reload
       featureFlagReloadPromise = new Promise((resolve) => {
@@ -118,22 +175,25 @@ export const safeReloadFeatureFlags = async (): Promise<boolean> => {
           try {
             await posthogInstance.reloadFeatureFlags();
             console.log("PostHog: Feature flags reloaded");
+            completeFlagReload(true);
             resolve(true);
           } catch (err) {
             console.error("Error reloading feature flags:", err);
+            completeFlagReload(false);
             resolve(false);
           } finally {
             // Clear the promise reference after a delay to prevent immediate subsequent calls
             setTimeout(() => {
               featureFlagReloadPromise = null;
-            }, 1000);
+            }, 5000);
           }
-        }, 100); // Small delay to batch potential concurrent requests
+        }, 300); // Small delay to batch potential concurrent requests
       });
       
       return await featureFlagReloadPromise;
     } catch (err) {
       console.error("Error initiating feature flag reload:", err);
+      completeFlagReload(false);
       featureFlagReloadPromise = null;
       return false;
     }

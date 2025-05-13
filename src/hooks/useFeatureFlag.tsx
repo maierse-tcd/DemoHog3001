@@ -1,13 +1,61 @@
-
 import { useFeatureFlagEnabled } from 'posthog-js/react';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { safeGetDistinctId } from '../utils/posthog';
 
 /**
- * Maximum number of retries to check for feature flag initialization
+ * Configuration constants for flag behavior
  */
-const MAX_RETRIES = 3; // Reduced from 5
-const CACHE_DURATION_MS = 60000; // Cache flag value for 1 minute
+const MAX_RETRIES = 2; // Reduced from 3
+const CACHE_DURATION_MS = 5 * 60000; // Cache flag value for 5 minutes
+const POSTHOG_FLAG_CACHE_PREFIX = 'ph_flag_';
+
+/**
+ * Check if a string is a PostHog email (ends with @posthog.com)
+ */
+const isPostHogEmail = (value: string | null): boolean => {
+  return typeof value === 'string' && 
+         value.includes('@') && 
+         value.toLowerCase().endsWith('@posthog.com');
+};
+
+/**
+ * Save flag value to cache
+ */
+const cacheFlagValue = (flagName: string, value: boolean): void => {
+  try {
+    localStorage.setItem(
+      `${POSTHOG_FLAG_CACHE_PREFIX}${flagName}`, 
+      JSON.stringify({
+        value,
+        timestamp: Date.now()
+      })
+    );
+  } catch (err) {
+    // Ignore storage errors
+  }
+};
+
+/**
+ * Get cached flag value if available and not expired
+ */
+const getCachedFlagValue = (flagName: string): boolean | null => {
+  try {
+    const cacheData = localStorage.getItem(`${POSTHOG_FLAG_CACHE_PREFIX}${flagName}`);
+    if (!cacheData) return null;
+    
+    const { value, timestamp } = JSON.parse(cacheData);
+    const now = Date.now();
+    
+    // If cache is expired, return null
+    if (now - timestamp > CACHE_DURATION_MS) {
+      return null;
+    }
+    
+    return value;
+  } catch (err) {
+    return null;
+  }
+};
 
 /**
  * An enhanced wrapper for the PostHog useFeatureFlagEnabled hook
@@ -16,18 +64,50 @@ const CACHE_DURATION_MS = 60000; // Cache flag value for 1 minute
 export function useFeatureFlag(flagName: string): boolean {
   // Use the official PostHog hook
   const enabled = useFeatureFlagEnabled(flagName);
-  // Track if PostHog has identified a user
+  // Track if user is identified
   const [isIdentified, setIsIdentified] = useState(false);
+  // Final flag value with fallbacks
+  const [flagValue, setFlagValue] = useState<boolean | null>(null);
   // Keep track of retry attempts
   const retryCount = useRef(0);
   // Store timeoutId for cleanup
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Cache the last known value to avoid flickering and reduce checks
-  const lastKnownValue = useRef<boolean | null>(null);
-  // Track when the flag was last checked
+  // Last time we checked the identification status
   const lastCheckTime = useRef<number>(0);
   // Track if component is still mounted
   const isMounted = useRef(true);
+  
+  // Special handling for is_admin flag based on email domain
+  const handleIsAdminFlag = useCallback(() => {
+    if (flagName !== 'is_admin') return null;
+    
+    // For is_admin flag, check if the user has a posthog.com email
+    const distinctId = safeGetDistinctId();
+    
+    // If the user has a PostHog email domain, enable the flag regardless of PostHog
+    if (isPostHogEmail(distinctId)) {
+      console.log('Email domain check: User has @posthog.com email, enabling admin flag');
+      return true;
+    }
+    
+    return null; // Let regular flag checking continue
+  }, [flagName]);
+  
+  // Initial check for cached values
+  useEffect(() => {
+    // First check special case for is_admin
+    const specialCaseValue = handleIsAdminFlag();
+    if (specialCaseValue !== null) {
+      setFlagValue(specialCaseValue);
+      return;
+    }
+    
+    // Then check cache
+    const cachedValue = getCachedFlagValue(flagName);
+    if (cachedValue !== null) {
+      setFlagValue(cachedValue);
+    }
+  }, [flagName, handleIsAdminFlag]);
   
   // Check if user is identified, as feature flags are only reliable after identification
   useEffect(() => {
@@ -36,11 +116,13 @@ export function useFeatureFlag(flagName: string): boolean {
       return;
     }
     
-    // Check if we're within the cache period
+    // Throttle checks to avoid excessive processing
     const now = Date.now();
-    if (lastKnownValue.current !== null && now - lastCheckTime.current < CACHE_DURATION_MS) {
+    if (now - lastCheckTime.current < 500) {
       return;
     }
+    
+    lastCheckTime.current = now;
     
     const checkIdentification = () => {
       const distinctId = safeGetDistinctId();
@@ -48,15 +130,22 @@ export function useFeatureFlag(flagName: string): boolean {
       
       if (hasValidId) {
         setIsIdentified(true);
-        retryCount.current = MAX_RETRIES; // Stop further retries
         
-        // Update last check time and cache the value
-        lastCheckTime.current = Date.now();
-        lastKnownValue.current = enabled;
+        // Special case for is_admin flag based on email domain
+        const specialCaseValue = handleIsAdminFlag();
+        if (specialCaseValue !== null) {
+          setFlagValue(specialCaseValue);
+          cacheFlagValue(flagName, specialCaseValue);
+          return;
+        }
         
-        // For debugging purposes - only log admin flag specifically to reduce noise
+        // Update with current value from PostHog
+        setFlagValue(enabled);
+        cacheFlagValue(flagName, enabled);
+        
+        // For debugging - only log certain flags to reduce noise
         if (flagName === 'is_admin') {
-          console.log(`Feature flag ${flagName}: ${enabled}, user identified: ${!!distinctId}`);
+          console.log(`Feature flag ${flagName}: ${enabled}, user: ${distinctId}`);
         }
       } else {
         // Increment retry counter
@@ -64,7 +153,7 @@ export function useFeatureFlag(flagName: string): boolean {
         
         // Schedule another check with exponential backoff if we haven't reached max retries
         if (retryCount.current < MAX_RETRIES && isMounted.current) {
-          const delay = Math.min(2000 * Math.pow(2, retryCount.current - 1), 10000); // Start with longer delay (2s)
+          const delay = Math.min(2000 * Math.pow(2, retryCount.current - 1), 10000);
           timeoutRef.current = setTimeout(checkIdentification, delay);
         }
       }
@@ -81,25 +170,46 @@ export function useFeatureFlag(flagName: string): boolean {
         timeoutRef.current = null;
       }
     };
-  }, [flagName, enabled]);
+  }, [flagName, enabled, handleIsAdminFlag]);
 
-  // Once identified, we'll use the cache until it expires
-  if (isIdentified) {
-    const now = Date.now();
-    
-    // If the cache is fresh, use it
-    if (lastKnownValue.current !== null && now - lastCheckTime.current < CACHE_DURATION_MS) {
-      return lastKnownValue.current;
+  // Update flag value when PostHog value changes (for identified users)
+  useEffect(() => {
+    if (isIdentified) {
+      // Special case for is_admin flag based on email domain
+      const specialCaseValue = handleIsAdminFlag();
+      if (specialCaseValue !== null) {
+        setFlagValue(specialCaseValue);
+        cacheFlagValue(flagName, specialCaseValue);
+        return;
+      }
+      
+      // Update cache and state with current value
+      setFlagValue(enabled);
+      cacheFlagValue(flagName, enabled);
     }
-    
-    // Update cache and return current value
-    lastKnownValue.current = enabled;
-    lastCheckTime.current = now;
-    return enabled;
+  }, [enabled, isIdentified, flagName, handleIsAdminFlag]);
+  
+  // If we have a value, return it
+  if (flagValue !== null) {
+    return flagValue;
   }
   
-  // If not identified yet, return false
-  return false;
+  // Special case for is_admin - check email domain as fallback
+  if (flagName === 'is_admin') {
+    const specialCaseValue = handleIsAdminFlag();
+    if (specialCaseValue !== null) {
+      return specialCaseValue;
+    }
+  }
+  
+  // Try to get cached value as a last resort
+  const cachedValue = getCachedFlagValue(flagName);
+  if (cachedValue !== null) {
+    return cachedValue;
+  }
+  
+  // Default to official PostHog value, or false if not identified yet
+  return isIdentified ? enabled : false;
 }
 
 export default useFeatureFlag;

@@ -13,6 +13,9 @@ interface AuthIntegrationProps {
   setCurrentSubscription: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
+// Storage key for identification debounce
+const LAST_AUTH_CHECK_KEY = 'ph_last_auth_check';
+
 export const useAuthIntegration = ({
   posthogLoadedRef,
   currentUserRef,
@@ -27,25 +30,61 @@ export const useAuthIntegration = ({
   const lastIdentifiedUserRef = useRef<string | null>(null);
   // Track when the last auth check was performed
   const lastAuthCheckTimeRef = useRef<number>(0);
+  // Track if component is mounted
+  const isMountedRef = useRef<boolean>(true);
+
+  // Helper to check if an identification was recent
+  const wasRecentlyChecked = (): boolean => {
+    try {
+      const lastCheck = localStorage.getItem(LAST_AUTH_CHECK_KEY);
+      if (!lastCheck) return false;
+      
+      const { timestamp } = JSON.parse(lastCheck);
+      return Date.now() - timestamp < 30000; // 30 second throttle
+    } catch (err) {
+      return false;
+    }
+  };
+  
+  // Helper to record a check time
+  const recordCheckTime = (): void => {
+    try {
+      localStorage.setItem(LAST_AUTH_CHECK_KEY, JSON.stringify({
+        timestamp: Date.now()
+      }));
+    } catch (err) {
+      // Ignore storage errors
+    }
+  };
 
   // Effect to identify current user when PostHog is loaded
   useEffect(() => {
     // Only check if PostHog is loaded and no check is in progress
     if (posthogLoadedRef.current && !authCheckInProgressRef.current) {
+      // Avoid excessive checks
+      if (wasRecentlyChecked()) {
+        return;
+      }
+      
       const now = Date.now();
       // Limit checks to at most once every 10 seconds
       if (now - lastAuthCheckTimeRef.current > 10000) {
         lastAuthCheckTimeRef.current = now;
+        recordCheckTime();
         checkAndIdentifyCurrentUser();
       }
     }
+    
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [posthogLoadedRef.current]);
 
   // Function to identify the current user in PostHog and set groups
   const checkAndIdentifyCurrentUser = () => {
     // Prevent concurrent checks
-    if (authCheckInProgressRef.current) {
-      console.log("Auth check already in progress, skipping");
+    if (authCheckInProgressRef.current || !isMountedRef.current) {
+      console.log("Auth check already in progress or component unmounted, skipping");
       return;
     }
     
@@ -53,6 +92,11 @@ export const useAuthIntegration = ({
     
     try {
       supabase.auth.getSession().then(({ data }) => {
+        if (!isMountedRef.current) {
+          authCheckInProgressRef.current = false;
+          return;
+        }
+        
         if (data.session?.user) {
           const user = data.session.user;
           const email = user.email;
@@ -68,14 +112,28 @@ export const useAuthIntegration = ({
             // If different user than the currently identified one
             if (currentUserRef.current && currentUserRef.current !== email) {
               console.log(`User already identified with this email: ${email}, forcing reset and re-identify`);
-              safeReset();
-              clearStoredGroups();
               
-              // Brief delay to ensure reset completes
+              // Ensure we don't reidentify too soon
               setTimeout(() => {
-                identifyUser(email, user.id, user.user_metadata);
-                authCheckInProgressRef.current = false;
-              }, 200);
+                if (!isMountedRef.current) {
+                  authCheckInProgressRef.current = false;
+                  return;
+                }
+                
+                safeReset();
+                clearStoredGroups();
+                
+                // Brief delay to ensure reset completes
+                setTimeout(() => {
+                  if (!isMountedRef.current) {
+                    authCheckInProgressRef.current = false;
+                    return;
+                  }
+                  
+                  identifyUser(email, user.id, user.user_metadata);
+                  authCheckInProgressRef.current = false;
+                }, 300);
+              }, 100);
             } else {
               // No user currently identified
               identifyUser(email, user.id, user.user_metadata);
@@ -102,8 +160,8 @@ export const useAuthIntegration = ({
 
   // Function to identify a user
   const identifyUser = (email: string, userId: string, metadata?: any) => {
-    if (!posthogLoadedRef.current) {
-      console.warn('PostHog not loaded yet, will identify when loaded');
+    if (!posthogLoadedRef.current || !isMountedRef.current) {
+      console.warn('PostHog not loaded yet or component unmounted');
       return;
     }
 
@@ -112,7 +170,7 @@ export const useAuthIntegration = ({
     currentUserRef.current = email;
     
     try {
-      // First identify with just the essential info - only update once
+      // Always identify with email as the distinct ID for consistency
       safeIdentify(email, {
         email: email,
         supabase_id: userId,
@@ -122,6 +180,7 @@ export const useAuthIntegration = ({
       // Then fetch additional profile data in a separate operation
       // Use setTimeout to avoid render cycle conflicts
       setTimeout(() => {
+        if (!isMountedRef.current) return;
         fetchUserProfileAndIdentify(userId, email, metadata);
       }, 500);
     } catch (err) {
@@ -131,7 +190,7 @@ export const useAuthIntegration = ({
   
   // Fetch user profile and identify with all properties
   const fetchUserProfileAndIdentify = (userId: string, email: string, metadata?: any) => {
-    if (!posthogLoadedRef.current) return;
+    if (!posthogLoadedRef.current || !isMountedRef.current) return;
     
     supabase
       .from('profiles')
@@ -139,6 +198,8 @@ export const useAuthIntegration = ({
       .eq('id', userId)
       .maybeSingle()
       .then(({ data: profileData, error }) => {
+        if (!isMountedRef.current) return;
+        
         if (error) {
           console.error('Error fetching profile data:', error);
           return;
@@ -158,27 +219,39 @@ export const useAuthIntegration = ({
             is_kids_account: isKid,
             language: profileData.language || 'English',
             // Add this to ensure proper feature flag evaluation
-            is_admin_user: profileData.is_admin === true || email.endsWith('@posthog.com')
+            is_admin_user: profileData.is_admin === true || email.endsWith('@posthog.com'),
+            email: email // Always include email for consistency
           };
           
-          // Wait longer before updating user type and subscription
+          // Re-identify with complete properties after sufficient delay
           setTimeout(() => {
-            // Update user type group - after a significant delay
-            updateUserType(isKid);
+            if (!isMountedRef.current) return;
             
-            // Check for subscription information in user metadata with additional delay
-            if (metadata?.selectedPlanId) {
-              setTimeout(() => {
-                fetchAndIdentifySubscriptionGroup(metadata.selectedPlanId);
-              }, 1000);
-            }
-          }, 1000);
+            // Always use email as the identifier for consistency
+            safeIdentify(email, userProperties);
+            
+            // Wait before updating user type
+            setTimeout(() => {
+              if (!isMountedRef.current) return;
+              updateUserType(isKid);
+              
+              // Check for subscription information after user is identified
+              if (metadata?.selectedPlanId) {
+                setTimeout(() => {
+                  if (!isMountedRef.current) return;
+                  fetchAndIdentifySubscriptionGroup(metadata.selectedPlanId);
+                }, 1000);
+              }
+            }, 800);
+          }, 800);
         }
       });
   };
   
   // Fetch subscription details and identify subscription group
   const fetchAndIdentifySubscriptionGroup = (planId: string) => {
+    if (!isMountedRef.current) return;
+    
     // Get plan details from the database
     supabase
       .from('subscription_plans')
@@ -186,6 +259,8 @@ export const useAuthIntegration = ({
       .eq('id', planId)
       .single()
       .then(({ data: planData, error }) => {
+        if (!isMountedRef.current) return;
+        
         if (error) {
           console.error('Error fetching plan details:', error);
           return;
@@ -198,6 +273,8 @@ export const useAuthIntegration = ({
           
           // Significant delay before updating subscription to avoid race conditions
           setTimeout(() => {
+            if (!isMountedRef.current) return;
+            
             // Call the subscription update with plan details
             updateSubscription(planName, planId, planData.price || '0');
             
@@ -205,7 +282,7 @@ export const useAuthIntegration = ({
             setCurrentSubscription(slugifyGroupKey(planName));
             
             console.log(`PostHog: Fetched and identified subscription group: ${planName}`);
-          }, 1500);
+          }, 1200);
         }
       });
   };

@@ -9,11 +9,15 @@ import { usePostHog } from 'posthog-js/react';
 import { useFeatureFlag } from '../../hooks/useFeatureFlag';
 
 // Minimum time between feature flag reloads (in ms)
-const MIN_RELOAD_INTERVAL = 60000; // Increased to 60 seconds (from 30 seconds)
+const MIN_RELOAD_INTERVAL = 120000; // Increased to 2 minutes (from 60 seconds)
+
+// Use a shared last reload time across all instances
+let lastReloadTimeGlobal = 0;
+// Track if a global reload is in progress
+let reloadInProgressGlobal = false;
 
 export function useFeatureFlags() {
   const posthog = usePostHog();
-  const lastReloadTime = useRef<number>(0);
   const reloadInProgressRef = useRef<boolean>(false);
   // Track if component is mounted
   const isMounted = useRef(true);
@@ -32,22 +36,24 @@ export function useFeatureFlags() {
    * Reload all feature flags from the server with rate limiting
    */
   const reloadFeatureFlags = useCallback(async (): Promise<void> => {
-    // Prevent concurrent reloads
-    if (reloadInProgressRef.current || !isMounted.current) {
+    const now = Date.now();
+    
+    // Prevent concurrent reloads across all components
+    if (reloadInProgressGlobal || !isMounted.current) {
       console.log('Feature flag reload already in progress or component unmounted, skipping');
       return;
     }
     
-    const now = Date.now();
-    // Check if we've reloaded recently
-    if (now - lastReloadTime.current < MIN_RELOAD_INTERVAL) {
+    // Check if we've reloaded recently (using global time)
+    if (now - lastReloadTimeGlobal < MIN_RELOAD_INTERVAL) {
       console.log('Feature flag reload throttled, too soon since last reload');
       return;
     }
     
     try {
+      reloadInProgressGlobal = true;
       reloadInProgressRef.current = true;
-      lastReloadTime.current = now;
+      lastReloadTimeGlobal = now;
       
       console.log('Reloading PostHog feature flags');
       await safeReloadFeatureFlags();
@@ -59,6 +65,7 @@ export function useFeatureFlags() {
     } catch (err) {
       console.error('Error reloading feature flags:', err);
     } finally {
+      reloadInProgressGlobal = false;
       reloadInProgressRef.current = false;
     }
   }, []);
@@ -69,7 +76,7 @@ export function useFeatureFlags() {
       if (posthog && !flagsLoaded) {
         reloadFeatureFlags();
       }
-    }, 2000); // Delay initial load to avoid startup race conditions
+    }, 3000); // Longer delay initial load to avoid startup race conditions
     
     // Track mounted state
     return () => {
