@@ -9,12 +9,14 @@ import { usePostHog } from 'posthog-js/react';
 import { useFeatureFlag } from '../../hooks/useFeatureFlag';
 
 // Minimum time between feature flag reloads (in ms)
-const MIN_RELOAD_INTERVAL = 30000; // 30 seconds
+const MIN_RELOAD_INTERVAL = 60000; // Increased to 60 seconds (from 30 seconds)
 
 export function useFeatureFlags() {
   const posthog = usePostHog();
   const lastReloadTime = useRef<number>(0);
-  const reloadInProgress = useRef<boolean>(false);
+  const reloadInProgressRef = useRef<boolean>(false);
+  // Track if component is mounted
+  const isMounted = useRef(true);
   
   // State to track loaded flags
   const [flagsLoaded, setFlagsLoaded] = useState<boolean>(false);
@@ -31,8 +33,8 @@ export function useFeatureFlags() {
    */
   const reloadFeatureFlags = useCallback(async (): Promise<void> => {
     // Prevent concurrent reloads
-    if (reloadInProgress.current) {
-      console.log('Feature flag reload already in progress, skipping');
+    if (reloadInProgressRef.current || !isMounted.current) {
+      console.log('Feature flag reload already in progress or component unmounted, skipping');
       return;
     }
     
@@ -44,25 +46,36 @@ export function useFeatureFlags() {
     }
     
     try {
-      reloadInProgress.current = true;
+      reloadInProgressRef.current = true;
       lastReloadTime.current = now;
       
       console.log('Reloading PostHog feature flags');
       await safeReloadFeatureFlags();
-      setFlagsLoaded(true);
-      console.log('PostHog feature flags reloaded successfully');
+      
+      if (isMounted.current) {
+        setFlagsLoaded(true);
+        console.log('PostHog feature flags reloaded successfully');
+      }
     } catch (err) {
       console.error('Error reloading feature flags:', err);
     } finally {
-      reloadInProgress.current = false;
+      reloadInProgressRef.current = false;
     }
   }, []);
   
-  // Load feature flags on component mount
+  // Load feature flags on component mount - with delay
   useEffect(() => {
-    if (posthog && !flagsLoaded) {
-      reloadFeatureFlags();
-    }
+    const timeoutId = setTimeout(() => {
+      if (posthog && !flagsLoaded) {
+        reloadFeatureFlags();
+      }
+    }, 2000); // Delay initial load to avoid startup race conditions
+    
+    // Track mounted state
+    return () => {
+      isMounted.current = false;
+      clearTimeout(timeoutId);
+    };
   }, [posthog, flagsLoaded, reloadFeatureFlags]);
   
   /**

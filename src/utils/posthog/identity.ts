@@ -10,6 +10,10 @@ import posthog from 'posthog-js';
 const LAST_GROUPS_STORAGE_KEY = 'posthog_last_groups';
 const POSTHOG_LAST_ID_KEY = 'posthog_last_identified_user';
 
+// Prevent overly frequent identifications
+const MIN_IDENTIFY_INTERVAL = 10000; // 10 seconds
+let lastIdentifyTime = 0;
+
 /**
  * Safely identify a user in PostHog
  * Uses email as the primary identifier for consistent cross-platform identification
@@ -20,58 +24,37 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
     return;
   }
 
+  // Rate limit identify calls to prevent loops
+  const now = Date.now();
+  if (now - lastIdentifyTime < MIN_IDENTIFY_INTERVAL) {
+    // Check if we're trying to identify the same user
+    try {
+      const lastId = localStorage.getItem(POSTHOG_LAST_ID_KEY);
+      if (lastId === distinctId) {
+        // Skip redundant identification
+        return;
+      }
+    } catch (err) {
+      // Ignore storage errors
+    }
+  }
+
+  lastIdentifyTime = now;
+
   if (isPostHogAvailable()) {
     try {
       // Get current distinct ID to check if we need to identify
       const currentId = posthog.get_distinct_id?.();
       
-      // Only log if different
+      // Only identify if different to avoid unnecessary operations
       if (currentId !== distinctId) {
-        console.log(`Current PostHog distinct ID: ${currentId}, identifying as: ${distinctId}`);
+        console.log(`Identifying PostHog user: ${distinctId}`);
         
         // Store the last identified user in localStorage for debugging
         try {
           localStorage.setItem(POSTHOG_LAST_ID_KEY, distinctId);
         } catch (err) {
           // Ignore storage errors
-        }
-      }
-      
-      // Ensure is_kids_account and language are included in properties if available
-      const finalProperties = {
-        ...(properties || {}),
-        // Make sure to prioritize any provided values but include defaults if missing
-        is_kids_account: properties?.is_kids_account !== undefined ? properties.is_kids_account : properties?.isKidsAccount,
-        language: properties?.language || 'English' // Default to English if not provided
-      };
-      
-      // Identify the user
-      posthog.identify(distinctId, finalProperties);
-      console.log(`PostHog: User identified with ID: ${distinctId} and properties:`, finalProperties);
-      
-      // Force reload feature flags after identification
-      posthog.reloadFeatureFlags();
-    } catch (err) {
-      console.error("PostHog identify error:", err);
-    }
-  } else if (typeof window !== 'undefined' && window.posthog) {
-    try {
-      const instance = window.posthog;
-      // Add proper type guard to check if posthog is an instance with required methods
-      if (isPostHogInstance(instance)) {
-        // Get current distinct ID to check if we need to identify
-        const currentId = instance.get_distinct_id?.();
-        
-        // Only log if different
-        if (currentId !== distinctId) {
-          console.log(`Current PostHog distinct ID: ${currentId}, identifying as: ${distinctId}`);
-          
-          // Store the last identified user in localStorage for debugging
-          try {
-            localStorage.setItem(POSTHOG_LAST_ID_KEY, distinctId);
-          } catch (err) {
-            // Ignore storage errors
-          }
         }
         
         // Ensure is_kids_account and language are included in properties if available
@@ -83,11 +66,47 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
         };
         
         // Identify the user
-        instance.identify(distinctId, finalProperties);
-        console.log(`PostHog: User identified with ID: ${distinctId} and properties:`, finalProperties);
+        posthog.identify(distinctId, finalProperties);
         
-        // Force reload feature flags
-        instance.reloadFeatureFlags();
+        // Don't reload flags immediately - this causes loops
+        // A separate, debounced call will handle flag reloads
+      }
+    } catch (err) {
+      console.error("PostHog identify error:", err);
+    }
+  } else if (typeof window !== 'undefined' && window.posthog) {
+    try {
+      const instance = window.posthog;
+      // Add proper type guard to check if posthog is an instance with required methods
+      if (isPostHogInstance(instance)) {
+        // Get current distinct ID to check if we need to identify
+        const currentId = instance.get_distinct_id?.();
+        
+        // Only identify if different
+        if (currentId !== distinctId) {
+          console.log(`Identifying PostHog user: ${distinctId}`);
+          
+          // Store the last identified user in localStorage for debugging
+          try {
+            localStorage.setItem(POSTHOG_LAST_ID_KEY, distinctId);
+          } catch (err) {
+            // Ignore storage errors
+          }
+          
+          // Ensure is_kids_account and language are included in properties if available
+          const finalProperties = {
+            ...(properties || {}),
+            // Make sure to prioritize any provided values but include defaults if missing
+            is_kids_account: properties?.is_kids_account !== undefined ? properties.is_kids_account : properties?.isKidsAccount,
+            language: properties?.language || 'English' // Default to English if not provided
+          };
+          
+          // Identify the user
+          instance.identify(distinctId, finalProperties);
+          
+          // Don't reload flags immediately - this causes loops
+          // A separate, debounced call will handle flag reloads
+        }
       } else {
         console.warn("PostHog instance does not have required methods");
       }

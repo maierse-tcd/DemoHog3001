@@ -4,6 +4,7 @@ import { Image } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { safeGetDistinctId } from '../utils/posthog';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
+import { useMemo } from 'react';
 
 /**
  * Admin navigation items that are only shown when the user has the is_admin feature flag enabled
@@ -17,20 +18,28 @@ export const AdminNavItems = () => {
   // Get the currently identified PostHog user email which might be different from Supabase email
   const posthogDistinctId = safeGetDistinctId();
   
-  // Only consider email from posthog if it looks like a valid email
-  const isPosthogEmailUser = typeof posthogDistinctId === 'string' && 
-    posthogDistinctId.includes('@') && 
-    posthogDistinctId.toLowerCase().endsWith('@posthog.com');
-  
-  // Check if the Supabase user has a posthog.com email
-  const isSupabasePosthogEmailUser = typeof userEmail === 'string' && 
-    userEmail.toLowerCase().endsWith('@posthog.com');
+  // Memoize email checks to prevent recalculation on each render
+  const { isPosthogEmailUser, isSupabasePosthogEmailUser } = useMemo(() => {
+    // Only consider email from posthog if it looks like a valid email
+    const isPosthogEmail = typeof posthogDistinctId === 'string' && 
+      posthogDistinctId.includes('@') && 
+      posthogDistinctId.toLowerCase().endsWith('@posthog.com');
+    
+    // Check if the Supabase user has a posthog.com email
+    const isSupabaseEmail = typeof userEmail === 'string' && 
+      userEmail.toLowerCase().endsWith('@posthog.com');
+      
+    return { 
+      isPosthogEmailUser: isPosthogEmail,
+      isSupabasePosthogEmailUser: isSupabaseEmail 
+    };
+  }, [posthogDistinctId, userEmail]);
   
   // Only render the admin nav item if the user is logged in AND 
   // (has the is_admin flag enabled OR has a posthog.com email in either system)
   const showAdminLink = isLoggedIn && (isAdmin || isPosthogEmailUser || isSupabasePosthogEmailUser);
   
-  // For debugging purposes
+  // For debugging purposes - limit to once when component mounts or when values change
   if (isLoggedIn) {
     console.log(`AdminNavItems: isAdmin flag: ${isAdmin}, PostHog email: ${posthogDistinctId}, Supabase email: ${userEmail}, showAdminLink: ${showAdminLink}`);
   }

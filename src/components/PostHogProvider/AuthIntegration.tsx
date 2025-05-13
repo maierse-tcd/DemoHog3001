@@ -2,8 +2,7 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { safeIdentify, safeReset, clearStoredGroups } from '../../utils/posthog';
-import { slugifyGroupKey, extractPriceValue } from '../../utils/posthog/helpers';
-import posthog from 'posthog-js';
+import { slugifyGroupKey } from '../../utils/posthog/helpers';
 
 interface AuthIntegrationProps {
   posthogLoadedRef: React.MutableRefObject<boolean>;
@@ -26,11 +25,19 @@ export const useAuthIntegration = ({
   const authCheckInProgressRef = useRef<boolean>(false);
   // Last identified user to prevent redundant operations
   const lastIdentifiedUserRef = useRef<string | null>(null);
+  // Track when the last auth check was performed
+  const lastAuthCheckTimeRef = useRef<number>(0);
 
   // Effect to identify current user when PostHog is loaded
   useEffect(() => {
+    // Only check if PostHog is loaded and no check is in progress
     if (posthogLoadedRef.current && !authCheckInProgressRef.current) {
-      checkAndIdentifyCurrentUser();
+      const now = Date.now();
+      // Limit checks to at most once every 10 seconds
+      if (now - lastAuthCheckTimeRef.current > 10000) {
+        lastAuthCheckTimeRef.current = now;
+        checkAndIdentifyCurrentUser();
+      }
     }
   }, [posthogLoadedRef.current]);
 
@@ -102,20 +109,21 @@ export const useAuthIntegration = ({
 
     console.log(`Identifying user in PostHog with email: ${email}`);
     lastIdentifiedUserRef.current = email;
+    currentUserRef.current = email;
     
     try {
-      // First try to identify with just the essential info to ensure quick identification
-      // This minimizes race conditions by getting the user identified ASAP
+      // First identify with just the essential info - only update once
+      safeIdentify(email, {
+        email: email,
+        supabase_id: userId,
+        $set_once: { first_seen: new Date().toISOString() }
+      });
+      
+      // Then fetch additional profile data in a separate operation
+      // Use setTimeout to avoid render cycle conflicts
       setTimeout(() => {
-        safeIdentify(email, {
-          email: email,
-          supabase_id: userId,
-          $set_once: { first_seen: new Date().toISOString() }
-        });
-        
-        // Then fetch additional profile data to enhance the user properties
         fetchUserProfileAndIdentify(userId, email, metadata);
-      }, 0);
+      }, 500);
     } catch (err) {
       console.error('Error identifying user in PostHog:', err);
     }
@@ -149,27 +157,22 @@ export const useAuthIntegration = ({
             name: profileData.name || metadata?.name || email?.split('@')[0],
             is_kids_account: isKid,
             language: profileData.language || 'English',
+            // Add this to ensure proper feature flag evaluation
+            is_admin_user: profileData.is_admin === true || email.endsWith('@posthog.com')
           };
           
-          // Don't update PostHog right away - use setTimeout to avoid blocking the render cycle
+          // Wait longer before updating user type and subscription
           setTimeout(() => {
-            // Only update with additional properties, don't re-identify
-            if (posthog && typeof posthog.people === 'object' && posthog.people.set) {
-              posthog.people.set(userProperties);
-              console.log("PostHog: User properties updated:", userProperties);
-            }
+            // Update user type group - after a significant delay
+            updateUserType(isKid);
             
-            // Update user type group after a small delay to allow property updates to complete
-            setTimeout(() => {
-              // Update user type group
-              updateUserType(isKid);
-              
-              // Check for subscription information in user metadata
-              if (metadata?.selectedPlanId) {
+            // Check for subscription information in user metadata with additional delay
+            if (metadata?.selectedPlanId) {
+              setTimeout(() => {
                 fetchAndIdentifySubscriptionGroup(metadata.selectedPlanId);
-              }
-            }, 300);
-          }, 0);
+              }, 1000);
+            }
+          }, 1000);
         }
       });
   };
@@ -193,7 +196,7 @@ export const useAuthIntegration = ({
           // Store original name for reference
           setCurrentSubscriptionName(planName);
           
-          // Update in own event cycle to avoid blocking render
+          // Significant delay before updating subscription to avoid race conditions
           setTimeout(() => {
             // Call the subscription update with plan details
             updateSubscription(planName, planId, planData.price || '0');
@@ -202,7 +205,7 @@ export const useAuthIntegration = ({
             setCurrentSubscription(slugifyGroupKey(planName));
             
             console.log(`PostHog: Fetched and identified subscription group: ${planName}`);
-          }, 0);
+          }, 1500);
         }
       });
   };

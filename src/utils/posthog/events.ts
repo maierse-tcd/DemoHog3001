@@ -1,3 +1,4 @@
+
 /**
  * PostHog event tracking utilities
  */
@@ -7,7 +8,8 @@ import posthog from 'posthog-js';
 
 // Keep track of feature flag reloads to prevent excessive calls
 let lastFeatureFlagReload = 0;
-const MIN_RELOAD_INTERVAL = 5000; // 5 seconds
+const MIN_RELOAD_INTERVAL = 10000; // 10 seconds - increased from 5s
+let featureFlagReloadPromise: Promise<boolean> | null = null;
 
 /**
  * Safely capture an event in PostHog
@@ -88,11 +90,10 @@ export const captureTestEvent = (
 };
 
 /**
- * Safely reload feature flags with rate limiting
+ * Safely reload feature flags with rate limiting and singleton promise
  */
 export const safeReloadFeatureFlags = async (): Promise<boolean> => {
   const now = Date.now();
-  const posthogInstance = getPostHogInstance();
   
   // Check if we've reloaded too recently
   if (now - lastFeatureFlagReload < MIN_RELOAD_INTERVAL) {
@@ -100,14 +101,40 @@ export const safeReloadFeatureFlags = async (): Promise<boolean> => {
     return false;
   }
   
+  // If a reload is already in progress, return that promise
+  if (featureFlagReloadPromise) {
+    return featureFlagReloadPromise;
+  }
+  
+  const posthogInstance = getPostHogInstance();
+  
   if (posthogInstance) {
     try {
       lastFeatureFlagReload = now;
-      await posthogInstance.reloadFeatureFlags();
-      console.log("PostHog: Feature flags reloaded");
-      return true;
+      
+      // Create a new promise for this reload
+      featureFlagReloadPromise = new Promise((resolve) => {
+        setTimeout(async () => {
+          try {
+            await posthogInstance.reloadFeatureFlags();
+            console.log("PostHog: Feature flags reloaded");
+            resolve(true);
+          } catch (err) {
+            console.error("Error reloading feature flags:", err);
+            resolve(false);
+          } finally {
+            // Clear the promise reference after a delay to prevent immediate subsequent calls
+            setTimeout(() => {
+              featureFlagReloadPromise = null;
+            }, 1000);
+          }
+        }, 100); // Small delay to batch potential concurrent requests
+      });
+      
+      return await featureFlagReloadPromise;
     } catch (err) {
-      console.error("Error reloading feature flags:", err);
+      console.error("Error initiating feature flag reload:", err);
+      featureFlagReloadPromise = null;
       return false;
     }
   }
