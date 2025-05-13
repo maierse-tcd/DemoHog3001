@@ -10,6 +10,10 @@ interface ImageUploaderProps {
   className?: string;
   accept?: string;
   maxSizeMB?: number;
+  contentId?: string;
+  imageType?: 'poster' | 'backdrop' | 'thumbnail';
+  aspectRatio?: 'landscape' | 'portrait' | 'square';
+  onImageUploaded?: (url: string) => void;
 }
 
 export const ImageUploader: React.FC<ImageUploaderProps> = ({
@@ -18,12 +22,17 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   label = 'Upload Image',
   className = '',
   accept = 'image/*',
-  maxSizeMB = 5
+  maxSizeMB = 5,
+  contentId,
+  imageType = 'backdrop',
+  onImageUploaded
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [preview, setPreview] = useState<string | undefined>(previewUrl);
   const [error, setError] = useState<string | null>(null);
-
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  
   const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -66,9 +75,27 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     };
     reader.readAsDataURL(file);
     
+    // Simulate upload process
+    setIsUploading(true);
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 10;
+      setUploadProgress(progress);
+      
+      if (progress >= 100) {
+        clearInterval(interval);
+        setIsUploading(false);
+        
+        // Call the parent's callback if provided
+        if (onImageUploaded && preview) {
+          onImageUploaded(preview);
+        }
+      }
+    }, 300);
+    
     // Pass file to parent component
     onImageSelect(file);
-  }, [maxSizeMB, onImageSelect]);
+  }, [maxSizeMB, onImageSelect, onImageUploaded, preview]);
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -91,26 +118,34 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     // You might want to notify the parent component that the image was removed
   }, []);
 
+  // Adjust for existing user authentication status - default to true for this example
+  const canUpload = true;
+
   return (
     <div className={`w-full ${className}`}>
       {preview ? (
         <ImagePreview 
-          previewUrl={preview} 
-          onRemove={removeImage} 
-          label={label}
+          preview={preview} 
+          imageType={imageType}
+          isUploading={isUploading}
+          uploadProgress={uploadProgress}
+          onClear={removeImage} 
         />
       ) : (
         <UploadPlaceholder
-          isDragging={isDragging}
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-          handleFileChange={handleFileChange}
-          label={label}
-          accept={accept}
-          error={error}
+          isUploading={isUploading}
+          canUpload={canUpload}
+          onClick={() => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = accept;
+            input.onchange = (e) => handleFileChange(e as React.ChangeEvent<HTMLInputElement>);
+            input.click();
+          }}
         />
+      )}
+      {error && (
+        <p className="mt-2 text-sm text-red-600">{error}</p>
       )}
     </div>
   );
