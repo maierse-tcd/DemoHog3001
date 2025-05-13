@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { toast } from '../../hooks/use-toast';
 import { ProfileSettings } from '../../contexts/ProfileSettingsContext';
@@ -14,6 +15,7 @@ interface ProfileInfoProps {
 export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettings }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isKidsAccount, setIsKidsAccount] = useState<boolean>(settings.isKidsAccount);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>(settings.language || 'English');
   const initialRenderRef = useRef(true);
   const updateInProgressRef = useRef(false);
   
@@ -28,9 +30,22 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
     initialRenderRef.current = false;
   }, [settings.isKidsAccount, isKidsAccount]);
 
+  // Sync language from settings
+  useEffect(() => {
+    if (settings.language !== selectedLanguage) {
+      console.log(`Syncing language from settings: ${settings.language}`);
+      setSelectedLanguage(settings.language || 'English');
+    }
+  }, [settings.language]);
+
   const handleKidsAccountChange = (checked: boolean) => {
     console.log(`Kids account checkbox changed to: ${checked}`);
     setIsKidsAccount(checked);
+  };
+
+  const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    console.log(`Language changed to: ${e.target.value}`);
+    setSelectedLanguage(e.target.value);
   };
 
   useEffect(() => {
@@ -97,11 +112,13 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
         console.log('Kids account status unchanged, skipping update');
       }
       
-      // Get language from form - this will ensure it's tracked in PostHog
-      const language = formData.get('language') as string;
-      if (language !== settings.language) {
-        changes.language = language;
+      // Get language from state - this ensures it's tracked properly
+      if (selectedLanguage !== settings.language) {
+        console.log(`Language changed from ${settings.language} to ${selectedLanguage}`);
+        changes.language = selectedLanguage;
         hasChanges = true;
+      } else {
+        console.log('Language unchanged, skipping update');
       }
 
       if (hasChanges) {
@@ -120,7 +137,7 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
         safeIdentify(email, { 
           name, 
           is_kids_account: isKidsAccount,
-          language: language || settings.language || 'English'
+          language: selectedLanguage || settings.language || 'English'
         });
       }
 
@@ -150,8 +167,8 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
       }
       
       // Handle language changes in settings
-      if (language !== settings.language) {
-        settingsChanges.language = language;
+      if (selectedLanguage !== settings.language) {
+        settingsChanges.language = selectedLanguage;
         hasSettingsChanges = true;
       }
 
@@ -200,12 +217,13 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
           />
         </div>
         
-        {/* Language selection dropdown */}
+        {/* Language selection dropdown - now controlled by React state */}
         <div>
           <label className="block text-sm font-medium text-netflix-gray mb-1">Language</label>
           <select
             name="language"
-            defaultValue={settings.language || 'English'}
+            value={selectedLanguage}
+            onChange={handleLanguageChange}
             className="w-full bg-netflix-black border border-netflix-gray rounded px-3 py-2"
           >
             <option value="English">English</option>

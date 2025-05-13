@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
@@ -81,15 +80,19 @@ const Profile = () => {
           // Safe access with proper type handling
           const displayName = profileData?.name || userEmail.split('@')[0];
           
+          console.log('Profile data:', profileData);
+          console.log('Language from profile:', profileData.language);
+          
           // Update context with profile data
           updateSettings({
             name: displayName,
             email: profileData?.email || userEmail,
             // Use plan ID from metadata if available, otherwise use the one from context
             selectedPlanId: userMetadata.selectedPlanId || settings.selectedPlanId,
-            isKidsAccount: userMetadata.isKidsAccount || settings.isKidsAccount,
+            isKidsAccount: profileData.is_kids || false,
+            // Always use language from the database, fallback to settings or default
+            language: profileData.language || settings.language || 'English',
             // Keep other settings from context
-            language: settings.language,
             notifications: settings.notifications,
             playbackSettings: settings.playbackSettings,
           });
