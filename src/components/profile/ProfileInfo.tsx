@@ -4,8 +4,8 @@ import { toast } from '../../hooks/use-toast';
 import { ProfileSettings } from '../../contexts/ProfileSettingsContext';
 import { supabase } from '../../integrations/supabase/client';
 import { safeIdentify } from '../../utils/posthog';
-import { Checkbox } from '../ui/checkbox';
 import { usePostHogContext } from '../../contexts/PostHogContext';
+import { ProfileForm } from './ProfileForm';
 
 interface ProfileInfoProps {
   settings: ProfileSettings;
@@ -43,9 +43,9 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
     setIsKidsAccount(checked);
   };
 
-  const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    console.log(`Language changed to: ${e.target.value}`);
-    setSelectedLanguage(e.target.value);
+  const handleLanguageChange = (value: string) => {
+    console.log(`Language changed to: ${value}`);
+    setSelectedLanguage(value);
   };
 
   useEffect(() => {
@@ -197,110 +197,15 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
   return (
     <div className="bg-netflix-darkgray rounded-lg p-6">
       <h2 className="text-2xl font-bold mb-6">Profile Settings</h2>
-      <form onSubmit={handleProfileSave} className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-netflix-gray mb-1">Name</label>
-          <input 
-            type="text" 
-            name="name"
-            defaultValue={settings.name} 
-            className="w-full bg-netflix-black border border-netflix-gray rounded px-3 py-2" 
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-netflix-gray mb-1">Email</label>
-          <input 
-            type="email" 
-            name="email"
-            defaultValue={settings.email} 
-            className="w-full bg-netflix-black border border-netflix-gray rounded px-3 py-2" 
-          />
-        </div>
-        
-        {/* Language selection dropdown - now controlled by React state */}
-        <div>
-          <label className="block text-sm font-medium text-netflix-gray mb-1">Language</label>
-          <select
-            name="language"
-            value={selectedLanguage}
-            onChange={handleLanguageChange}
-            className="w-full bg-netflix-black border border-netflix-gray rounded px-3 py-2"
-          >
-            <option value="English">English</option>
-            <option value="Spanish">Spanish</option>
-            <option value="French">French</option>
-            <option value="German">German</option>
-            <option value="Italian">Italian</option>
-            <option value="Portuguese">Portuguese</option>
-            <option value="Japanese">Japanese</option>
-            <option value="Chinese">Chinese</option>
-          </select>
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-netflix-gray mb-1">Password</label>
-          <input 
-            type="password" 
-            defaultValue="********" 
-            disabled
-            className="w-full bg-netflix-black border border-netflix-gray rounded px-3 py-2 opacity-50" 
-          />
-          <p className="text-sm text-netflix-gray mt-1">To change your password, use the "Reset Password" option</p>
-        </div>
-        
-        {/* Kids Account Toggle - Now controlled by React state */}
-        <div className="flex items-center space-x-3">
-          <Checkbox 
-            id="isKidsAccount" 
-            name="isKidsAccount" 
-            checked={isKidsAccount}
-            onCheckedChange={handleKidsAccountChange}
-            className="h-5 w-5 border border-netflix-gray" 
-          />
-          <label htmlFor="isKidsAccount" className="text-sm font-medium text-netflix-gray">
-            This is a kids account
-          </label>
-        </div>
-        <p className="text-sm text-netflix-gray mt-1">
-          Kids accounts have restricted content and simplified controls
-        </p>
-        
-        <div className="flex space-x-4">
-          <button 
-            type="submit" 
-            className="bg-netflix-red hover:bg-red-700 text-white px-4 py-2 rounded transition-colors"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Saving...' : 'Save Changes'}
-          </button>
-          <button 
-            type="button" 
-            className="border border-netflix-gray text-white px-4 py-2 rounded hover:bg-netflix-black transition-colors"
-            onClick={async () => {
-              try {
-                const { error } = await supabase.auth.resetPasswordForEmail(settings.email, {
-                  redirectTo: window.location.origin + '/profile'
-                });
-                
-                if (error) throw error;
-                
-                toast({
-                  title: 'Password reset email sent',
-                  description: 'Check your email for a link to reset your password',
-                });
-              } catch (error: any) {
-                toast({
-                  title: 'Error',
-                  description: error.message || 'Failed to send password reset email',
-                  variant: 'destructive'
-                });
-              }
-            }}
-          >
-            Reset Password
-          </button>
-        </div>
-      </form>
+      <ProfileForm
+        settings={settings}
+        isLoading={isLoading}
+        isKidsAccount={isKidsAccount}
+        selectedLanguage={selectedLanguage}
+        handleKidsAccountChange={handleKidsAccountChange}
+        handleLanguageChange={handleLanguageChange}
+        handleSubmit={handleProfileSave}
+      />
     </div>
   );
 };
