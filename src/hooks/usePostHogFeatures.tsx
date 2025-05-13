@@ -1,4 +1,5 @@
 
+import { useCallback } from 'react';
 import { 
   usePostHog, 
   useFeatureFlagEnabled, 
@@ -6,8 +7,8 @@ import {
   useFeatureFlagVariantKey,
   useActiveFeatureFlags
 } from 'posthog-js/react';
-import { useCallback } from 'react';
 import { usePostHogContext } from '../contexts/PostHogContext';
+import { useFeatureFlag } from './useFeatureFlag';
 
 // Re-export all official hooks for consistency in our app
 export { 

@@ -1,4 +1,9 @@
 
+/**
+ * PostHog State Manager
+ * Manages and tracks the state of PostHog integration
+ */
+
 import { useState, useRef, useCallback } from 'react';
 import { getLastIdentifiedGroup } from '../utils/posthog';
 

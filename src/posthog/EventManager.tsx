@@ -1,14 +1,20 @@
 
+/**
+ * PostHog Event Manager
+ * Provides utilities for tracking events in PostHog
+ */
+
 import { useCallback } from 'react';
 import { safeCapture } from '../utils/posthog';
 import { slugifyGroupKey } from '../utils/posthog/helpers';
+import { captureEventWithGroup } from '../utils/posthog/events';
 
 export function usePostHogEventManager() {
   // Standard event capture method
   const captureEvent = useCallback((eventName: string, properties?: Record<string, any>) => {
     try {
+      console.log(`PostHog: Capturing event: ${eventName}`, properties ? 'with properties' : '');
       safeCapture(eventName, properties);
-      console.log(`PostHog: Event captured: ${eventName}`, properties ? 'with properties' : '');
     } catch (err) {
       console.error(`Error capturing event ${eventName}:`, err);
     }
@@ -23,16 +29,9 @@ export function usePostHogEventManager() {
           ? slugifyGroupKey(groupKey) 
           : groupKey;
           
-        // Include the group property in the event
-        const eventProps = {
-          ...properties,
-          $groups: {
-            [groupType]: processedKey
-          }
-        };
+        console.log(`PostHog: Capturing group event: ${eventName} for ${groupType}:${processedKey}`);
         
-        safeCapture(eventName, eventProps);
-        console.log(`PostHog: Group event captured: ${eventName} for ${groupType}:${processedKey}`);
+        captureEventWithGroup(eventName, groupType, processedKey, properties);
       } catch (err) {
         console.error(`Error capturing group event ${eventName}:`, err);
       }

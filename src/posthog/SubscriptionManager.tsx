@@ -1,4 +1,9 @@
 
+/**
+ * PostHog Subscription Manager
+ * Manages subscription-related features and analytics
+ */
+
 import { useCallback, useRef } from 'react';
 import { safeGroupIdentify, captureEventWithGroup } from '../utils/posthog';
 import { slugifyGroupKey, extractPriceValue } from '../utils/posthog/helpers';

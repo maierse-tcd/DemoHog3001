@@ -1,4 +1,9 @@
 
+/**
+ * PostHog User Manager
+ * Manages user-related features and analytics
+ */
+
 import { useCallback, useRef } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { safeGroupIdentify, captureEventWithGroup } from '../utils/posthog';

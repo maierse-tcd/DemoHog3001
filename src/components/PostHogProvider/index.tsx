@@ -1,11 +1,10 @@
 
 import { useEffect, useMemo } from 'react';
-import { safeReset } from '../../utils/posthog';
+import { PostHogContextProvider } from '../../contexts/PostHogContext';
 import { usePostHogUserManager } from '../../posthog/UserManager';
 import { usePostHogSubscriptionManager } from '../../posthog/SubscriptionManager';
 import { usePostHogStateManager } from '../../posthog/StateManager';
 import { usePostHogEventManager } from '../../posthog/EventManager';
-import { PostHogContextProvider } from '../../contexts/PostHogContext';
 import { useAuthIntegration } from './AuthIntegration';
 import { PostHogInitializer } from './PostHogInitializer';
 import { POSTHOG_KEY, POSTHOG_HOST } from './config';
@@ -23,12 +22,6 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
   const { 
     posthogLoadedRef, 
     currentUserRef, 
-    currentUserType, 
-    setCurrentUserType,
-    currentSubscription, 
-    setCurrentSubscription,
-    currentSubscriptionName, 
-    setCurrentSubscriptionName,
     initializeState
   } = stateManager;
 
@@ -38,8 +31,8 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     currentUserRef,
     updateUserType: userManager.updateUserType,
     updateSubscription: subscriptionManager.updateSubscription,
-    setCurrentSubscriptionName,
-    setCurrentSubscription
+    setCurrentSubscriptionName: stateManager.setCurrentSubscriptionName,
+    setCurrentSubscription: stateManager.setCurrentSubscription
   });
 
   // Initialize state from localStorage on mount
