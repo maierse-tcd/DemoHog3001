@@ -15,13 +15,25 @@ export function useFeatureFlag(flagName: string): boolean {
   
   // Check if user is identified, as feature flags are only reliable after identification
   useEffect(() => {
-    const distinctId = safeGetDistinctId();
-    setIsIdentified(!!distinctId && typeof distinctId === 'string');
+    const checkIdentification = () => {
+      const distinctId = safeGetDistinctId();
+      const hasValidId = !!distinctId && typeof distinctId === 'string';
+      setIsIdentified(hasValidId);
+      
+      // For debugging purposes
+      if (flagName === 'is_admin') {
+        console.log(`Feature flag ${flagName}: ${enabled}, user identified: ${!!distinctId}, distinctId: ${distinctId}`);
+      }
+    };
     
-    // For debugging purposes
-    if (flagName === 'is_admin') {
-      console.log(`Feature flag ${flagName}: ${enabled}, user identified: ${!!distinctId}`);
-    }
+    // Check immediately
+    checkIdentification();
+    
+    // Set up an interval to check again (feature flags can take time to load)
+    const intervalId = setInterval(checkIdentification, 1000);
+    
+    // Clear interval on unmount
+    return () => clearInterval(intervalId);
   }, [flagName, enabled]);
 
   // Only return true if properly identified and the flag is enabled

@@ -15,6 +15,11 @@ const POSTHOG_LAST_ID_KEY = 'posthog_last_identified_user';
  * Uses email as the primary identifier for consistent cross-platform identification
  */
 export const safeIdentify = (distinctId: string, properties?: Record<string, any>): void => {
+  if (!distinctId) {
+    console.error("Cannot identify with empty distinctId");
+    return;
+  }
+
   if (isPostHogAvailable()) {
     try {
       // Get current distinct ID to check if we need to identify
@@ -115,20 +120,26 @@ export const safeReset = (): void => {
   if (posthogInstance && typeof posthogInstance.reset === 'function') {
     try {
       console.log("PostHog: Resetting user identity");
-      posthogInstance.reset();
       
-      // Clear stored groups
-      clearStoredGroups();
-      
-      // Clear last identified user
+      // Clear stored IDs before reset
       try {
         localStorage.removeItem(POSTHOG_LAST_ID_KEY);
       } catch (err) {
         // Ignore storage errors
       }
+      
+      // Clear stored groups
+      clearStoredGroups();
+      
+      // Reset the PostHog identity
+      posthogInstance.reset();
+      console.log("PostHog: Identity reset complete");
+      
     } catch (err) {
       console.error("PostHog reset error:", err);
     }
+  } else {
+    console.warn("PostHog reset function not available");
   }
 };
 
@@ -138,6 +149,7 @@ export const safeReset = (): void => {
 export const clearStoredGroups = (): void => {
   try {
     localStorage.removeItem(LAST_GROUPS_STORAGE_KEY);
+    console.log("PostHog: Cleared stored groups");
   } catch (err) {
     console.error("Error clearing stored groups:", err);
   }

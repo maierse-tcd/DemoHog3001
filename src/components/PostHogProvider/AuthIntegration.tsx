@@ -1,8 +1,8 @@
 
 import { useEffect, useRef } from 'react';
 import { supabase } from '../../integrations/supabase/client';
-import { safeIdentify, safeReset } from '../../utils/posthog';
-import { slugifyGroupKey } from '../../utils/posthog/helpers';
+import { safeIdentify, safeReset, clearStoredGroups } from '../../utils/posthog';
+import { slugifyGroupKey, extractPriceValue } from '../../utils/posthog/helpers';
 import posthog from 'posthog-js';
 
 interface AuthIntegrationProps {
@@ -40,6 +40,7 @@ export const useAuthIntegration = ({
           if (email) {
             // Always reset before identifying to ensure clean state
             safeReset();
+            clearStoredGroups();
             
             // Give a small delay to ensure reset completes
             setTimeout(() => {
@@ -60,6 +61,13 @@ export const useAuthIntegration = ({
     if (!posthogLoadedRef.current) {
       console.warn('PostHog not loaded yet, will identify when loaded');
       return;
+    }
+
+    // Always check if this is a different email than the currently identified one
+    if (email === currentUserRef.current) {
+      console.log(`User already identified with this email: ${email}, forcing reset and re-identify`);
+      safeReset();
+      clearStoredGroups();
     }
 
     console.log(`Identifying user in PostHog with email: ${email}`);
