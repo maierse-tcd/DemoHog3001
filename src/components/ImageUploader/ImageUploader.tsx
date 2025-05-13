@@ -139,7 +139,15 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = accept;
-            input.onchange = (e) => handleFileChange(e as React.ChangeEvent<HTMLInputElement>);
+            input.onchange = (e) => {
+              // Fix: Handle the type conversion properly
+              if (e && e.target && e.target instanceof HTMLInputElement && e.target.files) {
+                const files = e.target.files;
+                if (files.length > 0) {
+                  validateAndProcessFile(files[0]);
+                }
+              }
+            };
             input.click();
           }}
         />
