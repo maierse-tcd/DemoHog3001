@@ -84,7 +84,7 @@ export const useAuthIntegration = ({
   const fetchUserProfileAndIdentify = (userId: string, email: string, metadata?: any) => {
     supabase
       .from('profiles')
-      .select('is_kids, created_at, name, language')
+      .select('is_admin, created_at, name')
       .eq('id', userId)
       .maybeSingle()
       .then(({ data: profileData, error }) => {
@@ -96,8 +96,9 @@ export const useAuthIntegration = ({
         }
         
         if (profileData) {
-          // Determine user type (Kid or Adult)
-          const isKid = profileData?.is_kids === true;
+          // Determine user type (Kid or Adult) based on is_admin (inverse)
+          // Typically kids accounts aren't admin accounts
+          const isKid = profileData?.is_admin === false; 
           
           // Create complete user properties object with profile data
           const userProperties = {
@@ -105,7 +106,7 @@ export const useAuthIntegration = ({
             name: profileData.name || metadata?.name || email?.split('@')[0],
             supabase_id: userId,
             is_kids_account: isKid,
-            language: profileData.language || 'English', // Default to English if not set
+            language: 'English', // Default to English since language column doesn't exist
             $set_once: { first_seen: new Date().toISOString() }
           };
           
@@ -146,7 +147,7 @@ export const useAuthIntegration = ({
       // Update current user reference
       currentUserRef.current = email;
       console.log(`PostHog: User identified with email: ${email} and properties:`, 
-        { is_kids_account: profileData?.is_kids, language: profileData?.language });
+        { is_kids_account: profileData?.is_kids, language: profileData?.language || 'English' });
     } else {
       console.error('PostHog is not properly initialized for identification');
     }

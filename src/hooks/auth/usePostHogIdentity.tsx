@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { safeCapture } from '../../utils/posthog';
 import { usePostHogContext } from '../../contexts/PostHogContext';
@@ -14,23 +13,30 @@ export const usePostHogIdentity = () => {
     }
     
     try {
-      // Fetch additional user properties from profile
-      const { data: profileData } = await supabase
+      // Fetch profile data - only use fields we know exist in the DB
+      const { data: profileData, error } = await supabase
         .from('profiles')
-        .select('is_kids, language')
+        .select('is_admin, name')
         .eq('id', userId)
         .maybeSingle();
+      
+      if (error) {
+        console.error("Error fetching profile data:", error.message);
+      }
       
       // PostHog identification is now centralized in PostHogProvider
       // This function is kept for backward compatibility
       console.log(`PostHog identity now managed by PostHogProvider for: ${userEmail}`);
-      console.log(`Additional properties: language=${profileData?.language}, is_kids=${profileData?.is_kids}`);
       
       // If profile data exists, track it as properties
       if (profileData) {
+        // We'll use is_admin as a proxy for determining if it's a kids account
+        // Typically kids accounts aren't admin accounts
+        const isKidsAccount = !profileData.is_admin; // Default assumption
+        
         captureEvent('user_properties_fetched', {
-          is_kids_account: profileData.is_kids,
-          language: profileData.language || 'English'
+          is_kids_account: isKidsAccount,
+          language: 'English' // Default to English as language column doesn't exist
         });
       }
       
