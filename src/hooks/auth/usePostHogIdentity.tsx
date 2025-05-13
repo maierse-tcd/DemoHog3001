@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { safeCapture } from '../../utils/posthog';
 import { usePostHogContext } from '../../contexts/PostHogContext';
@@ -13,10 +14,10 @@ export const usePostHogIdentity = () => {
     }
     
     try {
-      // Fetch profile data - only use fields we know exist in the DB
+      // Fetch profile data - now including the language field
       const { data: profileData, error } = await supabase
         .from('profiles')
-        .select('is_admin, name')
+        .select('is_admin, name, language')
         .eq('id', userId)
         .maybeSingle();
       
@@ -36,7 +37,7 @@ export const usePostHogIdentity = () => {
         
         captureEvent('user_properties_fetched', {
           is_kids_account: isKidsAccount,
-          language: 'English' // Default to English as language column doesn't exist
+          language: profileData.language || 'English' // Now we can use the actual language value
         });
       }
       

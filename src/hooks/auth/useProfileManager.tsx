@@ -25,7 +25,7 @@ export const useProfileManager = () => {
       const { data: userData } = await supabase.auth.getUser();
       const userEmail = userData?.user?.email || '';
       
-      // Fetch profile data from profiles table using id
+      // Fetch profile data from profiles table using id, now including language
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
@@ -51,7 +51,7 @@ export const useProfileManager = () => {
         name: profileInfo.displayName,
         email: userEmail,
         selectedPlanId: profileInfo.userMetadata.selectedPlanId || settings?.selectedPlanId || 'premium',
-        language: settings?.language || 'English',
+        language: profileData?.language || settings?.language || 'English',
         notifications: settings?.notifications || { email: true },
         isKidsAccount: profileInfo.userMetadata.isKidsAccount || settings?.isKidsAccount || false,
         playbackSettings: settings?.playbackSettings || {

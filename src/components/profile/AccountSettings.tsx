@@ -5,6 +5,7 @@ import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { Eye, EyeOff } from 'lucide-react';
 import { safeIdentify } from '../../utils/posthog';
 import { usePostHog } from 'posthog-js/react';
+import { supabase } from '../../integrations/supabase/client';
 
 interface AccountSettingsProps {
   settings: ProfileSettings;
@@ -53,6 +54,20 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
       // Update PostHog with language if it changed
       if (languageChanged && settings.email) {
         console.log(`Updating PostHog with language: ${language}`);
+        
+        // Also update the language in the profiles table in Supabase
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { error } = await supabase
+            .from('profiles')
+            .update({ language })
+            .eq('id', user.id);
+            
+          if (error) {
+            console.error('Error updating language in database:', error);
+          }
+        }
+        
         safeIdentify(settings.email, {
           language: language,
           is_kids_account: settings.isKidsAccount

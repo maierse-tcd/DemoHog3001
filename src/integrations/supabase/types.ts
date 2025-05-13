@@ -111,6 +111,7 @@ export type Database = {
           id: string
           is_admin: boolean | null
           is_kids: boolean | null
+          language: string | null
           name: string | null
           updated_at: string
         }
@@ -122,6 +123,7 @@ export type Database = {
           id: string
           is_admin?: boolean | null
           is_kids?: boolean | null
+          language?: string | null
           name?: string | null
           updated_at?: string
         }
@@ -133,6 +135,7 @@ export type Database = {
           id?: string
           is_admin?: boolean | null
           is_kids?: boolean | null
+          language?: string | null
           name?: string | null
           updated_at?: string
         }

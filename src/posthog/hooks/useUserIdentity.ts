@@ -18,10 +18,10 @@ export function useUserIdentity() {
     // If properties don't include language or is_kids_account, try to fetch from profile
     if (!properties?.language || properties?.is_kids_account === undefined) {
       try {
-        // Check if is_kids exists in the profiles table by trying to query it
+        // Get profile data including the new language column
         const { data: profileData, error } = await supabase
           .from('profiles')
-          .select('is_admin, name')
+          .select('is_admin, name, language')
           .eq('id', userId)
           .maybeSingle();
         
@@ -43,7 +43,7 @@ export function useUserIdentity() {
           const enhancedProperties = {
             ...properties,
             is_kids_account: isKids,
-            language: properties?.language || 'English' // Default to English if not provided
+            language: properties?.language || profileData.language || 'English'
           };
           
           safeIdentify(userId, enhancedProperties);

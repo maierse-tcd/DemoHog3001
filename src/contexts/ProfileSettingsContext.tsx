@@ -102,8 +102,8 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
                 name: profileData.name || prev.name,
                 email: profileData.email || prev.email,
                 isKidsAccount: !!profileData.is_kids,
-                // Keep local settings that aren't stored in the database
-                language: prev.language,
+                // Now use the language from the database if available
+                language: profileData.language || prev.language,
                 playbackSettings: prev.playbackSettings,
                 notifications: prev.notifications,
                 // Use the selectedPlanId from metadata if it exists, or keep the existing one
@@ -313,6 +313,7 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
         .update({
           name: updatedSettings.name,
           email: updatedSettings.email,
+          language: updatedSettings.language,
           // Note: We don't update is_kids here as it's handled separately
         })
         .eq('id', user.id);

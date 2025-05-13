@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { safeIdentify, safeReset, clearStoredGroups } from '../../utils/posthog';
@@ -84,7 +83,7 @@ export const useAuthIntegration = ({
   const fetchUserProfileAndIdentify = (userId: string, email: string, metadata?: any) => {
     supabase
       .from('profiles')
-      .select('is_admin, created_at, name')
+      .select('is_admin, created_at, name, language')
       .eq('id', userId)
       .maybeSingle()
       .then(({ data: profileData, error }) => {
@@ -106,7 +105,7 @@ export const useAuthIntegration = ({
             name: profileData.name || metadata?.name || email?.split('@')[0],
             supabase_id: userId,
             is_kids_account: isKid,
-            language: 'English', // Default to English since language column doesn't exist
+            language: profileData.language || 'English', // Now we use the actual language from DB
             $set_once: { first_seen: new Date().toISOString() }
           };
           
