@@ -5,11 +5,13 @@ import { Checkbox } from '../ui/checkbox';
 interface KidsAccountToggleProps {
   isKidsAccount: boolean;
   onToggle: (checked: boolean) => void;
+  disabled?: boolean;
 }
 
 export const KidsAccountToggle: React.FC<KidsAccountToggleProps> = ({
   isKidsAccount,
-  onToggle
+  onToggle,
+  disabled = false
 }) => {
   return (
     <div>
@@ -19,6 +21,7 @@ export const KidsAccountToggle: React.FC<KidsAccountToggleProps> = ({
           name="isKidsAccount" 
           checked={isKidsAccount}
           onCheckedChange={onToggle}
+          disabled={disabled}
           className="h-5 w-5 border border-netflix-gray" 
         />
         <label htmlFor="isKidsAccount" className="text-sm font-medium text-netflix-gray">

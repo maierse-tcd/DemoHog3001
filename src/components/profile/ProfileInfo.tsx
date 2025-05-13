@@ -3,8 +3,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { toast } from '../../hooks/use-toast';
 import { ProfileSettings } from '../../contexts/ProfileSettingsContext';
 import { supabase } from '../../integrations/supabase/client';
-import { safeIdentify } from '../../utils/posthog';
-import { usePostHogContext } from '../../contexts/PostHogContext';
 import { ProfileForm } from './ProfileForm';
 
 interface ProfileInfoProps {
@@ -14,14 +12,13 @@ interface ProfileInfoProps {
 
 export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettings }) => {
   const [isLoading, setIsLoading] = useState(false);
+  // Store local state for kids account that's only pushed to context on save
   const [isKidsAccount, setIsKidsAccount] = useState<boolean>(settings.isKidsAccount);
   const [selectedLanguage, setSelectedLanguage] = useState<string>(settings.language || 'English');
   const initialRenderRef = useRef(true);
   const updateInProgressRef = useRef(false);
   
-  // Use PostHog context
-  const { updateUserType } = usePostHogContext();
-
+  // Sync from settings when they change externally
   useEffect(() => {
     if (!initialRenderRef.current || settings.isKidsAccount !== isKidsAccount) {
       console.log(`Syncing kids account state from settings: ${settings.isKidsAccount}`);
@@ -38,34 +35,18 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
     }
   }, [settings.language]);
 
+  // Only update local state without triggering PostHog updates
   const handleKidsAccountChange = (checked: boolean) => {
     console.log(`Kids account checkbox changed to: ${checked}`);
     setIsKidsAccount(checked);
+    // We intentionally don't update settings here to prevent the loop
   };
 
   const handleLanguageChange = (value: string) => {
     console.log(`Language changed to: ${value}`);
     setSelectedLanguage(value);
+    // Similarly, don't update settings directly
   };
-
-  useEffect(() => {
-    // Skip on initial render
-    if (initialRenderRef.current) {
-      return;
-    }
-    
-    // Only update if value differs from settings
-    if (isKidsAccount !== settings.isKidsAccount) {
-      console.log(`Updating PostHog with new kids account status: ${isKidsAccount}`);
-      
-      // Use context method
-      try {
-        updateUserType(isKidsAccount);
-      } catch (err) {
-        console.error('Error updating PostHog user type:', err);
-      }
-    }
-  }, [isKidsAccount, settings.isKidsAccount, updateUserType]);
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,7 +93,7 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
         console.log('Kids account status unchanged, skipping update');
       }
       
-      // Get language from state - this ensures it's tracked properly
+      // Get language from state
       if (selectedLanguage !== settings.language) {
         console.log(`Language changed from ${settings.language} to ${selectedLanguage}`);
         changes.language = selectedLanguage;
@@ -132,15 +113,6 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
         if (error) throw error;
       }
 
-      if (email && (email !== settings.email || hasChanges)) {
-        // Update PostHog with all relevant properties when anything significant changes
-        safeIdentify(email, { 
-          name, 
-          is_kids_account: isKidsAccount,
-          language: selectedLanguage || settings.language || 'English'
-        });
-      }
-
       const settingsChanges: Partial<ProfileSettings> = {};
       let hasSettingsChanges = false;
 
@@ -157,13 +129,6 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
       if (isKidsAccount !== settings.isKidsAccount) {
         settingsChanges.isKidsAccount = isKidsAccount;
         hasSettingsChanges = true;
-        
-        // Use context for updating PostHog
-        try {
-          updateUserType(isKidsAccount);
-        } catch (err) {
-          console.error('Error updating PostHog user type:', err);
-        }
       }
       
       // Handle language changes in settings
@@ -174,6 +139,7 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
 
       if (hasSettingsChanges) {
         console.log('Updating settings context with changes:', settingsChanges);
+        // Now update the context after database save is successful
         updateSettings(settingsChanges);
       }
 

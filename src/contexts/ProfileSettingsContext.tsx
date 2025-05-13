@@ -109,18 +109,6 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
                 // Use the selectedPlanId from metadata if it exists, or keep the existing one
                 selectedPlanId: userMetadata?.selectedPlanId || prev.selectedPlanId,
               }));
-              
-              // Check if we need to update the PostHog group
-              const currentGroup = getLastIdentifiedGroup('user_type');
-              const newUserType = profileData.is_kids ? 'Kid' : 'Adult';
-              
-              // Only update if different from current group
-              if (!currentGroup || (currentGroup !== newUserType)) {
-                safeGroupIdentify('user_type', newUserType, {
-                  name: newUserType,
-                  date_joined: profileData.created_at || new Date().toISOString()
-                });
-              }
             }
           }
         } else {
@@ -171,7 +159,8 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
           }
           
           // Update other user-specific settings
-          if (newSettings.name !== undefined || newSettings.email !== undefined) {
+          if (newSettings.name !== undefined || newSettings.email !== undefined || 
+              newSettings.language !== undefined) {
             updateUserProfile(updated);
           }
           
@@ -280,15 +269,19 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
         } else {
           // Update PostHog group for user type
           const userType = isKids ? 'Kid' : 'Adult';
-          safeGroupIdentify('user_type', userType, {
-            name: userType,
-            update_time: new Date().toISOString()
-          });
           
-          toast({
-            title: "Account type updated",
-            description: `Your account is now set as a ${isKids ? 'kids' : 'adult'} account.`,
-          });
+          // Use a timeout to avoid PostHog operation during render
+          setTimeout(() => {
+            safeGroupIdentify('user_type', userType, {
+              name: userType,
+              update_time: new Date().toISOString()
+            });
+            
+            toast({
+              title: "Account type updated",
+              description: `Your account is now set as a ${isKids ? 'kids' : 'adult'} account.`,
+            });
+          }, 0);
         }
         
         // Clear debounce timer reference
