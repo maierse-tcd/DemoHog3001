@@ -29,6 +29,7 @@ export const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
   const isSelected = plan.id === selectedPlanId;
   
   const handleSelect = () => {
+    console.log(`SubscriptionPlan: Selected plan ${plan.id}, previously selected: ${selectedPlanId}`);
     onSelect(plan.id);
     
     // Trigger confetti when plan is selected

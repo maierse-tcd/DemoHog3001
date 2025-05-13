@@ -7,12 +7,14 @@ interface SubscriptionPlansGridProps {
   plans: Plan[];
   isLoading: boolean;
   onSelectPlan: (planId: string) => void;
+  selectedPlanId?: string | null;
 }
 
 export const SubscriptionPlansGrid: React.FC<SubscriptionPlansGridProps> = ({ 
   plans, 
   isLoading,
-  onSelectPlan 
+  onSelectPlan,
+  selectedPlanId = null
 }) => {
   if (isLoading) {
     return (
@@ -40,7 +42,7 @@ export const SubscriptionPlansGrid: React.FC<SubscriptionPlansGridProps> = ({
         <div key={plan.id} className="flex">
           <SubscriptionPlan
             plan={plan}
-            selectedPlanId={null}
+            selectedPlanId={selectedPlanId}
             onSelect={onSelectPlan}
           />
         </div>

@@ -5,10 +5,12 @@ import { AuthLayout } from '../components/auth/AuthLayout';
 import { SignUpForm } from '../components/auth/SignUpForm';
 import { PlanSelector } from '../components/auth/PlanSelector';
 import { supabase } from '../integrations/supabase/client';
+import { useToast } from '../hooks/use-toast';
 
 const SignUp = () => {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   // Check for existing session on component mount
   useEffect(() => {
@@ -24,6 +26,7 @@ const SignUp = () => {
   }, [navigate]);
   
   const handlePlanSelect = (planId: string) => {
+    console.log(`SignUp: Plan selected: ${planId}`);
     setSelectedPlanId(planId);
   };
 
