@@ -1,10 +1,13 @@
-
 /**
  * PostHog event tracking utilities
  */
 
 import { getPostHogInstance, isPostHogAvailable, isPostHogInstance } from './core';
 import posthog from 'posthog-js';
+
+// Keep track of feature flag reloads to prevent excessive calls
+let lastFeatureFlagReload = 0;
+const MIN_RELOAD_INTERVAL = 5000; // 5 seconds
 
 /**
  * Safely capture an event in PostHog
@@ -85,19 +88,31 @@ export const captureTestEvent = (
 };
 
 /**
- * Safely reload feature flags
+ * Safely reload feature flags with rate limiting
  */
-export const safeReloadFeatureFlags = async (): Promise<void> => {
+export const safeReloadFeatureFlags = async (): Promise<boolean> => {
+  const now = Date.now();
   const posthogInstance = getPostHogInstance();
+  
+  // Check if we've reloaded too recently
+  if (now - lastFeatureFlagReload < MIN_RELOAD_INTERVAL) {
+    console.log("Feature flag reload throttled - too soon since last reload");
+    return false;
+  }
   
   if (posthogInstance) {
     try {
+      lastFeatureFlagReload = now;
       await posthogInstance.reloadFeatureFlags();
       console.log("PostHog: Feature flags reloaded");
+      return true;
     } catch (err) {
       console.error("Error reloading feature flags:", err);
+      return false;
     }
   }
+  
+  return false;
 };
 
 /**
@@ -106,12 +121,15 @@ export const safeReloadFeatureFlags = async (): Promise<void> => {
 export const safeIsFeatureEnabled = (flag: string): boolean => {
   const posthogInstance = getPostHogInstance();
   
-  if (posthogInstance) {
-    try {
-      return !!posthogInstance.isFeatureEnabled(flag);
-    } catch (err) {
-      console.error(`Error checking feature flag ${flag}:`, err);
-    }
+  // No instance, return false as it's safer
+  if (!posthogInstance) {
+    return false;
   }
-  return false;
+  
+  try {
+    return !!posthogInstance.isFeatureEnabled(flag);
+  } catch (err) {
+    console.error(`Error checking feature flag ${flag}:`, err);
+    return false;
+  }
 };

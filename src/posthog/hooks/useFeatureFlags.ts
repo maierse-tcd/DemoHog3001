@@ -3,13 +3,21 @@
  * Hook for working with PostHog feature flags
  */
 
-import { useCallback } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import { safeIsFeatureEnabled, safeReloadFeatureFlags } from '../../utils/posthog';
 import { usePostHog } from 'posthog-js/react';
 import { useFeatureFlag } from '../../hooks/useFeatureFlag';
 
+// Minimum time between feature flag reloads (in ms)
+const MIN_RELOAD_INTERVAL = 30000; // 30 seconds
+
 export function useFeatureFlags() {
   const posthog = usePostHog();
+  const lastReloadTime = useRef<number>(0);
+  const reloadInProgress = useRef<boolean>(false);
+  
+  // State to track loaded flags
+  const [flagsLoaded, setFlagsLoaded] = useState<boolean>(false);
   
   /**
    * Check if a feature flag is enabled
@@ -19,11 +27,43 @@ export function useFeatureFlags() {
   }, []);
   
   /**
-   * Reload all feature flags from the server
+   * Reload all feature flags from the server with rate limiting
    */
   const reloadFeatureFlags = useCallback(async (): Promise<void> => {
-    await safeReloadFeatureFlags();
+    // Prevent concurrent reloads
+    if (reloadInProgress.current) {
+      console.log('Feature flag reload already in progress, skipping');
+      return;
+    }
+    
+    const now = Date.now();
+    // Check if we've reloaded recently
+    if (now - lastReloadTime.current < MIN_RELOAD_INTERVAL) {
+      console.log('Feature flag reload throttled, too soon since last reload');
+      return;
+    }
+    
+    try {
+      reloadInProgress.current = true;
+      lastReloadTime.current = now;
+      
+      console.log('Reloading PostHog feature flags');
+      await safeReloadFeatureFlags();
+      setFlagsLoaded(true);
+      console.log('PostHog feature flags reloaded successfully');
+    } catch (err) {
+      console.error('Error reloading feature flags:', err);
+    } finally {
+      reloadInProgress.current = false;
+    }
   }, []);
+  
+  // Load feature flags on component mount
+  useEffect(() => {
+    if (posthog && !flagsLoaded) {
+      reloadFeatureFlags();
+    }
+  }, [posthog, flagsLoaded, reloadFeatureFlags]);
   
   /**
    * Check if a set of feature flags meets certain criteria
@@ -57,6 +97,7 @@ export function useFeatureFlags() {
     isFeatureEnabled,
     reloadFeatureFlags,
     checkFeatureFlags,
-    useFlag
+    useFlag,
+    flagsLoaded
   };
 }

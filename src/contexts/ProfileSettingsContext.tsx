@@ -1,8 +1,9 @@
+
 import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { useAuth } from '../hooks/useAuth';
 import { toast } from '../hooks/use-toast';
-import { safeGroupIdentify, getLastIdentifiedGroup } from '../utils/posthogUtils';
+import { safeGroupIdentify, getLastIdentifiedGroup } from '../utils/posthog';
 
 export interface ProfileSettings {
   name: string;
@@ -49,22 +50,29 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
   const [settings, setSettings] = useState<ProfileSettings>(defaultSettings);
   const [siteAccessPassword, setSiteAccessPassword] = useState<string | null>(null);
   const auth = useAuth();
-  // Safely destructure auth to avoid errors if auth is not fully initialized
   const isLoggedIn = auth?.isLoggedIn || false;
   const user = auth?.user || null;
   
   // Track last known database kids account status
   const dbKidsAccountRef = useRef<boolean | null>(null);
+  
   // Track if an update is in progress
   const updateInProgressRef = useRef(false);
+  
   // Debounce timer for group updates
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Used to prevent loops and multiple updates
+  const pendingUpdatesRef = useRef<Partial<ProfileSettings>>({});
+  const initializedRef = useRef(false);
 
   // Load settings from database when authenticated or localStorage as fallback
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        if (isLoggedIn) {
+        if (!initializedRef.current && isLoggedIn) {
+          console.log("Loading profile settings from database");
+          
           // Fetch site-wide access password from profiles (if available)
           const { data, error } = await supabase
             .from('profiles')
@@ -102,24 +110,28 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
                 name: profileData.name || prev.name,
                 email: profileData.email || prev.email,
                 isKidsAccount: !!profileData.is_kids,
-                // Now use the language from the database if available
                 language: profileData.language || prev.language,
                 playbackSettings: prev.playbackSettings,
                 notifications: prev.notifications,
-                // Use the selectedPlanId from metadata if it exists, or keep the existing one
+                // Use the selectedPlanId from metadata if it exists
                 selectedPlanId: userMetadata?.selectedPlanId || prev.selectedPlanId,
               }));
+              
+              initializedRef.current = true;
             }
           }
-        } else {
+        } else if (!initializedRef.current) {
           // Fall back to localStorage for non-authenticated users
           const savedSettings = localStorage.getItem('profileSettings');
           if (savedSettings) {
             setSettings(JSON.parse(savedSettings));
           }
+          initializedRef.current = true;
         }
       } catch (error) {
         console.error("Error loading settings:", error);
+        // Still mark as initialized to prevent endless retries
+        initializedRef.current = true;
       }
     };
 
@@ -130,13 +142,19 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
   const updateSettings = async (newSettings: Partial<ProfileSettings>) => {
     // Prevent concurrent updates
     if (updateInProgressRef.current) {
-      console.log('Settings update already in progress, skipping');
+      console.log('Settings update already in progress, adding to pending updates');
+      // Store in pending updates
+      pendingUpdatesRef.current = {
+        ...pendingUpdatesRef.current,
+        ...newSettings
+      };
       return;
     }
     
     updateInProgressRef.current = true;
     
     try {
+      // Update local state immediately
       setSettings(prev => {
         const updated = { ...prev, ...newSettings };
         
@@ -145,111 +163,174 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
         
         // If authenticated and user has ID, also update database
         if (isLoggedIn && user?.id) {
-          // For site-wide access password, update it in the database
-          if (newSettings.accessPassword !== undefined) {
-            updateSiteAccessPassword(newSettings.accessPassword);
-          }
-          
-          // If kids account status is being updated, handle specially
+          // If kids account status is being updated, separate handling
           if (newSettings.isKidsAccount !== undefined && 
               newSettings.isKidsAccount !== prev.isKidsAccount) {
             
-            // Update in database and PostHog
-            updateIsKidsAccount(newSettings.isKidsAccount);
+            // Queue update to database and PostHog 
+            // This uses the debounce approach to avoid excessive API calls
+            queueKidsAccountUpdate(newSettings.isKidsAccount);
           }
           
           // Update other user-specific settings
           if (newSettings.name !== undefined || newSettings.email !== undefined || 
               newSettings.language !== undefined) {
-            updateUserProfile(updated);
+            queueUserProfileUpdate(updated);
           }
           
           // If selectedPlanId is being updated, update it in user metadata
           if (newSettings.selectedPlanId !== undefined &&
               newSettings.selectedPlanId !== prev.selectedPlanId) {
-            updateSelectedPlanInMetadata(newSettings.selectedPlanId);
+            queueSelectedPlanUpdate(newSettings.selectedPlanId);
+          }
+          
+          // For site-wide access password, special handling
+          if (newSettings.accessPassword !== undefined) {
+            queueAccessPasswordUpdate(newSettings.accessPassword);
           }
         }
         
         return updated;
       });
+      
+      // Process any pending updates from a queue
+      const pendingUpdates = pendingUpdatesRef.current;
+      pendingUpdatesRef.current = {};
+      
+      if (Object.keys(pendingUpdates).length > 0) {
+        // Wait briefly to ensure current update completes
+        setTimeout(() => {
+          updateSettings(pendingUpdates);
+        }, 500);
+      }
     } finally {
-      // Clear update flag after a short delay to prevent bouncing
+      // Clear update flag after a short delay
       setTimeout(() => {
         updateInProgressRef.current = false;
-      }, 500);
+      }, 300);
     }
   };
 
-  // Update the site-wide access password in the database
-  const updateSiteAccessPassword = async (password: string) => {
-    try {
-      if (!isLoggedIn || !user?.id) return;
-      
-      // Update the access_password in the user's profile
-      const { error } = await supabase
-        .from('profiles')
-        .update({ access_password: password })
-        .eq('id', user.id);
-      
-      if (error) {
-        console.error('Error updating access password:', error);
-        toast({
-          title: "Error saving password",
-          description: "There was a problem saving the access password.",
-          variant: "destructive"
-        });
-      } else {
-        setSiteAccessPassword(password);
-      }
-    } catch (error) {
-      console.error('Error in updateSiteAccessPassword:', error);
+  // Queue an update to the user profile - minimizes unnecessary database calls
+  const queueUserProfileUpdate = (updatedSettings: ProfileSettings) => {
+    if (!isLoggedIn || !user?.id) return;
+    
+    // Use a debounce to batch updates
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
     }
+    
+    debounceTimerRef.current = setTimeout(async () => {
+      try {
+        // Only update fields that we actually store in the profiles table
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            name: updatedSettings.name,
+            email: updatedSettings.email,
+            language: updatedSettings.language,
+            // Note: We don't update is_kids here as it's handled separately
+          })
+          .eq('id', user.id);
+        
+        if (error) {
+          console.error('Error updating user profile:', error);
+        }
+      } catch (error) {
+        console.error('Error in queueUserProfileUpdate:', error);
+      } finally {
+        debounceTimerRef.current = null;
+      }
+    }, 500); // Debounce for half a second
+  };
+
+  // Queue an update to the site-wide access password
+  const queueAccessPasswordUpdate = (password: string) => {
+    if (!isLoggedIn || !user?.id) return;
+    
+    // Use a debounce to avoid rapid updates
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    debounceTimerRef.current = setTimeout(async () => {
+      try {
+        // Update the access_password in the user's profile
+        const { error } = await supabase
+          .from('profiles')
+          .update({ access_password: password })
+          .eq('id', user.id);
+        
+        if (error) {
+          console.error('Error updating access password:', error);
+          toast({
+            title: "Error saving password",
+            description: "There was a problem saving the access password.",
+            variant: "destructive"
+          });
+        } else {
+          setSiteAccessPassword(password);
+        }
+      } catch (error) {
+        console.error('Error in queueAccessPasswordUpdate:', error);
+      } finally {
+        debounceTimerRef.current = null;
+      }
+    }, 500);
   };
   
-  // Update selectedPlanId in user metadata
-  const updateSelectedPlanInMetadata = async (planId: string) => {
-    try {
-      if (!isLoggedIn) return;
-      
-      const { error } = await supabase.auth.updateUser({
-        data: { selectedPlanId: planId }
-      });
-      
-      if (error) {
-        console.error('Error updating plan in user metadata:', error);
-        toast({
-          title: "Error saving plan",
-          description: "There was a problem saving your subscription plan.",
-          variant: "destructive"
-        });
-      } else {
-        console.log(`Subscription plan updated to ${planId} in user metadata`);
-      }
-    } catch (error) {
-      console.error('Error in updateSelectedPlanInMetadata:', error);
+  // Queue an update to the selectedPlanId in user metadata
+  const queueSelectedPlanUpdate = (planId: string) => {
+    if (!isLoggedIn) return;
+    
+    // Use a debounce to avoid rapid updates
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
     }
+    
+    debounceTimerRef.current = setTimeout(async () => {
+      try {
+        const { error } = await supabase.auth.updateUser({
+          data: { selectedPlanId: planId }
+        });
+        
+        if (error) {
+          console.error('Error updating plan in user metadata:', error);
+          toast({
+            title: "Error saving plan",
+            description: "There was a problem saving your subscription plan.",
+            variant: "destructive"
+          });
+        } else {
+          console.log(`Subscription plan updated to ${planId} in user metadata`);
+        }
+      } catch (error) {
+        console.error('Error in queueSelectedPlanUpdate:', error);
+      } finally {
+        debounceTimerRef.current = null;
+      }
+    }, 500);
   };
 
-  // Update is_kids flag in the database and PostHog group
-  const updateIsKidsAccount = async (isKids: boolean) => {
-    try {
-      if (!isLoggedIn || !user?.id) return;
+  // Queue an update to the is_kids flag in the database and PostHog group
+  const queueKidsAccountUpdate = (isKids: boolean) => {
+    if (!isLoggedIn || !user?.id) return;
+  
+    // Skip update if the value is the same as database state
+    if (isKids === dbKidsAccountRef.current) {
+      console.log('Kids account status unchanged, skipping update');
+      return;
+    }
+  
+    // Debounce the update to prevent rapid changes
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
     
-      // Skip update if the value is the same as database state
-      if (isKids === dbKidsAccountRef.current) {
-        console.log('Kids account status unchanged, skipping update');
-        return;
-      }
+    dbKidsAccountRef.current = isKids; // Update ref immediately
     
-      // Debounce the update to prevent rapid changes
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-      
-      dbKidsAccountRef.current = isKids; // Update ref immediately
-      
-      debounceTimerRef.current = setTimeout(async () => {
+    debounceTimerRef.current = setTimeout(async () => {
+      try {
         // Update the is_kids flag in the user's profile
         const { error } = await supabase
           .from('profiles')
@@ -267,11 +348,21 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
           // Reset the ref on error
           dbKidsAccountRef.current = null;
         } else {
+          console.log(`Database updated: is_kids = ${isKids}`);
+          
           // Update PostHog group for user type
           const userType = isKids ? 'Kid' : 'Adult';
           
           // Use a timeout to avoid PostHog operation during render
           setTimeout(() => {
+            // First check if we already have this group identified
+            const currentGroup = getLastIdentifiedGroup('user_type');
+            if (currentGroup === userType) {
+              console.log(`PostHog: User already identified as ${userType}, skipping group update`);
+              return;
+            }
+            
+            console.log(`Updating PostHog with new kids account status: ${isKids}`);
             safeGroupIdentify('user_type', userType, {
               name: userType,
               update_time: new Date().toISOString()
@@ -281,45 +372,20 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
               title: "Account type updated",
               description: `Your account is now set as a ${isKids ? 'kids' : 'adult'} account.`,
             });
-          }, 0);
+          }, 200);
         }
-        
+      } catch (error) {
+        console.error('Error in queueKidsAccountUpdate:', error);
+        // Reset the ref on error
+        dbKidsAccountRef.current = null;
+      } finally {
         // Clear debounce timer reference
         debounceTimerRef.current = null;
-      }, 300);
-      
-    } catch (error) {
-      console.error('Error in updateIsKidsAccount:', error);
-      // Reset the ref on error
-      dbKidsAccountRef.current = null;
-    }
-  };
-
-  // Update user profile in the database
-  const updateUserProfile = async (updatedSettings: ProfileSettings) => {
-    try {
-      if (!isLoggedIn || !user?.id) return;
-      
-      // Only update fields that we actually store in the profiles table
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          name: updatedSettings.name,
-          email: updatedSettings.email,
-          language: updatedSettings.language,
-          // Note: We don't update is_kids here as it's handled separately
-        })
-        .eq('id', user.id);
-      
-      if (error) {
-        console.error('Error updating user profile:', error);
       }
-    } catch (error) {
-      console.error('Error in updateUserProfile:', error);
-    }
+    }, 1000); // Longer debounce for kids account changes
   };
 
-  // Update selected plan
+  // Update selected plan - public facing method
   const updateSelectedPlan = (planId: string) => {
     updateSettings({ selectedPlanId: planId });
   };

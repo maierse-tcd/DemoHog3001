@@ -1,78 +1,89 @@
 
-import React from 'react';
+import React, { forwardRef } from 'react';
+import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 import { KidsAccountToggle } from './KidsAccountToggle';
 import { LanguageSelector } from './LanguageSelector';
-import { ProfileButtons } from './ProfileButtons';
 import { ProfileSettings } from '../../contexts/ProfileSettingsContext';
 
 interface ProfileFormProps {
   settings: ProfileSettings;
   isLoading: boolean;
-  isKidsAccount: boolean;
-  selectedLanguage: string;
   handleKidsAccountChange: (checked: boolean) => void;
   handleLanguageChange: (value: string) => void;
-  handleSubmit: (e: React.FormEvent) => Promise<void>;
+  handleNameChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleEmailChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleSubmit: (e: React.FormEvent) => void;
 }
 
-export const ProfileForm: React.FC<ProfileFormProps> = ({
+export const ProfileForm = forwardRef<HTMLFormElement, ProfileFormProps>(({
   settings,
   isLoading,
-  isKidsAccount,
-  selectedLanguage,
   handleKidsAccountChange,
   handleLanguageChange,
+  handleNameChange,
+  handleEmailChange,
   handleSubmit
-}) => {
+}, ref) => {
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <Label className="block text-sm font-medium text-netflix-gray mb-1">Name</Label>
-        <Input 
-          type="text" 
-          name="name"
-          defaultValue={settings.name} 
-          className="w-full bg-netflix-black border border-netflix-gray rounded px-3 py-2" 
-        />
+    <form ref={ref} onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-4">
+        <div>
+          <label htmlFor="name" className="block text-sm font-medium text-netflix-gray">
+            Name
+          </label>
+          <Input
+            id="name"
+            name="name"
+            value={settings.name}
+            onChange={handleNameChange}
+            className="mt-1 block w-full"
+            disabled={isLoading}
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-netflix-gray">
+            Email
+          </label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            value={settings.email}
+            onChange={handleEmailChange}
+            className="mt-1 block w-full"
+            disabled={isLoading}
+          />
+        </div>
+        
+        <div>
+          <LanguageSelector 
+            selectedLanguage={settings.language}
+            onLanguageChange={handleLanguageChange}
+            disabled={isLoading}
+          />
+        </div>
+        
+        <div>
+          <KidsAccountToggle 
+            isKidsAccount={settings.isKidsAccount}
+            onToggle={handleKidsAccountChange} 
+            disabled={isLoading}
+            immediate={false} // Make sure updates only happen on save
+          />
+        </div>
       </div>
       
-      <div>
-        <Label className="block text-sm font-medium text-netflix-gray mb-1">Email</Label>
-        <Input 
-          type="email" 
-          name="email"
-          defaultValue={settings.email} 
-          className="w-full bg-netflix-black border border-netflix-gray rounded px-3 py-2" 
-        />
-      </div>
-      
-      <LanguageSelector 
-        selectedLanguage={selectedLanguage}
-        onLanguageChange={handleLanguageChange}
-      />
-      
-      <div>
-        <Label className="block text-sm font-medium text-netflix-gray mb-1">Password</Label>
-        <Input 
-          type="password" 
-          defaultValue="********" 
-          disabled
-          className="w-full bg-netflix-black border border-netflix-gray rounded px-3 py-2 opacity-50" 
-        />
-        <p className="text-sm text-netflix-gray mt-1">To change your password, use the "Reset Password" option</p>
-      </div>
-      
-      <KidsAccountToggle 
-        isKidsAccount={isKidsAccount}
-        onToggle={handleKidsAccountChange}
-      />
-      
-      <ProfileButtons 
-        isLoading={isLoading} 
-        email={settings.email}
-      />
+      <Button 
+        type="submit" 
+        disabled={isLoading}
+        className="bg-netflix-red hover:bg-netflix-red-dark"
+      >
+        {isLoading ? 'Saving...' : 'Save Changes'}
+      </Button>
     </form>
   );
-};
+});
+
+ProfileForm.displayName = 'ProfileForm';

@@ -12,59 +12,50 @@ interface ProfileInfoProps {
 
 export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettings }) => {
   const [isLoading, setIsLoading] = useState(false);
-  // Store local state for kids account that's only pushed to context on save
-  const [isKidsAccount, setIsKidsAccount] = useState<boolean>(settings.isKidsAccount);
-  const [selectedLanguage, setSelectedLanguage] = useState<string>(settings.language || 'English');
+  // Store local state for form fields
+  const [localKidsAccount, setLocalKidsAccount] = useState<boolean>(settings.isKidsAccount);
+  const [localLanguage, setLocalLanguage] = useState<string>(settings.language || 'English');
+  const [localName, setLocalName] = useState<string>(settings.name || '');
+  const [localEmail, setLocalEmail] = useState<string>(settings.email || '');
+  
   const initialRenderRef = useRef(true);
-  const updateInProgressRef = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
   
   // Sync from settings when they change externally
   useEffect(() => {
-    if (!initialRenderRef.current || settings.isKidsAccount !== isKidsAccount) {
-      console.log(`Syncing kids account state from settings: ${settings.isKidsAccount}`);
-      setIsKidsAccount(settings.isKidsAccount);
+    if (!initialRenderRef.current) {
+      setLocalKidsAccount(settings.isKidsAccount);
+      setLocalLanguage(settings.language || 'English');
+      setLocalName(settings.name || '');
+      setLocalEmail(settings.email || '');
     }
     initialRenderRef.current = false;
-  }, [settings.isKidsAccount, isKidsAccount]);
-
-  // Sync language from settings
-  useEffect(() => {
-    if (settings.language !== selectedLanguage) {
-      console.log(`Syncing language from settings: ${settings.language}`);
-      setSelectedLanguage(settings.language || 'English');
-    }
-  }, [settings.language]);
+  }, [settings]);
 
   // Only update local state without triggering PostHog updates
   const handleKidsAccountChange = (checked: boolean) => {
-    console.log(`Kids account checkbox changed to: ${checked}`);
-    setIsKidsAccount(checked);
-    // We intentionally don't update settings here to prevent the loop
+    setLocalKidsAccount(checked);
+    // We don't update settings here to prevent PostHog updates until Save is clicked
   };
 
   const handleLanguageChange = (value: string) => {
-    console.log(`Language changed to: ${value}`);
-    setSelectedLanguage(value);
+    setLocalLanguage(value);
     // Similarly, don't update settings directly
+  };
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalName(e.target.value);
+  };
+  
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalEmail(e.target.value);
   };
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Prevent concurrent updates
-    if (updateInProgressRef.current) {
-      console.log('Update already in progress, skipping');
-      return;
-    }
-    
-    updateInProgressRef.current = true;
     setIsLoading(true);
 
     try {
-      const formData = new FormData(e.target as HTMLFormElement);
-      const name = formData.get('name') as string;
-      const email = formData.get('email') as string;
-      
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
@@ -75,31 +66,26 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
       const changes: Record<string, any> = {};
       let hasChanges = false;
 
-      if (name !== settings.name) {
-        changes.name = name;
+      if (localName !== settings.name) {
+        changes.name = localName;
         hasChanges = true;
       }
 
-      if (email !== settings.email) {
-        changes.email = email;
+      if (localEmail !== settings.email) {
+        changes.email = localEmail;
         hasChanges = true;
       }
 
-      if (isKidsAccount !== settings.isKidsAccount) {
-        console.log(`Kids account changed from ${settings.isKidsAccount} to ${isKidsAccount}`);
-        changes.is_kids = isKidsAccount;
+      if (localKidsAccount !== settings.isKidsAccount) {
+        console.log(`Kids account changed from ${settings.isKidsAccount} to ${localKidsAccount}`);
+        changes.is_kids = localKidsAccount;
         hasChanges = true;
-      } else {
-        console.log('Kids account status unchanged, skipping update');
       }
       
-      // Get language from state
-      if (selectedLanguage !== settings.language) {
-        console.log(`Language changed from ${settings.language} to ${selectedLanguage}`);
-        changes.language = selectedLanguage;
+      if (localLanguage !== settings.language) {
+        console.log(`Language changed from ${settings.language} to ${localLanguage}`);
+        changes.language = localLanguage;
         hasChanges = true;
-      } else {
-        console.log('Language unchanged, skipping update');
       }
 
       if (hasChanges) {
@@ -111,42 +97,39 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
           .eq('id', user.id);
 
         if (error) throw error;
-      }
+        
+        // Now update the context with all changes
+        const settingsChanges: Partial<ProfileSettings> = {};
+        
+        if (localName !== settings.name) {
+          settingsChanges.name = localName;
+        }
+        
+        if (localEmail !== settings.email) {
+          settingsChanges.email = localEmail;
+        }
+        
+        if (localKidsAccount !== settings.isKidsAccount) {
+          settingsChanges.isKidsAccount = localKidsAccount;
+        }
+        
+        if (localLanguage !== settings.language) {
+          settingsChanges.language = localLanguage;
+        }
 
-      const settingsChanges: Partial<ProfileSettings> = {};
-      let hasSettingsChanges = false;
-
-      if (name !== settings.name) {
-        settingsChanges.name = name;
-        hasSettingsChanges = true;
-      }
-      
-      if (email !== settings.email) {
-        settingsChanges.email = email;
-        hasSettingsChanges = true;
-      }
-      
-      if (isKidsAccount !== settings.isKidsAccount) {
-        settingsChanges.isKidsAccount = isKidsAccount;
-        hasSettingsChanges = true;
-      }
-      
-      // Handle language changes in settings
-      if (selectedLanguage !== settings.language) {
-        settingsChanges.language = selectedLanguage;
-        hasSettingsChanges = true;
-      }
-
-      if (hasSettingsChanges) {
         console.log('Updating settings context with changes:', settingsChanges);
-        // Now update the context after database save is successful
         updateSettings(settingsChanges);
-      }
 
-      toast({
-        title: 'Profile updated',
-        description: 'Your profile information has been saved',
-      });
+        toast({
+          title: 'Profile updated',
+          description: 'Your profile information has been saved',
+        });
+      } else {
+        toast({
+          title: 'No changes',
+          description: 'No changes were made to your profile',
+        });
+      }
     } catch (error: any) {
       toast({
         title: 'Update failed',
@@ -156,7 +139,6 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
       console.error('Error updating profile:', error);
     } finally {
       setIsLoading(false);
-      updateInProgressRef.current = false;
     }
   };
 
@@ -164,12 +146,19 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
     <div className="bg-netflix-darkgray rounded-lg p-6">
       <h2 className="text-2xl font-bold mb-6">Profile Settings</h2>
       <ProfileForm
-        settings={settings}
+        ref={formRef}
+        settings={{
+          ...settings,
+          name: localName,
+          email: localEmail,
+          isKidsAccount: localKidsAccount,
+          language: localLanguage,
+        }}
         isLoading={isLoading}
-        isKidsAccount={isKidsAccount}
-        selectedLanguage={selectedLanguage}
         handleKidsAccountChange={handleKidsAccountChange}
         handleLanguageChange={handleLanguageChange}
+        handleNameChange={handleNameChange}
+        handleEmailChange={handleEmailChange}
         handleSubmit={handleProfileSave}
       />
     </div>
