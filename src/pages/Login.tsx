@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useToast } from '../hooks/use-toast';
@@ -5,6 +6,7 @@ import { useProfileSettings } from '../contexts/ProfileSettingsContext';
 import { supabase } from '../integrations/supabase/client';
 import { AuthLayout } from '../components/auth/AuthLayout';
 import { LoginForm } from '../components/auth/LoginForm';
+import { safeReset } from '../utils/posthog';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -30,6 +32,8 @@ const Login = () => {
       }
     };
     
+    // Reset PostHog identity before checking session
+    safeReset();
     checkSession();
   }, [navigate]);
 

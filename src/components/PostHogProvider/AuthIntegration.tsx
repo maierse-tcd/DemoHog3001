@@ -1,7 +1,7 @@
 
 import { useEffect, useRef } from 'react';
 import { supabase } from '../../integrations/supabase/client';
-import { safeIdentify } from '../../utils/posthog';
+import { safeIdentify, safeReset } from '../../utils/posthog';
 import { slugifyGroupKey } from '../../utils/posthog/helpers';
 import posthog from 'posthog-js';
 
@@ -38,7 +38,13 @@ export const useAuthIntegration = ({
           const email = user.email;
           
           if (email) {
-            identifyUser(email, user.id, user.user_metadata);
+            // Always reset before identifying to ensure clean state
+            safeReset();
+            
+            // Give a small delay to ensure reset completes
+            setTimeout(() => {
+              identifyUser(email, user.id, user.user_metadata);
+            }, 100);
           } else {
             console.warn('User has no email, cannot identify');
           }
@@ -56,11 +62,6 @@ export const useAuthIntegration = ({
       return;
     }
 
-    if (email === currentUserRef.current) {
-      console.log('User already identified with this email, skipping');
-      return;
-    }
-
     console.log(`Identifying user in PostHog with email: ${email}`);
     
     try {
@@ -73,6 +74,9 @@ export const useAuthIntegration = ({
           supabase_id: userId,
           $set_once: { first_seen: new Date().toISOString() }
         });
+        
+        // Force reload feature flags after identification
+        posthog.reloadFeatureFlags();
         
         // Update current user reference
         currentUserRef.current = email;

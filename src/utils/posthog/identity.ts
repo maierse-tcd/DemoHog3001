@@ -8,6 +8,7 @@ import posthog from 'posthog-js';
 
 // Local storage keys for caching
 const LAST_GROUPS_STORAGE_KEY = 'posthog_last_groups';
+const POSTHOG_LAST_ID_KEY = 'posthog_last_identified_user';
 
 /**
  * Safely identify a user in PostHog
@@ -22,11 +23,21 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
       // Only log if different
       if (currentId !== distinctId) {
         console.log(`Current PostHog distinct ID: ${currentId}, identifying as: ${distinctId}`);
+        
+        // Store the last identified user in localStorage for debugging
+        try {
+          localStorage.setItem(POSTHOG_LAST_ID_KEY, distinctId);
+        } catch (err) {
+          // Ignore storage errors
+        }
       }
       
       // Identify the user
       posthog.identify(distinctId, properties);
       console.log(`PostHog: User identified with ID: ${distinctId}`);
+      
+      // Force reload feature flags after identification
+      posthog.reloadFeatureFlags();
     } catch (err) {
       console.error("PostHog identify error:", err);
     }
@@ -41,11 +52,21 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
         // Only log if different
         if (currentId !== distinctId) {
           console.log(`Current PostHog distinct ID: ${currentId}, identifying as: ${distinctId}`);
+          
+          // Store the last identified user in localStorage for debugging
+          try {
+            localStorage.setItem(POSTHOG_LAST_ID_KEY, distinctId);
+          } catch (err) {
+            // Ignore storage errors
+          }
         }
         
         // Identify the user
         instance.identify(distinctId, properties);
         console.log(`PostHog: User identified with ID: ${distinctId}`);
+        
+        // Force reload feature flags
+        instance.reloadFeatureFlags();
       } else {
         console.warn("PostHog instance does not have required methods");
       }
@@ -75,6 +96,13 @@ export const safeGetDistinctId = (): string | null => {
     }
   }
   
+  // If PostHog instance is not available, try to get from localStorage for debugging
+  try {
+    return localStorage.getItem(POSTHOG_LAST_ID_KEY);
+  } catch (err) {
+    // Ignore storage errors
+  }
+  
   return null;
 };
 
@@ -88,8 +116,16 @@ export const safeReset = (): void => {
     try {
       console.log("PostHog: Resetting user identity");
       posthogInstance.reset();
-      // Also clear stored groups
+      
+      // Clear stored groups
       clearStoredGroups();
+      
+      // Clear last identified user
+      try {
+        localStorage.removeItem(POSTHOG_LAST_ID_KEY);
+      } catch (err) {
+        // Ignore storage errors
+      }
     } catch (err) {
       console.error("PostHog reset error:", err);
     }

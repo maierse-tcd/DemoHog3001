@@ -7,6 +7,7 @@ import { SearchBar } from './SearchBar';
 import { useAuth } from '../hooks/useAuth';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
 import { ProfileAvatar } from './ProfileAvatar';
+import { AdminNavItems } from './AdminNavItems';
 
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -16,12 +17,6 @@ export const Navbar = () => {
   const isDarkTheme = location.pathname !== '/login' && location.pathname !== '/signup';
   const isAdmin = useFeatureFlag('is_admin');
   const hidePlan = useFeatureFlag('hide_plan');
-  
-  // Check if the user has a posthog.com email
-  const isPosthogEmail = userEmail && userEmail.toLowerCase().endsWith('@posthog.com');
-  
-  // Determine if we should show the Admin menu item (if they are logged in AND have the isAdmin flag OR posthog.com email)
-  const showAdminMenuItem = isLoggedIn && (isAdmin || isPosthogEmail);
   
   // Determine if we should show the Plans menu item
   // Only hide plans when the user is logged in AND the hidePlan flag is true
@@ -93,14 +88,8 @@ export const Navbar = () => {
               </Link>
             )}
             
-            {showAdminMenuItem && (
-              <Link 
-                to="/image-manager" 
-                className={`text-sm font-medium flex items-center gap-2 ${location.pathname === '/image-manager' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
-              >
-                Admin
-              </Link>
-            )}
+            {/* Admin link is now handled by the AdminNavItems component */}
+            <AdminNavItems />
           </div>
           
           {/* Mobile Menu Button */}
@@ -176,16 +165,8 @@ export const Navbar = () => {
             </Link>
           )}
           
-          {/* Only show Admin link when showAdminMenuItem is true */}
-          {showAdminMenuItem && (
-            <Link 
-              to="/image-manager" 
-              className={`flex items-center gap-2 px-4 py-2 ${location.pathname === '/image-manager' ? 'text-netflix-white' : 'text-netflix-gray'}`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Admin
-            </Link>
-          )}
+          {/* Admin NavItems component will handle visibility rules */}
+          <AdminNavItems />
         </div>
       )}
     </nav>
