@@ -1,9 +1,10 @@
-
 import React, { useState } from 'react';
 import { toast } from '../../hooks/use-toast';
 import { ProfileSettings } from '../../contexts/ProfileSettingsContext';
 import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { Eye, EyeOff } from 'lucide-react';
+import { safeIdentify } from '../../utils/posthog';
+import { usePostHog } from 'posthog-js/react';
 
 interface AccountSettingsProps {
   settings: ProfileSettings;
@@ -17,6 +18,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
   const isAdmin = useFeatureFlagEnabled('is_admin');
   const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const posthog = usePostHog();
   
   const handleSettingsSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,8 +26,12 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
     
     const formData = new FormData(e.target as HTMLFormElement);
     
+    // Get the new language setting
+    const language = formData.get('language') as string;
+    const languageChanged = language !== settings.language;
+    
     const updatedSettings: Partial<ProfileSettings> = {
-      language: formData.get('language') as string,
+      language: language,
       playbackSettings: {
         autoplayNext: formData.get('autoplayNext') === 'on',
         autoplayPreviews: formData.get('autoplayPreviews') === 'on',
@@ -43,6 +49,23 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
     
     try {
       await updateSettings(updatedSettings);
+      
+      // Update PostHog with language if it changed
+      if (languageChanged && settings.email) {
+        console.log(`Updating PostHog with language: ${language}`);
+        safeIdentify(settings.email, {
+          language: language,
+          is_kids_account: settings.isKidsAccount
+        });
+        
+        // Also use direct PostHog call as backup
+        if (posthog) {
+          posthog.capture('language_changed', {
+            previous_language: settings.language || 'English',
+            new_language: language
+          });
+        }
+      }
       
       toast({
         title: 'Settings updated',

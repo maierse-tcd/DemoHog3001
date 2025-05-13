@@ -73,49 +73,44 @@ export const useAuthIntegration = ({
     console.log(`Identifying user in PostHog with email: ${email}`);
     
     try {
-      // Initialize PostHog directly to ensure it's available
-      if (typeof posthog !== 'undefined' && posthog.identify) {
-        // Use email as the primary identifier (more consistent across platforms)
-        posthog.identify(email, {
-          email: email,
-          name: metadata?.name || email?.split('@')[0],
-          supabase_id: userId,
-          $set_once: { first_seen: new Date().toISOString() }
-        });
-        
-        // Force reload feature flags after identification
-        posthog.reloadFeatureFlags();
-        
-        // Update current user reference
-        currentUserRef.current = email;
-        console.log(`PostHog: User identified with email: ${email}`);
-        
-        // Fetch user profile to get is_kids status and subscription info
-        fetchUserProfile(userId, metadata);
-      } else {
-        console.error('PostHog is not properly initialized for identification');
-      }
+      // Fetch user profile to get additional properties before identifying
+      fetchUserProfileAndIdentify(userId, email, metadata);
     } catch (err) {
       console.error('Error identifying user in PostHog:', err);
     }
   };
   
-  // Fetch user profile and identify groups
-  const fetchUserProfile = (userId: string, metadata?: any) => {
+  // Fetch user profile and identify with all properties
+  const fetchUserProfileAndIdentify = (userId: string, email: string, metadata?: any) => {
     supabase
       .from('profiles')
-      .select('is_kids, created_at')
+      .select('is_kids, created_at, name, language')
       .eq('id', userId)
       .maybeSingle()
       .then(({ data: profileData, error }) => {
         if (error) {
           console.error('Error fetching profile data:', error);
+          // Fall back to basic identification if profile fetch fails
+          identifyUserInPostHog(email, userId, metadata, { is_kids: false });
           return;
         }
         
         if (profileData) {
           // Determine user type (Kid or Adult)
           const isKid = profileData?.is_kids === true;
+          
+          // Create complete user properties object with profile data
+          const userProperties = {
+            email: email,
+            name: profileData.name || metadata?.name || email?.split('@')[0],
+            supabase_id: userId,
+            is_kids_account: isKid,
+            language: profileData.language || 'English', // Default to English if not set
+            $set_once: { first_seen: new Date().toISOString() }
+          };
+          
+          // Identify user with complete properties
+          identifyUserInPostHog(email, userId, metadata, userProperties);
           
           // Update user type group
           updateUserType(isKid);
@@ -125,9 +120,36 @@ export const useAuthIntegration = ({
             fetchAndIdentifySubscriptionGroup(metadata.selectedPlanId);
           }
         } else {
-          console.log('No profile data found for user, skipping group identification');
+          console.log('No profile data found for user, using default values');
+          identifyUserInPostHog(email, userId, metadata, { is_kids: false });
         }
       });
+  };
+  
+  // Core function to identify user in PostHog with given properties
+  const identifyUserInPostHog = (email: string, userId: string, metadata?: any, profileData?: any) => {
+    // Initialize PostHog directly to ensure it's available
+    if (typeof posthog !== 'undefined' && posthog.identify) {
+      // Use email as the primary identifier (more consistent across platforms)
+      posthog.identify(email, {
+        email: email,
+        name: profileData?.name || metadata?.name || email?.split('@')[0],
+        supabase_id: userId,
+        is_kids_account: profileData?.is_kids || false,
+        language: profileData?.language || 'English',
+        $set_once: { first_seen: new Date().toISOString() }
+      });
+      
+      // Force reload feature flags after identification
+      posthog.reloadFeatureFlags();
+      
+      // Update current user reference
+      currentUserRef.current = email;
+      console.log(`PostHog: User identified with email: ${email} and properties:`, 
+        { is_kids_account: profileData?.is_kids, language: profileData?.language });
+    } else {
+      console.error('PostHog is not properly initialized for identification');
+    }
   };
   
   // Fetch subscription details and identify subscription group

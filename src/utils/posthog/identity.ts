@@ -37,9 +37,17 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
         }
       }
       
+      // Ensure is_kids_account and language are included in properties if available
+      const finalProperties = {
+        ...(properties || {}),
+        // Make sure to prioritize any provided values but include defaults if missing
+        is_kids_account: properties?.is_kids_account !== undefined ? properties.is_kids_account : properties?.isKidsAccount,
+        language: properties?.language || 'English' // Default to English if not provided
+      };
+      
       // Identify the user
-      posthog.identify(distinctId, properties);
-      console.log(`PostHog: User identified with ID: ${distinctId}`);
+      posthog.identify(distinctId, finalProperties);
+      console.log(`PostHog: User identified with ID: ${distinctId} and properties:`, finalProperties);
       
       // Force reload feature flags after identification
       posthog.reloadFeatureFlags();
@@ -66,9 +74,17 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
           }
         }
         
+        // Ensure is_kids_account and language are included in properties if available
+        const finalProperties = {
+          ...(properties || {}),
+          // Make sure to prioritize any provided values but include defaults if missing
+          is_kids_account: properties?.is_kids_account !== undefined ? properties.is_kids_account : properties?.isKidsAccount,
+          language: properties?.language || 'English' // Default to English if not provided
+        };
+        
         // Identify the user
-        instance.identify(distinctId, properties);
-        console.log(`PostHog: User identified with ID: ${distinctId}`);
+        instance.identify(distinctId, finalProperties);
+        console.log(`PostHog: User identified with ID: ${distinctId} and properties:`, finalProperties);
         
         // Force reload feature flags
         instance.reloadFeatureFlags();

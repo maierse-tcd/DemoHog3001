@@ -5,16 +5,49 @@
 
 import { useCallback } from 'react';
 import { safeIdentify, safeGetDistinctId, safeReset } from '../../utils/posthog';
+import { supabase } from '../../integrations/supabase/client';
 
 export function useUserIdentity() {
   /**
-   * Identify a user in PostHog
+   * Identify a user in PostHog with full profile properties
    */
-  const identifyUser = useCallback((
+  const identifyUser = useCallback(async (
     userId: string, 
     properties?: Record<string, any>
-  ): void => {
-    safeIdentify(userId, properties);
+  ): Promise<void> => {
+    // If properties don't include language or is_kids_account, try to fetch from profile
+    if (!properties?.language || properties?.is_kids_account === undefined) {
+      try {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('is_kids, language')
+          .eq('id', userId)
+          .maybeSingle();
+        
+        if (profileData) {
+          // Merge profile data with provided properties
+          const enhancedProperties = {
+            ...properties,
+            is_kids_account: properties?.is_kids_account !== undefined ? 
+              properties.is_kids_account : 
+              profileData.is_kids,
+            language: properties?.language || profileData.language || 'English'
+          };
+          
+          safeIdentify(userId, enhancedProperties);
+        } else {
+          // Fall back to just using the provided properties
+          safeIdentify(userId, properties);
+        }
+      } catch (err) {
+        console.error("Error fetching profile for PostHog identification:", err);
+        // Fall back to basic identification
+        safeIdentify(userId, properties);
+      }
+    } else {
+      // If all properties are provided, just identify directly
+      safeIdentify(userId, properties);
+    }
   }, []);
   
   /**

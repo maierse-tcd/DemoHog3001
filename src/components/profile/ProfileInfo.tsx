@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { toast } from '../../hooks/use-toast';
 import { ProfileSettings } from '../../contexts/ProfileSettingsContext';
@@ -96,6 +97,13 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
       } else {
         console.log('Kids account status unchanged, skipping update');
       }
+      
+      // Get language from form - this will ensure it's tracked in PostHog
+      const language = formData.get('language') as string;
+      if (language !== settings.language) {
+        changes.language = language;
+        hasChanges = true;
+      }
 
       if (hasChanges) {
         changes.updated_at = new Date().toISOString();
@@ -108,8 +116,13 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
         if (error) throw error;
       }
 
-      if (email && email !== settings.email) {
-        safeIdentify(email, { name });
+      if (email && (email !== settings.email || hasChanges)) {
+        // Update PostHog with all relevant properties when anything significant changes
+        safeIdentify(email, { 
+          name, 
+          is_kids_account: isKidsAccount,
+          language: language || settings.language || 'English'
+        });
       }
 
       const settingsChanges: Partial<ProfileSettings> = {};
@@ -135,6 +148,12 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
         } catch (err) {
           console.error('Error updating PostHog user type:', err);
         }
+      }
+      
+      // Handle language changes in settings
+      if (language !== settings.language) {
+        settingsChanges.language = language;
+        hasSettingsChanges = true;
       }
 
       if (hasSettingsChanges) {
@@ -181,6 +200,26 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
             className="w-full bg-netflix-black border border-netflix-gray rounded px-3 py-2" 
           />
         </div>
+        
+        {/* Language selection dropdown */}
+        <div>
+          <label className="block text-sm font-medium text-netflix-gray mb-1">Language</label>
+          <select
+            name="language"
+            defaultValue={settings.language || 'English'}
+            className="w-full bg-netflix-black border border-netflix-gray rounded px-3 py-2"
+          >
+            <option value="English">English</option>
+            <option value="Spanish">Spanish</option>
+            <option value="French">French</option>
+            <option value="German">German</option>
+            <option value="Italian">Italian</option>
+            <option value="Portuguese">Portuguese</option>
+            <option value="Japanese">Japanese</option>
+            <option value="Chinese">Chinese</option>
+          </select>
+        </div>
+        
         <div>
           <label className="block text-sm font-medium text-netflix-gray mb-1">Password</label>
           <input 

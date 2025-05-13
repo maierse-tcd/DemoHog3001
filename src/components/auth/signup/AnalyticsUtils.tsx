@@ -9,7 +9,8 @@ export const trackSignup = (
   planId: string,
   planName: string,
   planCost: number,
-  isKidsAccount: boolean
+  isKidsAccount: boolean,
+  language: string = 'English'
 ): void => {
   const signupDate = new Date().toISOString();
   
@@ -21,6 +22,7 @@ export const trackSignup = (
     plan_type: planName,
     plan_cost: planCost,
     is_kids_account: isKidsAccount || false,
+    language: language,
     signup_date: signupDate
   });
 };
