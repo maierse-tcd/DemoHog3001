@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { Navbar } from '../components/Navbar';
 import { HeroSection } from '../components/HeroSection';
 import { ContentRow } from '../components/ContentRow';
 import { Footer } from '../components/Footer';
 import { mockCategories, mockContent, getFeaturedContent, Content } from '../data/mockData';
-import { safeGetDistinctId } from '../utils/posthog';
+import { safeGetDistinctId } from '../utils/posthogUtils';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
 import { useAuth } from '../hooks/useAuth';
 import { loadContentFromSupabase, initializeContentDatabase } from '../utils/contentUtils';
@@ -50,7 +49,8 @@ const Index = () => {
             ? getRandomItem(trending) 
             : getRandomItem(contentData);
             
-          setFeaturedContent(newFeatured);
+          // Explicitly cast to Content to satisfy TypeScript
+          setFeaturedContent(newFeatured as Content);
 
           console.log("Featured content with backdrop URL:", newFeatured.backdropUrl);
         }
