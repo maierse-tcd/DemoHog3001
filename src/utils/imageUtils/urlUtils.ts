@@ -1,6 +1,7 @@
 
 // Import the listFilesRecursively function from the supabaseStorage file
 import { listFilesRecursively } from "./supabaseStorage";
+import { supabase } from "../../integrations/supabase/client";
 
 // Helper function to extract filename from a Supabase storage URL
 export const extractFilenameFromUrl = (url: string): string | null => {

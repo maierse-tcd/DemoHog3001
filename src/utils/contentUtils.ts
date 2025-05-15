@@ -49,7 +49,7 @@ export const saveContentToSupabase = async (content: Content): Promise<Content> 
       type: data.type as 'movie' | 'series',
       posterUrl: data.poster_url || '',
       backdropUrl: data.backdrop_url || '',
-      genre: data.genre,
+      genre: data.genre as Content['genre'], // Cast to the correct Genre[] type
       releaseYear: data.release_year || '',
       ageRating: data.age_rating || '',
       duration: data.duration || '',
@@ -87,20 +87,20 @@ export const loadContentFromSupabase = async (): Promise<Content[]> => {
     }
 
     // Convert from database model to Content model
-    const contentItems: Content[] = data.map(item => ({
+    const contentItems = data.map(item => ({
       id: item.id,
       title: item.title,
       description: item.description || '',
       type: item.type as 'movie' | 'series',
       posterUrl: item.poster_url || '',
       backdropUrl: item.backdrop_url || '',
-      genre: item.genre,
+      genre: item.genre as Content['genre'], // Cast to the correct Genre[] type
       releaseYear: item.release_year || '',
       ageRating: item.age_rating || '',
       duration: item.duration || '',
       trending: item.trending || false,
       videoUrl: item.video_url
-    }));
+    })) as Content[];
 
     return contentItems;
   } catch (error) {
