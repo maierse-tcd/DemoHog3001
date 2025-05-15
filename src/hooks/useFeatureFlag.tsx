@@ -12,6 +12,8 @@ export function useFeatureFlag(flagName: string): boolean {
   const phEnabled = useFeatureFlagEnabled(flagName);
   // Track if user is identified
   const [isIdentified, setIsIdentified] = useState<boolean>(false);
+  // Track the final computed value
+  const [finalValue, setFinalValue] = useState<boolean>(false);
   
   // Check if user is identified, as feature flags are only reliable after identification
   useEffect(() => {
@@ -20,6 +22,13 @@ export function useFeatureFlag(flagName: string): boolean {
       const hasValidId = !!distinctId && typeof distinctId === 'string';
       
       setIsIdentified(hasValidId);
+      
+      // Only set the final value if the user is identified
+      if (hasValidId) {
+        setFinalValue(phEnabled);
+      } else {
+        setFinalValue(false);
+      }
       
       // For debugging - only log certain flags to reduce noise
       if (flagName === 'is_admin') {
@@ -35,8 +44,8 @@ export function useFeatureFlag(flagName: string): boolean {
     
   }, [flagName, phEnabled]);
 
-  // Only return true if the user is identified and the flag is enabled
-  return isIdentified && phEnabled;
+  // Return the computed value that considers identification status
+  return finalValue;
 }
 
 export default useFeatureFlag;

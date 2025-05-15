@@ -1,10 +1,11 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { useToast } from '../../hooks/use-toast';
 import { supabase } from '../../integrations/supabase/client';
-import { safeCapture } from '../../utils/posthog';
+import { safeCapture, safeReloadFeatureFlags } from '../../utils/posthog';
 
 interface LoginFormProps {
   fetchUserProfile: (userId: string) => Promise<void>;
@@ -106,6 +107,18 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
     
     // Fetch user profile data
     await fetchUserProfile(userId);
+    
+    // After successful login, explicitly reload feature flags
+    // with a slight delay to ensure identification is complete
+    setTimeout(async () => {
+      console.log('Reloading feature flags after login...');
+      try {
+        await safeReloadFeatureFlags();
+        console.log('Feature flags reloaded successfully');
+      } catch (err) {
+        console.error('Error reloading feature flags:', err);
+      }
+    }, 1500);
     
     toast({
       title: "Login successful",
