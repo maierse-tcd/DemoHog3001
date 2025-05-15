@@ -6,7 +6,7 @@ import { safeCapture } from '../../utils/posthogUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { useToast } from '../../hooks/use-toast';
-import { mockContent, Content, Genre } from '../../data/mockData';
+import { Content, Genre } from '../../data/mockData';
 import { supabase } from '../../integrations/supabase/client';
 import { DetailsTab } from './DetailsTab';
 import { MediaTab } from './MediaTab';

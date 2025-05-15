@@ -1,17 +1,15 @@
 
 import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { useState, useEffect } from 'react';
-import { safeGetDistinctId } from '../utils/posthog';
+import { safeGetDistinctId } from '../utils/posthogUtils';
 
 /**
  * An enhanced wrapper for the PostHog useFeatureFlagEnabled hook
  * that only checks if the user is identified before returning a value
  */
 export function useFeatureFlag(flagName: string): boolean {
-  // Use the official PostHog hook
+  // Use the official PostHog hook directly
   const phEnabled = useFeatureFlagEnabled(flagName);
-  // Track if flag has been checked
-  const [flagValue, setFlagValue] = useState<boolean>(false);
   // Track if user is identified
   const [isIdentified, setIsIdentified] = useState<boolean>(false);
   
@@ -23,28 +21,22 @@ export function useFeatureFlag(flagName: string): boolean {
       
       setIsIdentified(hasValidId);
       
-      // If user is identified, use the PostHog value
-      if (hasValidId) {
-        setFlagValue(phEnabled);
-        
-        // For debugging - only log certain flags to reduce noise
-        if (flagName === 'is_admin') {
-          console.log(`Feature flag ${flagName}: ${phEnabled}, user: ${distinctId}`);
-        }
+      // For debugging - only log certain flags to reduce noise
+      if (flagName === 'is_admin') {
+        console.log(`Feature flag ${flagName}: ${phEnabled}, user identified: ${hasValidId}`);
       }
     };
     
     // Initial check
     checkIdentification();
     
-    // Check again if phEnabled changes
-    if (isIdentified) {
-      setFlagValue(phEnabled);
-    }
-  }, [flagName, phEnabled, isIdentified]);
+    // Check again whenever phEnabled changes
+    // This ensures we re-evaluate when PostHog updates
+    
+  }, [flagName, phEnabled]);
 
   // Only return true if the user is identified and the flag is enabled
-  return isIdentified && flagValue;
+  return isIdentified && phEnabled;
 }
 
 export default useFeatureFlag;

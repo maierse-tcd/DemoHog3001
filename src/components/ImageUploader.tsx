@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
