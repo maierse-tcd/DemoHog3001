@@ -20,7 +20,7 @@ export const listFilesRecursively = async (prefix = ''): Promise<string[]> => {
     let urls: string[] = [];
 
     // Process files in current directory
-    const files = data.filter(item => !item.metadata.mimetype.includes('directory'));
+    const files = data.filter(item => item.metadata && item.metadata.mimetype && !item.metadata.mimetype.includes('directory'));
     
     for (const file of files) {
       const filePath = prefix ? `${prefix}/${file.name}` : file.name;
@@ -32,7 +32,7 @@ export const listFilesRecursively = async (prefix = ''): Promise<string[]> => {
     }
 
     // Recursively process subdirectories
-    const folders = data.filter(item => item.metadata.mimetype.includes('directory'));
+    const folders = data.filter(item => item.metadata && item.metadata.mimetype && item.metadata.mimetype.includes('directory'));
     for (const folder of folders) {
       const folderPath = prefix ? `${prefix}/${folder.name}` : folder.name;
       const subUrls = await listFilesRecursively(folderPath);

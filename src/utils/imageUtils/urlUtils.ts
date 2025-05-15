@@ -1,4 +1,5 @@
-import { supabase } from "../../integrations/supabase/client";
+
+// Import the listFilesRecursively function from the supabaseStorage file
 import { listFilesRecursively } from "./supabaseStorage";
 
 // Helper function to extract filename from a Supabase storage URL
