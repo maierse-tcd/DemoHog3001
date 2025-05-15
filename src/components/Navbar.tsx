@@ -5,7 +5,7 @@ import { Menu, ChevronDown, Home, Video, Film, CreditCard } from 'lucide-react';
 import { ProfileDropdown } from './ProfileDropdown';
 import { SearchBar } from './SearchBar';
 import { useAuth } from '../hooks/useAuth';
-import { useFeatureFlag } from '../hooks/useFeatureFlag';
+import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { ProfileAvatar } from './ProfileAvatar';
 import { AdminNavItems } from './AdminNavItems';
 
@@ -15,8 +15,7 @@ export const Navbar = () => {
   const location = useLocation();
   const { isLoggedIn, userEmail } = useAuth();
   const isDarkTheme = location.pathname !== '/login' && location.pathname !== '/signup';
-  const isAdmin = useFeatureFlag('is_admin');
-  const hidePlan = useFeatureFlag('hide_plan');
+  const hidePlan = useFeatureFlagEnabled('hide_plan');
   
   // Determine if we should show the Plans menu item
   // Only hide plans when the user is logged in AND the hidePlan flag is true

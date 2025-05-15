@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { useToast } from '../hooks/use-toast';
 import { Content } from '../data/mockData';
-import { useFeatureFlagEnabled } from '../hooks/usePostHogFeatures';
+import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { useAuth } from '../hooks/useAuth';
 import { usePostHog } from '../hooks/usePostHogFeatures';
 import { ContentEditor } from '../components/ContentEditor';
@@ -122,6 +122,7 @@ const ImageManager = () => {
   }
   
   if (isLoggedIn && isAdmin === false) {
+    console.log("User is logged in but isAdmin feature flag is false, redirecting to home");
     return <Navigate to="/" replace />;
   }
   
@@ -135,7 +136,7 @@ const ImageManager = () => {
             <div className="flex justify-center items-center h-64">
               <div className="animate-pulse flex flex-col items-center">
                 <div className="h-8 w-32 bg-netflix-gray rounded mb-4"></div>
-                <div className="text-netflix-gray">Loading...</div>
+                <div className="text-netflix-gray">Loading admin access...</div>
               </div>
             </div>
           </div>
