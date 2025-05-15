@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 
@@ -13,6 +12,7 @@ export interface AuthState {
   user?: {
     id: string;
   };
+  adminOverride?: boolean; // Add the adminOverride field to the auth state
 }
 
 interface AuthContextType extends AuthState {
@@ -27,7 +27,8 @@ const initialAuthState: AuthState = {
   userEmail: '',
   isLoading: true,
   userMetadata: {},
-  user: undefined
+  user: undefined,
+  adminOverride: false // Default to false
 };
 
 // Create context
@@ -68,7 +69,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           userName: profileData.name || 'User',
           avatarUrl: profileData.avatar_url || '',
           userMetadata: userMetadata,
-          user: { id: userId }, // Add the user id
+          user: { id: userId },
+          adminOverride: profileData.admin_override === true, // Include the admin_override value
           isLoading: false
         });
       } else {
@@ -80,7 +82,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           updateAuthState({
             userName: name,
             userMetadata: userMetadata,
-            user: { id: userId }, // Add the user id
+            user: { id: userId },
+            adminOverride: false, // Default to false for new profiles
             isLoading: false
           });
         }

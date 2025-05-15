@@ -1,11 +1,12 @@
+
 import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { safeGetDistinctId } from '../utils/posthog';
+import { safeGetDistinctId, safeIsFeatureEnabled } from '../utils/posthog';
 
 /**
  * Configuration constants for flag behavior
  */
-const MAX_RETRIES = 2;
+const MAX_RETRIES = 3; // Increase retries
 const CACHE_DURATION_MS = 5 * 60000; // Cache flag value for 5 minutes
 const POSTHOG_FLAG_CACHE_PREFIX = 'ph_flag_';
 
@@ -54,7 +55,7 @@ const getCachedFlagValue = (flagName: string): boolean | null => {
  */
 export function useFeatureFlag(flagName: string): boolean {
   // Use the official PostHog hook
-  const enabled = useFeatureFlagEnabled(flagName);
+  const phEnabled = useFeatureFlagEnabled(flagName);
   // Track if user is identified
   const [isIdentified, setIsIdentified] = useState(false);
   // Final flag value with fallbacks
@@ -67,15 +68,53 @@ export function useFeatureFlag(flagName: string): boolean {
   const lastCheckTime = useRef<number>(0);
   // Track if component is still mounted
   const isMounted = useRef(true);
+  // Latest direct check result
+  const latestDirectCheck = useRef<boolean | null>(null);
+  
+  // Direct check via safeIsFeatureEnabled
+  const checkFlagDirectly = useCallback(() => {
+    try {
+      // Get value directly from PostHog
+      const currentValue = safeIsFeatureEnabled(flagName);
+      latestDirectCheck.current = currentValue;
+      
+      // Log changes for important flags
+      if (flagName === 'is_admin' && flagValue !== currentValue) {
+        console.log(`Feature flag ${flagName} direct check: ${currentValue}`);
+      }
+      
+      return currentValue;
+    } catch (e) {
+      console.error(`Error checking feature flag ${flagName} directly:`, e);
+      return null;
+    }
+  }, [flagName, flagValue]);
   
   // Initial check for cached values
   useEffect(() => {
-    // Check cache
+    // Check cache first
     const cachedValue = getCachedFlagValue(flagName);
     if (cachedValue !== null) {
       setFlagValue(cachedValue);
     }
-  }, [flagName]);
+    
+    // Then try direct check
+    const directValue = checkFlagDirectly();
+    if (directValue !== null) {
+      // If direct check works and differs from cache, update it
+      if (cachedValue !== directValue) {
+        setFlagValue(directValue);
+        cacheFlagValue(flagName, directValue);
+      }
+    }
+    
+    return () => {
+      isMounted.current = false;
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [flagName, checkFlagDirectly]);
   
   // Check if user is identified, as feature flags are only reliable after identification
   useEffect(() => {
@@ -99,13 +138,16 @@ export function useFeatureFlag(flagName: string): boolean {
       if (hasValidId) {
         setIsIdentified(true);
         
-        // Update with current value from PostHog
-        setFlagValue(enabled);
-        cacheFlagValue(flagName, enabled);
+        // Update with current value from PostHog or direct check
+        const directValue = checkFlagDirectly();
+        const valueToUse = directValue !== null ? directValue : phEnabled;
+        
+        setFlagValue(valueToUse);
+        cacheFlagValue(flagName, valueToUse);
         
         // For debugging - only log certain flags to reduce noise
         if (flagName === 'is_admin') {
-          console.log(`Feature flag ${flagName}: ${enabled}, user: ${distinctId}`);
+          console.log(`Feature flag ${flagName}: ${valueToUse}, user: ${distinctId}`);
         }
       } else {
         // Increment retry counter
@@ -113,7 +155,7 @@ export function useFeatureFlag(flagName: string): boolean {
         
         // Schedule another check with exponential backoff if we haven't reached max retries
         if (retryCount.current < MAX_RETRIES && isMounted.current) {
-          const delay = Math.min(2000 * Math.pow(2, retryCount.current - 1), 10000);
+          const delay = Math.min(1000 * Math.pow(2, retryCount.current - 1), 10000);
           timeoutRef.current = setTimeout(checkIdentification, delay);
         }
       }
@@ -121,29 +163,37 @@ export function useFeatureFlag(flagName: string): boolean {
     
     // Initial check
     checkIdentification();
-    
-    // Clean up timeout on unmount
-    return () => {
-      isMounted.current = false;
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
-    };
-  }, [flagName, enabled]);
+  }, [flagName, phEnabled, checkFlagDirectly]);
 
   // Update flag value when PostHog value changes (for identified users)
   useEffect(() => {
     if (isIdentified) {
-      // Update cache and state with current value
-      setFlagValue(enabled);
-      cacheFlagValue(flagName, enabled);
+      // Check both the hook value and direct value
+      const directValue = checkFlagDirectly();
+      const newValue = directValue !== null ? directValue : phEnabled;
+      
+      // Only update if the value has changed
+      if (flagValue !== newValue) {
+        // Log significant changes
+        if (flagName === 'is_admin') {
+          console.log(`Feature flag ${flagName} updated: ${newValue}, direct check: ${directValue}, hook: ${phEnabled}`);
+        }
+        
+        // Update cache and state with current value
+        setFlagValue(newValue);
+        cacheFlagValue(flagName, newValue);
+      }
     }
-  }, [enabled, isIdentified, flagName]);
+  }, [phEnabled, isIdentified, flagName, flagValue, checkFlagDirectly]);
   
   // If we have a value, return it
   if (flagValue !== null) {
     return flagValue;
+  }
+  
+  // Try latest direct check
+  if (latestDirectCheck.current !== null) {
+    return latestDirectCheck.current;
   }
   
   // Try to get cached value as a last resort
@@ -153,7 +203,7 @@ export function useFeatureFlag(flagName: string): boolean {
   }
   
   // Default to official PostHog value, or false if not identified yet
-  return isIdentified ? enabled : false;
+  return isIdentified ? phEnabled : false;
 }
 
 export default useFeatureFlag;

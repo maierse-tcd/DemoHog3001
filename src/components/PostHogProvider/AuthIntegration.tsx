@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { safeIdentify, safeReset, clearStoredGroups } from '../../utils/posthog';
@@ -194,7 +193,7 @@ export const useAuthIntegration = ({
     
     supabase
       .from('profiles')
-      .select('is_admin, created_at, name, language, is_kids')
+      .select('is_admin, admin_override, created_at, name, language, is_kids')
       .eq('id', userId)
       .maybeSingle()
       .then(({ data: profileData, error }) => {
@@ -213,13 +212,17 @@ export const useAuthIntegration = ({
           const isKid = profileData.is_kids === true || 
                         (profileData.is_admin === false && profileData.is_kids !== false);
           
+          // Check for admin override
+          const hasAdminOverride = profileData.admin_override === true;
+          
           // Create complete user properties object with profile data
           const userProperties = {
             name: profileData.name || metadata?.name || email?.split('@')[0],
             is_kids_account: isKid,
             language: profileData.language || 'English',
-            // Add this to ensure proper feature flag evaluation
-            is_admin_user: profileData.is_admin === true || email.endsWith('@posthog.com'),
+            // Add this to ensure proper feature flag evaluation - prioritize admin_override
+            is_admin_user: hasAdminOverride === true || profileData.is_admin === true,
+            has_admin_override: hasAdminOverride,
             email: email // Always include email for consistency
           };
           

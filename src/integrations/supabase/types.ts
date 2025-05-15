@@ -105,6 +105,7 @@ export type Database = {
       profiles: {
         Row: {
           access_password: string | null
+          admin_override: boolean | null
           avatar_url: string | null
           created_at: string
           email: string | null
@@ -117,6 +118,7 @@ export type Database = {
         }
         Insert: {
           access_password?: string | null
+          admin_override?: boolean | null
           avatar_url?: string | null
           created_at?: string
           email?: string | null
@@ -129,6 +131,7 @@ export type Database = {
         }
         Update: {
           access_password?: string | null
+          admin_override?: boolean | null
           avatar_url?: string | null
           created_at?: string
           email?: string | null

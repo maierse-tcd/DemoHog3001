@@ -1,9 +1,10 @@
+
 import { Link } from 'react-router-dom';
 import { Image } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { safeGetDistinctId } from '../utils/posthog';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
-import { useMemo, useRef, useEffect } from 'react';
+import { useMemo, useRef, useEffect, useState } from 'react';
 
 // Storage key for admin status cache
 const ADMIN_STATUS_CACHE_KEY = 'admin_status_cache';
@@ -46,11 +47,17 @@ const getCachedAdminStatus = (): boolean | null => {
 
 /**
  * Admin navigation items that are only shown when the user has the is_admin feature flag enabled
+ * or has admin_override set to true in the database
  */
 export const AdminNavItems = () => {
-  // Use our enhanced feature flag hook
-  const isAdmin = useFeatureFlag('is_admin');
-  const { isLoggedIn, userEmail } = useAuth();
+  // Component state
+  const [isLoading, setIsLoading] = useState(true);
+  const [showAdminLink, setShowAdminLink] = useState(false);
+  
+  // Get flag from PostHog
+  const isAdminFlag = useFeatureFlag('is_admin');
+  // Get database override and auth state
+  const { isLoggedIn, userEmail, adminOverride } = useAuth();
   
   // Track if we've already logged debugging info
   const hasLoggedInfo = useRef(false);
@@ -64,28 +71,41 @@ export const AdminNavItems = () => {
   }, []);
   
   // Determine if we should show the admin link
-  const showAdminLink = useMemo(() => {
-    // First, check if we're even logged in - no point checking if not
-    if (!isLoggedIn) return false;
-    
-    // If we have a valid cache, use it
-    if (cachedAdminStatus !== null) {
-      return cachedAdminStatus;
+  useEffect(() => {
+    // Don't determine status until we're logged in
+    if (!isLoggedIn) {
+      setIsLoading(false);
+      setShowAdminLink(false);
+      return;
     }
     
-    // Otherwise calculate based on flags only
-    const shouldShow = isLoggedIn && isAdmin;
+    // If we have a valid cache, use it immediately to prevent flickering
+    if (cachedAdminStatus !== null) {
+      setShowAdminLink(cachedAdminStatus);
+      setIsLoading(false);
+      return;
+    }
     
-    // Cache the result to avoid flickering
-    cacheAdminStatus(shouldShow);
+    // Prioritize database override over feature flag
+    const hasAdminAccess = adminOverride === true || isAdminFlag === true;
     
-    return shouldShow;
-  }, [isLoggedIn, isAdmin, cachedAdminStatus]);
+    // Update state and cache the result
+    setShowAdminLink(hasAdminAccess);
+    setIsLoading(false);
+    cacheAdminStatus(hasAdminAccess);
+    
+  }, [isLoggedIn, isAdminFlag, adminOverride, cachedAdminStatus]);
   
   // Log debug info on mount or when values change, but limit to once
   useEffect(() => {
-    if (isLoggedIn && !hasLoggedInfo.current) {
-      console.log(`AdminNavItems: isAdmin flag: ${isAdmin}, PostHog email: ${posthogDistinctId}, Supabase email: ${userEmail}, showAdminLink: ${showAdminLink}`);
+    if (isLoggedIn && !hasLoggedInfo.current && !isLoading) {
+      console.log(
+        `AdminNavItems: isAdmin flag: ${isAdminFlag}, ` +
+        `adminOverride: ${adminOverride}, ` + 
+        `PostHog email: ${posthogDistinctId}, ` +
+        `Supabase email: ${userEmail}, ` +
+        `showAdminLink: ${showAdminLink}`
+      );
       hasLoggedInfo.current = true;
       
       // Reset log flag after 30 seconds to allow a fresh log if needed
@@ -93,7 +113,12 @@ export const AdminNavItems = () => {
         hasLoggedInfo.current = false;
       }, 30000);
     }
-  }, [isLoggedIn, isAdmin, posthogDistinctId, userEmail, showAdminLink]);
+  }, [isLoggedIn, isAdminFlag, posthogDistinctId, userEmail, showAdminLink, adminOverride, isLoading]);
+  
+  // Show loading placeholder or nothing
+  if (isLoading) {
+    return null; // Or a loading indicator if preferred
+  }
   
   if (!showAdminLink) {
     return null;
