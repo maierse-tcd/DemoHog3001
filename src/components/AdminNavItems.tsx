@@ -13,6 +13,7 @@ export const AdminNavItems = () => {
   const [isLoading, setIsLoading] = useState(true);
   const isAdminEnabled = useFeatureFlag('is_admin');
   
+  // Add an effect to listen for feature flag changes
   useEffect(() => {
     // Only check the flag if the user is identified
     const distinctId = safeGetDistinctId();
@@ -25,6 +26,30 @@ export const AdminNavItems = () => {
       setIsLoading(false);
       console.log('AdminNavItems - User not identified, hiding admin items');
     }
+  }, [isAdminEnabled]);
+  
+  // Listen for a custom event that will be dispatched after login
+  useEffect(() => {
+    const handleFeatureFlagsUpdated = () => {
+      console.log('AdminNavItems - Feature flags updated event received');
+      const distinctId = safeGetDistinctId();
+      if (distinctId) {
+        // Re-check the feature flag status
+        setIsLoading(true);
+        setTimeout(() => {
+          // Give PostHog a moment to update the flag status
+          setIsAdmin(isAdminEnabled);
+          setIsLoading(false);
+        }, 100);
+      }
+    };
+
+    // Add event listener for custom event
+    window.addEventListener('posthog-feature-flags-updated', handleFeatureFlagsUpdated);
+    
+    return () => {
+      window.removeEventListener('posthog-feature-flags-updated', handleFeatureFlagsUpdated);
+    };
   }, [isAdminEnabled]);
   
   // If still loading or the flag isn't true, don't show anything

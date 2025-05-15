@@ -115,6 +115,9 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
       try {
         await safeReloadFeatureFlags();
         console.log('Feature flags reloaded successfully');
+        
+        // Dispatch a custom event to notify components that feature flags have been updated
+        window.dispatchEvent(new CustomEvent('posthog-feature-flags-updated'));
       } catch (err) {
         console.error('Error reloading feature flags:', err);
       }

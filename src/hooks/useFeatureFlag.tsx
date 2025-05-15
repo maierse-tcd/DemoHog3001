@@ -44,6 +44,26 @@ export function useFeatureFlag(flagName: string): boolean {
     
   }, [flagName, phEnabled]);
 
+  // Listen for the custom posthog-feature-flags-updated event
+  useEffect(() => {
+    const handleFeatureFlagsUpdated = () => {
+      console.log(`useFeatureFlag - ${flagName}: Feature flags updated event received`);
+      const distinctId = safeGetDistinctId();
+      if (distinctId) {
+        // We don't immediately update as PostHog might need time
+        setTimeout(() => {
+          setFinalValue(phEnabled);
+        }, 100);
+      }
+    };
+    
+    window.addEventListener('posthog-feature-flags-updated', handleFeatureFlagsUpdated);
+    
+    return () => {
+      window.removeEventListener('posthog-feature-flags-updated', handleFeatureFlagsUpdated);
+    };
+  }, [flagName, phEnabled]);
+  
   // Return the computed value that considers identification status
   return finalValue;
 }
