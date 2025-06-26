@@ -1,3 +1,4 @@
+
 /**
  * PostHog identity management utilities
  */
@@ -11,7 +12,7 @@ const POSTHOG_LAST_ID_KEY = 'posthog_last_identified_user';
 const POSTHOG_EMAIL_CACHE_KEY = 'posthog_email_cache';
 
 // Prevent overly frequent identifications
-const MIN_IDENTIFY_INTERVAL = 10000; // 10 seconds
+const MIN_IDENTIFY_INTERVAL = 5000; // Reduced to 5 seconds
 let lastIdentifyTime = 0;
 
 /**
@@ -58,7 +59,7 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
     return;
   }
 
-  // FIXED: Always use the provided distinctId if it's a valid email
+  // Always use the provided distinctId if it's a valid email
   let identifierId = distinctId;
   
   // Only fall back to cached email if distinctId is NOT an email format (like a UUID)
@@ -82,7 +83,7 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
     try {
       const lastId = localStorage.getItem(POSTHOG_LAST_ID_KEY);
       if (lastId === identifierId) {
-        // Skip redundant identification
+        console.log(`Skipping redundant identification for: ${identifierId}`);
         return;
       }
     } catch (err) {
@@ -99,7 +100,8 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
       
       // Only identify if different to avoid unnecessary operations
       if (currentId !== identifierId) {
-        console.log(`Identifying PostHog user: ${identifierId}`);
+        console.log(`PostHog: Identifying user with distinct ID: ${identifierId}`);
+        console.log(`PostHog: Properties:`, properties);
         
         // Store the last identified user in localStorage for debugging
         try {
@@ -111,14 +113,16 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
         // Ensure properties include email when possible
         const finalProperties = {
           ...(properties || {}),
-          // Make sure to prioritize any provided values but include defaults if missing
           is_kids_account: properties?.is_kids_account !== undefined ? properties.is_kids_account : properties?.isKidsAccount,
-          language: properties?.language || 'English', // Default to English if not provided
+          language: properties?.language || 'English',
           email: isValidEmailFormat(identifierId) ? identifierId : properties?.email || identifierId
         };
         
         // Identify the user
         posthog.identify(identifierId, finalProperties);
+        console.log(`PostHog: Successfully identified user: ${identifierId}`);
+      } else {
+        console.log(`PostHog: User already identified as: ${identifierId}`);
       }
     } catch (err) {
       console.error("PostHog identify error:", err);
@@ -126,33 +130,30 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
   } else if (typeof window !== 'undefined' && window.posthog) {
     try {
       const instance = window.posthog;
-      // Add proper type guard to check if posthog is an instance with required methods
       if (isPostHogInstance(instance)) {
-        // Get current distinct ID to check if we need to identify
         const currentId = instance.get_distinct_id?.();
         
-        // Only identify if different
         if (currentId !== identifierId) {
-          console.log(`Identifying PostHog user: ${identifierId}`);
+          console.log(`PostHog: Identifying user with distinct ID: ${identifierId}`);
+          console.log(`PostHog: Properties:`, properties);
           
-          // Store the last identified user in localStorage for debugging
           try {
             localStorage.setItem(POSTHOG_LAST_ID_KEY, identifierId);
           } catch (err) {
             // Ignore storage errors
           }
           
-          // Ensure properties include email when possible
           const finalProperties = {
             ...(properties || {}),
-            // Make sure to prioritize any provided values but include defaults if missing
             is_kids_account: properties?.is_kids_account !== undefined ? properties.is_kids_account : properties?.isKidsAccount,
-            language: properties?.language || 'English', // Default to English if not provided
+            language: properties?.language || 'English',
             email: isValidEmailFormat(identifierId) ? identifierId : properties?.email || identifierId
           };
           
-          // Identify the user
           instance.identify(identifierId, finalProperties);
+          console.log(`PostHog: Successfully identified user: ${identifierId}`);
+        } else {
+          console.log(`PostHog: User already identified as: ${identifierId}`);
         }
       } else {
         console.warn("PostHog instance does not have required methods");

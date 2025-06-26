@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { safeIdentify, safeReset, clearStoredGroups } from '../../utils/posthog';
@@ -25,10 +26,6 @@ export const useAuthIntegration = ({
 }: AuthIntegrationProps) => {
   // Track if auth check is in progress to prevent loops
   const authCheckInProgressRef = useRef<boolean>(false);
-  // Last identified user to prevent redundant operations
-  const lastIdentifiedUserRef = useRef<string | null>(null);
-  // Track when the last auth check was performed
-  const lastAuthCheckTimeRef = useRef<number>(0);
   // Track if component is mounted
   const isMountedRef = useRef<boolean>(true);
 
@@ -39,7 +36,7 @@ export const useAuthIntegration = ({
       if (!lastCheck) return false;
       
       const { timestamp } = JSON.parse(lastCheck);
-      return Date.now() - timestamp < 30000; // 30 second throttle
+      return Date.now() - timestamp < 10000; // Reduced to 10 seconds
     } catch (err) {
       return false;
     }
@@ -58,20 +55,14 @@ export const useAuthIntegration = ({
 
   // Effect to identify current user when PostHog is loaded
   useEffect(() => {
-    // Only check if PostHog is loaded and no check is in progress
     if (posthogLoadedRef.current && !authCheckInProgressRef.current) {
       // Avoid excessive checks
       if (wasRecentlyChecked()) {
         return;
       }
       
-      const now = Date.now();
-      // Limit checks to at most once every 10 seconds
-      if (now - lastAuthCheckTimeRef.current > 10000) {
-        lastAuthCheckTimeRef.current = now;
-        recordCheckTime();
-        checkAndIdentifyCurrentUser();
-      }
+      recordCheckTime();
+      checkAndIdentifyCurrentUser();
     }
     
     return () => {
@@ -101,40 +92,25 @@ export const useAuthIntegration = ({
           const email = user.email;
           
           if (email) {
-            // Check if this is the same user we've already identified
-            if (email === lastIdentifiedUserRef.current) {
-              console.log(`User ${email} already identified, skipping redundant identification`);
-              authCheckInProgressRef.current = false;
-              return;
-            }
-            
-            // If different user than the currently identified one
+            // If different user than the currently identified one, reset first
             if (currentUserRef.current && currentUserRef.current !== email) {
-              console.log(`User already identified with this email: ${email}, forcing reset and re-identify`);
+              console.log(`Different user detected, resetting PostHog identity before identifying: ${email}`);
               
-              // Ensure we don't reidentify too soon
+              safeReset();
+              clearStoredGroups();
+              
+              // Short delay to ensure reset completes
               setTimeout(() => {
                 if (!isMountedRef.current) {
                   authCheckInProgressRef.current = false;
                   return;
                 }
                 
-                safeReset();
-                clearStoredGroups();
-                
-                // Brief delay to ensure reset completes
-                setTimeout(() => {
-                  if (!isMountedRef.current) {
-                    authCheckInProgressRef.current = false;
-                    return;
-                  }
-                  
-                  identifyUser(email, user.id, user.user_metadata);
-                  authCheckInProgressRef.current = false;
-                }, 300);
-              }, 100);
+                identifyUser(email, user.id, user.user_metadata);
+                authCheckInProgressRef.current = false;
+              }, 200);
             } else {
-              // No user currently identified
+              // Same user or no user currently identified
               identifyUser(email, user.id, user.user_metadata);
               authCheckInProgressRef.current = false;
             }
@@ -157,7 +133,7 @@ export const useAuthIntegration = ({
     }
   };
 
-  // Function to identify a user
+  // Function to identify a user - simplified and more reliable
   const identifyUser = (email: string, userId: string, metadata?: any) => {
     if (!posthogLoadedRef.current || !isMountedRef.current) {
       console.warn('PostHog not loaded yet or component unmounted');
@@ -165,29 +141,17 @@ export const useAuthIntegration = ({
     }
 
     console.log(`Identifying user in PostHog with email: ${email}`);
-    lastIdentifiedUserRef.current = email;
     currentUserRef.current = email;
     
     try {
-      // Always identify with email as the distinct ID for consistency
-      safeIdentify(email, {
-        email: email,
-        supabase_id: userId,
-        $set_once: { first_seen: new Date().toISOString() }
-      });
-      
-      // Then fetch additional profile data in a separate operation
-      // Use setTimeout to avoid render cycle conflicts
-      setTimeout(() => {
-        if (!isMountedRef.current) return;
-        fetchUserProfileAndIdentify(userId, email, metadata);
-      }, 500);
+      // Fetch profile data immediately and identify with complete properties
+      fetchUserProfileAndIdentify(userId, email, metadata);
     } catch (err) {
       console.error('Error identifying user in PostHog:', err);
     }
   };
   
-  // Fetch user profile and identify with all properties
+  // Fetch user profile and identify with all properties - simplified timing
   const fetchUserProfileAndIdentify = (userId: string, email: string, metadata?: any) => {
     if (!posthogLoadedRef.current || !isMountedRef.current) return;
     
@@ -201,52 +165,63 @@ export const useAuthIntegration = ({
         
         if (error) {
           console.error('Error fetching profile data:', error);
+          // Identify with basic properties if profile fetch fails
+          safeIdentify(email, {
+            email: email,
+            supabase_id: userId,
+            name: metadata?.name || email?.split('@')[0],
+            $set_once: { first_seen: new Date().toISOString() }
+          });
           return;
         }
         
         if (profileData) {
-          console.log('Profile data:', profileData);
-          console.log('Language from profile:', profileData.language || 'English');
+          console.log('Profile data fetched:', profileData);
           
-          // Now we have both is_kids and is_admin fields
+          // Determine user type
           const isKid = profileData.is_kids === true || 
                         (profileData.is_admin === false && profileData.is_kids !== false);
           
           // Check for admin override
           const hasAdminOverride = profileData.admin_override === true;
           
-          // Create complete user properties object with profile data
+          // Create complete user properties object
           const userProperties = {
             name: profileData.name || metadata?.name || email?.split('@')[0],
             is_kids_account: isKid,
             language: profileData.language || 'English',
-            // Add this to ensure proper feature flag evaluation - prioritize admin_override
             is_admin_user: hasAdminOverride === true || profileData.is_admin === true,
             has_admin_override: hasAdminOverride,
-            email: email // Always include email for consistency
+            email: email,
+            supabase_id: userId,
+            $set_once: { first_seen: new Date().toISOString() }
           };
           
-          // Re-identify with complete properties after sufficient delay
+          // Identify with complete properties - use email as distinct ID
+          console.log(`PostHog: Identifying user with properties:`, userProperties);
+          safeIdentify(email, userProperties);
+          
+          // Update user type in context
           setTimeout(() => {
             if (!isMountedRef.current) return;
+            updateUserType(isKid);
             
-            // Always use email as the identifier for consistency
-            safeIdentify(email, userProperties);
-            
-            // Wait before updating user type
-            setTimeout(() => {
-              if (!isMountedRef.current) return;
-              updateUserType(isKid);
-              
-              // Check for subscription information after user is identified
-              if (metadata?.selectedPlanId) {
-                setTimeout(() => {
-                  if (!isMountedRef.current) return;
-                  fetchAndIdentifySubscriptionGroup(metadata.selectedPlanId);
-                }, 1000);
-              }
-            }, 800);
-          }, 800);
+            // Check for subscription information
+            if (metadata?.selectedPlanId) {
+              setTimeout(() => {
+                if (!isMountedRef.current) return;
+                fetchAndIdentifySubscriptionGroup(metadata.selectedPlanId);
+              }, 500);
+            }
+          }, 300);
+        } else {
+          // No profile data, identify with basic properties
+          safeIdentify(email, {
+            email: email,
+            supabase_id: userId,
+            name: metadata?.name || email?.split('@')[0],
+            $set_once: { first_seen: new Date().toISOString() }
+          });
         }
       });
   };
@@ -271,21 +246,16 @@ export const useAuthIntegration = ({
         
         if (planData) {
           const planName = planData.name;
-          // Store original name for reference
           setCurrentSubscriptionName(planName);
           
-          // Significant delay before updating subscription to avoid race conditions
           setTimeout(() => {
             if (!isMountedRef.current) return;
             
-            // Call the subscription update with plan details
             updateSubscription(planName, planId, planData.price || '0');
-            
-            // Update subscription state
             setCurrentSubscription(slugifyGroupKey(planName));
             
-            console.log(`PostHog: Fetched and identified subscription group: ${planName}`);
-          }, 1200);
+            console.log(`PostHog: Identified subscription group: ${planName}`);
+          }, 200);
         }
       });
   };
