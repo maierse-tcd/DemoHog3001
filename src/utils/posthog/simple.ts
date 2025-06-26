@@ -4,6 +4,8 @@
  * Clean, focused API for PostHog integration
  */
 
+import posthog from 'posthog-js';
+
 // Re-export simplified utilities
 export { trackEvent, trackGroupEvent } from './simpleEvents';
 export { identifyUser, getCurrentUserId, resetIdentity } from './simpleIdentity';

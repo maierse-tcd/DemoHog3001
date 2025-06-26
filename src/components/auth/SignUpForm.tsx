@@ -9,13 +9,10 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '
 import { Button } from '../ui/button';
 import { supabase } from '../../integrations/supabase/client';
 import { useToast } from '../../hooks/use-toast';
-import { safeGroupIdentify } from '../../utils/posthog';
-import { usePostHog } from 'posthog-js/react';
-import { usePostHogContext } from '../../contexts/PostHogContext';
+import { identifyUser, setUserType, setSubscriptionPlan, trackEvent } from '../../utils/posthog/simple';
 import { PlanProvider, usePlanContext } from './signup/PlanContext';
 import { PasswordFields, passwordSchema } from './signup/PasswordFields';
 import { KidsAccountToggle, kidsAccountSchema } from './signup/KidsAccountToggle';
-import { trackSignup, identifySubscription } from './signup/AnalyticsUtils';
 
 // Define the schema for the form
 const formSchema = z.object({
@@ -33,10 +30,6 @@ const SignUpFormInner: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  
-  // Get PostHog context and instance
-  const { updateSubscription } = usePostHogContext();
-  const posthog = usePostHog();
   
   // Get plan context
   const { selectedPlanId, planName, planCost, loadPlanDetails } = usePlanContext();
@@ -105,33 +98,41 @@ const SignUpFormInner: React.FC = () => {
         throw new Error(error.message);
       }
 
-      // Create PostHog group for user type
-      const userType = values.isKidsAccount ? 'Kid' : 'Adult';
-      safeGroupIdentify('user_type', userType, {
-        name: userType, // Explicitly set name for UI visibility
-        date_joined: signupDate,
-        subscription_plan: selectedPlanId
-      });
-      
-      // Use the centralized subscription update method
-      if (planName) {
-        console.log(`Registering new user with subscription: ${planName}`);
-        updateSubscription(planName, selectedPlanId, planCost.toString());
-        
-        // Direct PostHog reinforcement for maximum reliability
-        identifySubscription(posthog, planName, selectedPlanId, planCost);
-      }
-      
-      // Track signup analytics
       if (data?.user) {
-        trackSignup(
-          data.user.id, 
-          values.email, 
-          selectedPlanId, 
-          planName || 'Unknown Plan',
-          planCost,
-          values.isKidsAccount || false
-        );
+        console.log(`PostHog: Identifying new user during signup: ${values.email}`);
+        
+        // Immediate PostHog identification with simplified utilities
+        identifyUser(values.email, {
+          name: values.email.split('@')[0],
+          is_kids_account: values.isKidsAccount || false,
+          language: 'English',
+          email: values.email,
+          supabase_id: data.user.id,
+          signup_date: signupDate,
+          $set_once: { first_seen: signupDate }
+        });
+
+        // Set user type
+        setUserType(values.isKidsAccount || false);
+
+        // Set subscription if available
+        if (planName) {
+          console.log(`PostHog: Setting subscription for new user: ${planName}`);
+          setSubscriptionPlan(planName, selectedPlanId, planCost.toString());
+        }
+
+        // Track signup event
+        trackEvent('user_signup', {
+          user_id: data.user.id,
+          email: values.email,
+          plan_id: selectedPlanId,
+          plan_type: planName || 'Unknown Plan',
+          plan_cost: planCost,
+          is_kids_account: values.isKidsAccount || false,
+          signup_date: signupDate
+        });
+
+        console.log(`PostHog: Successfully identified and tracked signup for: ${values.email}`);
       }
 
       // If sign up is successful, navigate to profile page
@@ -142,6 +143,7 @@ const SignUpFormInner: React.FC = () => {
         description: "You have successfully signed up. Redirecting to your profile...",
       });
     } catch (error: any) {
+      console.error('Signup error:', error);
       toast({
         title: "Sign up failed",
         description: error.message || "An error occurred during sign up.",

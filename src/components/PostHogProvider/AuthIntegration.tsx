@@ -24,6 +24,7 @@ export const useAuthIntegration = ({
 
   useEffect(() => {
     if (posthogLoadedRef.current) {
+      console.log('PostHog: Auth integration starting - checking current user');
       checkAndIdentifyCurrentUser();
     }
     
@@ -43,15 +44,19 @@ export const useAuthIntegration = ({
         const email = user.email;
         
         if (email) {
+          console.log(`PostHog: Found authenticated user: ${email}`);
+          
           // Reset if different user
           if (currentUserRef.current && currentUserRef.current !== email) {
-            console.log(`Different user detected, resetting PostHog: ${email}`);
+            console.log(`PostHog: Different user detected, resetting: ${email}`);
             resetIdentity();
           }
           
-          // Simple identification
+          // Simple identification using new utilities
           identifyUserWithProfile(email, user.id, user.user_metadata);
         }
+      } else {
+        console.log('PostHog: No authenticated user found');
       }
     }).catch(err => {
       console.error('Error checking session:', err);
@@ -61,7 +66,7 @@ export const useAuthIntegration = ({
   const identifyUserWithProfile = (email: string, userId: string, metadata?: any) => {
     if (!posthogLoadedRef.current || !isMountedRef.current) return;
 
-    console.log(`Identifying user: ${email}`);
+    console.log(`PostHog: Identifying user with profile data: ${email}`);
     currentUserRef.current = email;
     
     // Fetch profile and identify
@@ -72,6 +77,10 @@ export const useAuthIntegration = ({
       .maybeSingle()
       .then(({ data: profileData, error }) => {
         if (!isMountedRef.current) return;
+        
+        if (error) {
+          console.warn('PostHog: Profile fetch error:', error);
+        }
         
         // Create user properties
         const userProperties = {
@@ -84,16 +93,19 @@ export const useAuthIntegration = ({
           $set_once: { first_seen: new Date().toISOString() }
         };
         
-        // Simple identification - let PostHog handle the rest
+        // Simple identification using new utilities
+        console.log('PostHog: Identifying user with properties:', userProperties);
         identifyUser(email, userProperties);
         
         // Set user type
         const isKid = profileData?.is_kids === true;
+        console.log(`PostHog: Setting user type - isKid: ${isKid}`);
         setUserType(isKid);
         updateUserType(isKid);
         
         // Handle subscription if present
         if (metadata?.selectedPlanId) {
+          console.log(`PostHog: Processing subscription: ${metadata.selectedPlanId}`);
           fetchAndSetSubscription(metadata.selectedPlanId);
         }
       });
@@ -108,14 +120,19 @@ export const useAuthIntegration = ({
       .eq('id', planId)
       .single()
       .then(({ data: planData, error }) => {
-        if (!isMountedRef.current || error || !planData) return;
+        if (!isMountedRef.current || error || !planData) {
+          if (error) console.warn('PostHog: Subscription plan fetch error:', error);
+          return;
+        }
         
         const planName = planData.name;
+        console.log(`PostHog: Setting subscription plan: ${planName}`);
+        
         setCurrentSubscriptionName(planName);
         updateSubscription(planName, planId, planData.price || '0');
         setCurrentSubscription(planName);
         
-        // Simple subscription identification
+        // Simple subscription identification using new utilities
         setSubscriptionPlan(planName, planId, planData.price);
       });
   };

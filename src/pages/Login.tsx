@@ -6,7 +6,7 @@ import { useProfileSettings } from '../contexts/ProfileSettingsContext';
 import { supabase } from '../integrations/supabase/client';
 import { AuthLayout } from '../components/auth/AuthLayout';
 import { LoginForm } from '../components/auth/LoginForm';
-import { safeReset } from '../utils/posthog';
+import { resetIdentity } from '../utils/posthog/simple';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -32,8 +32,9 @@ const Login = () => {
       }
     };
     
-    // Reset PostHog identity before checking session
-    safeReset();
+    // Reset PostHog identity before checking session using simplified utility
+    console.log('PostHog: Resetting identity at login page');
+    resetIdentity();
     checkSession();
   }, [navigate]);
 
@@ -66,6 +67,7 @@ const Login = () => {
       });
       
       // Note: PostHog identification is now centralized in PostHogProvider
+      console.log('PostHog: User profile fetched, identification handled by AuthIntegration');
     } catch (error) {
       console.error('Error fetching user profile:', error);
     }
