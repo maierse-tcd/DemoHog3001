@@ -1,4 +1,3 @@
-
 /**
  * PostHog identity management utilities
  */
@@ -9,7 +8,7 @@ import posthog from 'posthog-js';
 // Local storage keys for caching
 const LAST_GROUPS_STORAGE_KEY = 'posthog_last_groups';
 const POSTHOG_LAST_ID_KEY = 'posthog_last_identified_user';
-const POSTHOG_EMAIL_CACHE_KEY = 'posthog_email_cache'; // Key for email caching
+const POSTHOG_EMAIL_CACHE_KEY = 'posthog_email_cache';
 
 // Prevent overly frequent identifications
 const MIN_IDENTIFY_INTERVAL = 10000; // 10 seconds
@@ -51,7 +50,7 @@ const cacheEmail = (email: string): void => {
 
 /**
  * Safely identify a user in PostHog
- * Uses email as the primary identifier for consistent cross-platform identification
+ * FIXED: Always prioritize the provided distinctId if it's a valid email
  */
 export const safeIdentify = (distinctId: string, properties?: Record<string, any>): void => {
   if (!distinctId) {
@@ -59,18 +58,21 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
     return;
   }
 
-  // Always prioritize email format for identification
+  // FIXED: Always use the provided distinctId if it's a valid email
   let identifierId = distinctId;
   
-  // If distinctId doesn't look like an email but we have a cached email, use the cache
-  if (!isValidEmailFormat(distinctId) && getCachedEmail()) {
-    console.log(`Using cached email instead of UUID: ${getCachedEmail()}`);
-    identifierId = getCachedEmail() as string;
-  }
-  
-  // If it's an email, cache it for future use
-  if (isValidEmailFormat(distinctId)) {
+  // Only fall back to cached email if distinctId is NOT an email format (like a UUID)
+  if (!isValidEmailFormat(distinctId)) {
+    const cachedEmail = getCachedEmail();
+    if (cachedEmail) {
+      console.log(`Using cached email for non-email distinctId: ${cachedEmail}`);
+      identifierId = cachedEmail;
+    }
+  } else {
+    // If the provided distinctId is an email, cache it and use it
+    console.log(`Using provided email for identification: ${distinctId}`);
     cacheEmail(distinctId);
+    identifierId = distinctId;
   }
 
   // Rate limit identify calls to prevent loops
@@ -165,16 +167,10 @@ export const safeIdentify = (distinctId: string, properties?: Record<string, any
 
 /**
  * Get the current user ID from PostHog
- * Prioritizes returning email format identifiers when available
+ * FIXED: Only fall back to cached email when PostHog doesn't have an email-format ID
  */
 export const safeGetDistinctId = (): string | null => {
-  // First try to get from cached email, which is most stable
-  const cachedEmail = getCachedEmail();
-  if (cachedEmail && isValidEmailFormat(cachedEmail)) {
-    return cachedEmail;
-  }
-  
-  // Otherwise try to get from PostHog instance
+  // First try to get from PostHog instance
   const posthogInstance = getPostHogInstance();
   
   if (posthogInstance && typeof posthogInstance.get_distinct_id === 'function') {
@@ -187,7 +183,13 @@ export const safeGetDistinctId = (): string | null => {
         return currentId;
       }
       
-      // Otherwise return the ID as is
+      // If PostHog ID is not an email, check if we have a cached email
+      const cachedEmail = getCachedEmail();
+      if (cachedEmail && isValidEmailFormat(cachedEmail)) {
+        return cachedEmail;
+      }
+      
+      // Otherwise return the PostHog ID as is
       return currentId;
     } catch (err) {
       console.error("Error getting PostHog distinct ID:", err);
@@ -205,30 +207,42 @@ export const safeGetDistinctId = (): string | null => {
 };
 
 /**
- * Reset PostHog identity (for logout)
+ * Enhanced reset PostHog identity (for logout)
  */
 export const safeReset = (): void => {
+  console.log("PostHog: Starting identity reset");
+  
+  try {
+    // Clear all PostHog-related localStorage keys first
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (
+        key.startsWith('posthog_') ||
+        key === POSTHOG_LAST_ID_KEY ||
+        key === POSTHOG_EMAIL_CACHE_KEY ||
+        key === LAST_GROUPS_STORAGE_KEY
+      )) {
+        keysToRemove.push(key);
+      }
+    }
+    
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key);
+      console.log(`PostHog: Removed localStorage key: ${key}`);
+    });
+  } catch (err) {
+    console.error("Error clearing PostHog localStorage:", err);
+  }
+  
+  // Reset the PostHog instance
   const posthogInstance = getPostHogInstance();
   
   if (posthogInstance && typeof posthogInstance.reset === 'function') {
     try {
-      console.log("PostHog: Resetting user identity");
-      
-      // Clear stored IDs before reset
-      try {
-        localStorage.removeItem(POSTHOG_LAST_ID_KEY);
-        localStorage.removeItem(POSTHOG_EMAIL_CACHE_KEY);
-      } catch (err) {
-        // Ignore storage errors
-      }
-      
-      // Clear stored groups
-      clearStoredGroups();
-      
-      // Reset the PostHog identity
+      console.log("PostHog: Calling reset() on instance");
       posthogInstance.reset();
       console.log("PostHog: Identity reset complete");
-      
     } catch (err) {
       console.error("PostHog reset error:", err);
     }
