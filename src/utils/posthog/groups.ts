@@ -6,19 +6,11 @@
 import { getPostHogInstance, isPostHogAvailable } from './core';
 
 /**
- * Get the last identified groups from PostHog itself (not localStorage)
+ * Get the last identified groups - PostHog doesn't provide group retrieval
+ * so we return empty object as groups are write-only in PostHog
  */
 export const getLastGroups = (): Record<string, string> => {
-  const posthogInstance = getPostHogInstance();
-  
-  if (posthogInstance && typeof posthogInstance.getGroups === 'function') {
-    try {
-      return posthogInstance.getGroups() || {};
-    } catch (err) {
-      console.error("Error getting groups from PostHog:", err);
-    }
-  }
-  
+  // PostHog groups are write-only, no retrieval API available
   return {};
 };
 
@@ -32,10 +24,11 @@ export const setLastGroup = (groupType: string, groupKey: string): void => {
 
 /**
  * Get the last identified group of a specific type
+ * PostHog doesn't provide group retrieval, so this returns null
  */
 export const getLastIdentifiedGroup = (groupType: string): string | null => {
-  const groups = getLastGroups();
-  return groups[groupType] || null;
+  // PostHog groups are write-only, no retrieval API available
+  return null;
 };
 
 /**
