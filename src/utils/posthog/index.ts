@@ -1,10 +1,13 @@
 
 /**
  * PostHog utilities index file
- * Re-exports all PostHog utilities for easy consumption
+ * Now exports simplified, clean utilities
  */
 
-// Re-export from core
+// Export simplified utilities (recommended)
+export * from './simple';
+
+// Export legacy utilities for backward compatibility
 export { 
   POSTHOG_HOST,
   isPostHogInstance,
@@ -12,16 +15,15 @@ export {
   getPostHogInstance
 } from './core';
 
-// Re-export from events
+// Legacy exports - these will be deprecated
 export {
   safeCapture,
-  captureEventWithGroup, // Standard name for capturing events with group context
-  captureTestEvent, // Explicit method for A/B test event tracking
+  captureEventWithGroup,
+  captureTestEvent,
   safeReloadFeatureFlags,
   safeIsFeatureEnabled
 } from './events';
 
-// Re-export from identity
 export {
   safeIdentify,
   safeGetDistinctId,
@@ -29,7 +31,6 @@ export {
   clearStoredGroups
 } from './identity';
 
-// Re-export from groups
 export {
   getLastGroups,
   setLastGroup,
@@ -37,11 +38,8 @@ export {
   safeGroupIdentify
 } from './groups';
 
-// Re-export from helpers
 export {
   slugifyGroupKey,
   extractPriceValue,
   formatSubscriptionGroupProps
 } from './helpers';
-
-// MyList is now a purely visual feature with no functionality
