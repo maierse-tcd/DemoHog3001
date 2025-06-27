@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthLayout } from '../components/auth/AuthLayout';
@@ -32,9 +31,11 @@ const SignUp = () => {
 
   return (
     <div className="min-h-screen bg-netflix-black flex flex-col">
-      {/* Navbar with just logo */}
+      {/* Navbar with clickable logo */}
       <div className="py-6 px-8 border-b border-netflix-gray/20">
-        <h1 className="text-netflix-red text-3xl font-bold tracking-tighter">HOGFLIX</h1>
+        <Link to="/">
+          <h1 className="text-netflix-red text-3xl font-bold tracking-tighter cursor-pointer hover:opacity-80 transition-opacity">HOGFLIX</h1>
+        </Link>
       </div>
       
       <div className="flex-1 flex items-center justify-center p-4">
