@@ -17,7 +17,32 @@ import { PostHogProvider } from './components/PostHogProvider';
 import { Toaster } from './components/ui/toaster';
 import { AuthProvider } from './hooks/auth/useAuthContext';
 import { ProfileSettingsProvider } from './contexts/ProfileSettingsContext';
+import { usePageviewTracking } from './hooks/usePageviewTracking';
 import './App.css';
+
+// Component that includes the pageview tracking hook
+function AppContent() {
+  // Enable automatic pageview tracking for all route changes
+  usePageviewTracking();
+
+  return (
+    <Routes>
+      <Route path="/" element={<Index />} />
+      <Route path="/movies" element={<Movies />} />
+      <Route path="/series" element={<Series />} />
+      <Route path="/plans" element={<Plans />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<SignUp />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/help" element={<HelpPage />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/image-manager" element={<ImageManager />} />
+      <Route path="/content/:id" element={<ContentDetail />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}
 
 function App() {
   return (
@@ -25,21 +50,7 @@ function App() {
       <AuthProvider>
         <ProfileSettingsProvider>
           <Router>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/movies" element={<Movies />} />
-              <Route path="/series" element={<Series />} />
-              <Route path="/plans" element={<Plans />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<SignUp />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/help" element={<HelpPage />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/image-manager" element={<ImageManager />} />
-              <Route path="/content/:id" element={<ContentDetail />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <AppContent />
           </Router>
           <Toaster />
         </ProfileSettingsProvider>
