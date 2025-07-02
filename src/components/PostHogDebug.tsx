@@ -60,7 +60,7 @@ export const PostHogDebug = ({ enabled = false }: { enabled?: boolean }) => {
         </div>
       </div>
       <div className="text-xs text-gray-400 mt-2 border-t border-gray-600 pt-2">
-        💡 PostHog polls for flag updates every ~30s. Use refresh button for immediate check.
+        💡 Use refresh button for immediate flag updates.
       </div>
     </div>
   );
