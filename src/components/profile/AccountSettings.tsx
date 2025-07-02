@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from '../../hooks/use-toast';
 import { ProfileSettings } from '../../contexts/ProfileSettingsContext';
 import { useFeatureFlagEnabled } from 'posthog-js/react';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Settings } from 'lucide-react';
 import { safeIdentify } from '../../utils/posthog';
 import { usePostHog } from 'posthog-js/react';
 import { supabase } from '../../integrations/supabase/client';
@@ -19,7 +19,14 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
   const isAdmin = useFeatureFlagEnabled('is_admin');
   const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [adminRateOverride, setAdminRateOverride] = useState(false);
   const posthog = usePostHog();
+  
+  // Load admin rate override setting from localStorage
+  useEffect(() => {
+    const storedOverride = localStorage.getItem('adminRateOverride');
+    setAdminRateOverride(storedOverride === 'true');
+  }, []);
   
   const handleSettingsSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,6 +193,43 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
                 When the access_password feature flag is enabled, this password will be required to access Hogflix.
                 The password is stored securely in the database and applies to all site visitors.
               </p>
+            </div>
+          </div>
+        )}
+        
+        {/* Admin rate limiting override - only visible to admins */}
+        {isAdmin && (
+          <div>
+            <h3 className="font-medium mb-2">
+              <Settings className="inline mr-2" size={16} />
+              Rate Limiting Override
+            </h3>
+            <div className="flex items-center justify-between py-2 border-b border-netflix-gray/30">
+              <div>
+                <span>Enable high-rate automation</span>
+                <p className="text-xs text-netflix-gray mt-1">
+                  When enabled, allows 1000 login/signup attempts per minute for automation scripts
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={adminRateOverride}
+                  onChange={(e) => {
+                    const enabled = e.target.checked;
+                    setAdminRateOverride(enabled);
+                    localStorage.setItem('adminRateOverride', enabled.toString());
+                    toast({
+                      title: enabled ? 'Rate override enabled' : 'Rate override disabled',
+                      description: enabled 
+                        ? 'High-rate automation mode is now active' 
+                        : 'Normal rate limits restored'
+                    });
+                  }}
+                  className="sr-only peer" 
+                />
+                <div className="w-11 h-6 bg-netflix-gray peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-netflix-red"></div>
+              </label>
             </div>
           </div>
         )}
