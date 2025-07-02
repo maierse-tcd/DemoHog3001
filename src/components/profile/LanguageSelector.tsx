@@ -14,7 +14,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   return <div className="space-y-2">
       <Label className="block text-sm font-medium text-netflix-white">Language</Label>
       <Select value={selectedLanguage} onValueChange={onLanguageChange} disabled={disabled}>
-        <SelectTrigger className="w-full bg-netflix-black border border-netflix-gray rounded">
+        <SelectTrigger>
           <SelectValue placeholder="Select language" />
         </SelectTrigger>
         <SelectContent>
