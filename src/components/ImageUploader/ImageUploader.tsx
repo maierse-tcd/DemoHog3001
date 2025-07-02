@@ -27,29 +27,11 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   imageType = 'backdrop',
   onImageUploaded
 }) => {
-  const [isDragging, setIsDragging] = useState(false);
   const [preview, setPreview] = useState<string | undefined>(previewUrl);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   
-  const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
-
   const validateAndProcessFile = useCallback((file: File) => {
     // Reset error state
     setError(null);
@@ -97,16 +79,6 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     onImageSelect(file);
   }, [maxSizeMB, onImageSelect, onImageUploaded, preview]);
 
-  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      validateAndProcessFile(e.dataTransfer.files[0]);
-    }
-  }, [validateAndProcessFile]);
-
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       validateAndProcessFile(e.target.files[0]);
@@ -115,10 +87,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
   const removeImage = useCallback(() => {
     setPreview(undefined);
-    // You might want to notify the parent component that the image was removed
   }, []);
 
-  // Adjust for existing user authentication status - default to true for this example
   const canUpload = true;
 
   return (
@@ -140,7 +110,6 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             input.type = 'file';
             input.accept = accept;
             input.onchange = (e) => {
-              // Fix: Handle the type conversion properly
               if (e && e.target && e.target instanceof HTMLInputElement && e.target.files) {
                 const files = e.target.files;
                 if (files.length > 0) {
