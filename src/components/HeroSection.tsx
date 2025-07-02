@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import { DEFAULT_IMAGES } from '../utils/imageUtils';
 import { safeCapture } from '../utils/posthog';
 import { useToast } from '../hooks/use-toast';
+import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { Dialog, DialogContent } from './ui/dialog';
 
 interface HeroSectionProps {
@@ -16,6 +17,7 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const { toast } = useToast();
+  const showMyListFeature = useFeatureFlagEnabled('show_my_list_feature');
   
   // Use backdrop if available, otherwise fall back to default image
   const backdropUrl = content.backdropUrl || DEFAULT_IMAGES.backdrop;
@@ -127,14 +129,16 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
                 <Info className="mr-2 h-5 w-5" /> More Info
               </Button>
               
-              {/* Purely visual My List button with no functionality */}
-              <Button
-                variant="outline" 
-                className="border-gray-400 hover:bg-white/10"
-                onClick={handleMyListClick}
-              >
-                <Plus className="mr-2 h-5 w-5" /> My List
-              </Button>
+              {/* My List button - only show when feature flag is enabled */}
+              {showMyListFeature && (
+                <Button
+                  variant="outline" 
+                  className="border-gray-400 hover:bg-white/10"
+                  onClick={handleMyListClick}
+                >
+                  <Plus className="mr-2 h-5 w-5" /> My List
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -203,14 +207,16 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
                   <Play className="mr-2 h-5 w-5" fill="black" /> Play
                 </Button>
                 
-                {/* Purely visual My List button with no functionality */}
-                <Button
-                  variant="outline" 
-                  className="border-gray-400 hover:bg-white/10"
-                  onClick={handleMyListClick}
-                >
-                  <Plus className="mr-2 h-5 w-5" /> Add to My List
-                </Button>
+                {/* My List button - only show when feature flag is enabled */}
+                {showMyListFeature && (
+                  <Button
+                    variant="outline" 
+                    className="border-gray-400 hover:bg-white/10"
+                    onClick={handleMyListClick}
+                  >
+                    <Plus className="mr-2 h-5 w-5" /> Add to My List
+                  </Button>
+                )}
               </div>
             </div>
           </div>
