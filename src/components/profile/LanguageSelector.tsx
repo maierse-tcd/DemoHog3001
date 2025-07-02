@@ -1,22 +1,18 @@
-
 import React from 'react';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-
 interface LanguageSelectorProps {
   selectedLanguage: string;
   onLanguageChange: (value: string) => void;
   disabled?: boolean; // Added disabled prop as optional
 }
-
 export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   selectedLanguage,
   onLanguageChange,
   disabled = false // Default to false if not provided
 }) => {
-  return (
-    <div className="space-y-2">
-      <Label className="block text-sm font-medium text-netflix-gray">Language</Label>
+  return <div className="space-y-2">
+      <Label className="block text-sm font-medium text-netflix-white">Language</Label>
       <Select value={selectedLanguage} onValueChange={onLanguageChange} disabled={disabled}>
         <SelectTrigger className="w-full bg-netflix-black border border-netflix-gray rounded">
           <SelectValue placeholder="Select language" />
@@ -32,6 +28,5 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
           <SelectItem value="Chinese">Chinese</SelectItem>
         </SelectContent>
       </Select>
-    </div>
-  );
+    </div>;
 };
