@@ -43,46 +43,11 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
       });
       
       if (error) {
-        console.log("Login failed, creating account instead");
-        
-        // Sign up new user - simplified with no email confirmation
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { name: email.split('@')[0] }
-          }
-        });
-        
-        if (signUpError) {
-          console.error("Failed to create account:", signUpError);
-          throw signUpError;
-        }
-        
-        if (signUpData?.user) {
-          console.log("Created new user account:", signUpData.user.id);
-          
-          // Create profile for new user
-          try {
-            await supabase
-              .from('profiles')
-              .upsert({
-                id: signUpData.user.id,
-                email,
-                name: email.split('@')[0],
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              });
-              
-            // Since we've just created the account, let's sign in now
-            await handleSuccessfulLogin(signUpData.user.id, email);
-          } catch (profileError) {
-            console.warn("Could not create profile, but continuing:", profileError);
-            // Still proceed with login
-            await handleSuccessfulLogin(signUpData.user.id, email);
-          }
-        }
-      } else if (data && data.user) {
+        console.error("Login failed:", error);
+        throw error;
+      }
+      
+      if (data && data.user) {
         console.log("Login successful:", data.user.id);
         await handleSuccessfulLogin(data.user.id, email);
       }
