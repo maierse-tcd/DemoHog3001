@@ -4,6 +4,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Loader2, CheckCircle, Trash2, ImageIcon } from 'lucide-react';
 import { DEFAULT_IMAGES } from '../../utils/imageUtils';
 import { filterUniqueImages } from '../../utils/imageUtils/urlUtils';
+import { LazyImage } from '../ui/lazy-image';
 
 interface MediaGalleryProps {
   isLoadingImages: boolean;
@@ -75,14 +76,12 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
           >
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             
-            <img 
+            <LazyImage
               src={url} 
               alt={`Image ${index + 1}`}
               className="w-full h-full object-cover"
-              onError={(e) => {
-                console.error('Image failed to load:', url);
-                e.currentTarget.src = DEFAULT_IMAGES.backdrop;
-              }}
+              fallbackSrc={DEFAULT_IMAGES.backdrop}
+              placeholder={<ImageIcon className="h-4 w-4 text-muted-foreground" />}
             />
             
             <div className="absolute inset-0 flex justify-between items-start p-1">
