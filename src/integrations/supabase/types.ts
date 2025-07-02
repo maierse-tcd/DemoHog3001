@@ -206,6 +206,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      is_admin_user: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       seed_content_items: {
         Args: { content_items: Json }
         Returns: undefined
