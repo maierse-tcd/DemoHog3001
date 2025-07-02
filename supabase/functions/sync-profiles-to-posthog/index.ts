@@ -25,12 +25,8 @@ serve(async (req) => {
     if (error) throw error
 
     // Send profile data to PostHog for each user
-    const postHogApiKey = Deno.env.get('POSTHOG_API_KEY')
+    const postHogApiKey = Deno.env.get('POSTHOG_API_KEY') || 'phc_O1OL4R6b4MUWUsu8iYorqWfQoGSorFLHLOustqbVB0U'
     const postHogHost = 'https://ph.hogflix.dev'
-
-    if (!postHogApiKey) {
-      throw new Error('POSTHOG_API_KEY environment variable is required')
-    }
 
     const promises = profiles.map(async (profile) => {
       if (!profile.email) return
