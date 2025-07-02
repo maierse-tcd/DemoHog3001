@@ -86,6 +86,7 @@ export const useSignUp = ({ selectedPlanId, planName, planCost }: UseSignUpProps
           data: {
             selectedPlanId: selectedPlanId,
             isKidsAccount: values.isKidsAccount || false,
+            language: values.language,
             signupDate: signupDate,
             planType: planName,
             planCost: planCost,
@@ -105,7 +106,7 @@ export const useSignUp = ({ selectedPlanId, planName, planCost }: UseSignUpProps
         identifyUser(values.email, {
           name: values.email.split('@')[0],
           is_kids_account: values.isKidsAccount || false,
-          language: 'English',
+          language: values.language,
           email: values.email,
           supabase_id: data.user.id,
           signup_date: signupDate,

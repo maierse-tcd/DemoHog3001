@@ -37,6 +37,7 @@ const SignUpFormInner: React.FC = () => {
     resolver: zodResolver(signupFormSchema),
     defaultValues: {
       email: "",
+      language: "English",
       password: "",
       confirmPassword: "",
       isKidsAccount: false
