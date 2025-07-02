@@ -8,6 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { ProfileAvatar } from './ProfileAvatar';
 import { AdminNavItems } from './AdminNavItems';
+import { PostHogDebug } from './PostHogDebug';
 
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -168,6 +169,9 @@ export const Navbar = () => {
           <AdminNavItems />
         </div>
       )}
+      
+      {/* Debug component - only shows when enabled or in development */}
+      <PostHogDebug enabled={true} />
     </nav>
   );
 };

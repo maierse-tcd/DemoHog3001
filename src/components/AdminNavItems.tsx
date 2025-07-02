@@ -1,65 +1,37 @@
 
 import { Link } from 'react-router-dom';
 import { Image } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { useFeatureFlag } from '../hooks/useFeatureFlag';
-import { safeGetDistinctId } from '../utils/posthogUtils';
+import { useFeatureFlagEnabled, useActiveFeatureFlags } from 'posthog-js/react';
 
 /**
- * Admin navigation items that are only shown when the user has the is_admin feature flag enabled
+ * Simplified admin navigation items using PostHog's native feature flag hooks
+ * Shows the Images tab when the is_admin feature flag is enabled
  */
 export const AdminNavItems = () => {
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const isAdminEnabled = useFeatureFlag('is_admin');
+  const isAdminEnabled = useFeatureFlagEnabled('is_admin');
+  const activeFlags = useActiveFeatureFlags();
   
-  // Add an effect to listen for feature flag changes
-  useEffect(() => {
-    // Only check the flag if the user is identified
-    const distinctId = safeGetDistinctId();
-    if (distinctId) {
-      setIsAdmin(isAdminEnabled);
-      setIsLoading(false);
-      console.log(`AdminNavItems - is_admin flag: ${isAdminEnabled}, user: ${distinctId}`);
-    } else {
-      setIsAdmin(false);
-      setIsLoading(false);
-      console.log('AdminNavItems - User not identified, hiding admin items');
-    }
-  }, [isAdminEnabled]);
+  // Wait for feature flags to be loaded before showing anything
+  const flagsLoaded = activeFlags !== undefined;
   
-  // Listen for a custom event that will be dispatched after login
-  useEffect(() => {
-    const handleFeatureFlagsUpdated = () => {
-      console.log('AdminNavItems - Feature flags updated event received');
-      const distinctId = safeGetDistinctId();
-      if (distinctId) {
-        // Re-check the feature flag status
-        setIsLoading(true);
-        setTimeout(() => {
-          // Give PostHog a moment to update the flag status
-          setIsAdmin(isAdminEnabled);
-          setIsLoading(false);
-        }, 100);
-      }
-    };
-
-    // Add event listener for custom event
-    window.addEventListener('posthog-feature-flags-updated', handleFeatureFlagsUpdated);
-    
-    return () => {
-      window.removeEventListener('posthog-feature-flags-updated', handleFeatureFlagsUpdated);
-    };
-  }, [isAdminEnabled]);
+  // Debug logging
+  console.log('AdminNavItems - Flags loaded:', flagsLoaded);
+  console.log('AdminNavItems - is_admin flag:', isAdminEnabled);
+  console.log('AdminNavItems - Active flags:', activeFlags);
   
-  // If still loading or the flag isn't true, don't show anything
-  if (isLoading) {
-    return null; // Don't render while loading
-  }
-  
-  if (!isAdmin) {
+  // Don't render while flags are loading
+  if (!flagsLoaded) {
+    console.log('AdminNavItems - Waiting for feature flags to load...');
     return null;
   }
+  
+  // Only show if the admin flag is explicitly true
+  if (!isAdminEnabled) {
+    console.log('AdminNavItems - is_admin flag is false or undefined, hiding admin items');
+    return null;
+  }
+  
+  console.log('AdminNavItems - Showing admin navigation items');
   
   return (
     <Link 

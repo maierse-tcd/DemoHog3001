@@ -2,6 +2,7 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { identifyUser, setUserType, setSubscriptionPlan, resetIdentity } from '../../utils/posthog/simple';
+import posthog from 'posthog-js';
 
 interface AuthIntegrationProps {
   posthogLoadedRef: React.MutableRefObject<boolean>;
@@ -96,6 +97,15 @@ export const useAuthIntegration = ({
         // Simple identification using new utilities
         console.log('PostHog: Identifying user with properties:', userProperties);
         identifyUser(email, userProperties);
+        
+        // Reload feature flags after identification to ensure they are up to date
+        console.log('PostHog: Reloading feature flags after user identification');
+        setTimeout(() => {
+          if (posthog && typeof posthog.reloadFeatureFlags === 'function') {
+            posthog.reloadFeatureFlags();
+            console.log('PostHog: Feature flags reloaded successfully');
+          }
+        }, 100);
         
         // Set user type
         const isKid = profileData?.is_kids === true;
