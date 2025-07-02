@@ -8,6 +8,7 @@ import { ProfileInfo } from '../components/profile/ProfileInfo';
 import { SubscriptionSettings } from '../components/profile/SubscriptionSettings';
 import { AccountSettings } from '../components/profile/AccountSettings';
 import { HelpCenter } from '../components/profile/HelpCenter';
+import { SubscriptionNotification } from '../components/SubscriptionNotification';
 import { supabase } from '../integrations/supabase/client';
 import { useToast } from '../hooks/use-toast';
 import { useAuth } from '../hooks/useAuth';
@@ -20,6 +21,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  const [subscriptionStatus, setSubscriptionStatus] = useState('none');
   
   useEffect(() => {
     // Check for tab in URL query params
@@ -83,6 +85,9 @@ const Profile = () => {
           console.log('Profile data:', profileData);
           console.log('Language from profile:', profileData.language);
           
+          // Set subscription status from profile
+          setSubscriptionStatus(profileData.subscription_status || 'none');
+          
           // Update context with profile data
           updateSettings({
             name: displayName,
@@ -109,6 +114,10 @@ const Profile = () => {
     
     checkAuth();
   }, [navigate, toast, updateSettings, settings, isLoggedIn, authLoading]);
+
+  const handleUpgrade = () => {
+    setActiveTab('subscription');
+  };
 
   // Show loading state only while fetching profile data and auth is still pending
   if (authLoading) {
@@ -151,6 +160,11 @@ const Profile = () => {
 
           {/* Main content area that changes based on active tab */}
           <div className="flex-1">
+            {/* Show subscription notification if not subscribed */}
+            <SubscriptionNotification 
+              isSubscribed={subscriptionStatus === 'active'}
+              onUpgrade={handleUpgrade}
+            />
             {activeTab === 'profile' && (
               <ProfileInfo settings={settings} updateSettings={updateSettings} />
             )}

@@ -17,7 +17,7 @@ export const useSubscriptionSettings = ({
   selectedPlanId: initialPlanId,
   updateSelectedPlan
 }: UseSubscriptionSettingsProps) => {
-  const { isLoggedIn } = useAuthContext();
+  const { isLoggedIn, userMetadata } = useAuthContext();
   const [isLoading, setIsLoading] = useState(false);
   const [currentPlanId, setCurrentPlanId] = useState(initialPlanId);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -103,14 +103,27 @@ export const useSubscriptionSettings = ({
       }
       
       // Update user metadata with the selected plan
-      const { error } = await supabase.auth.updateUser({
+      const { error: authError } = await supabase.auth.updateUser({
         data: { 
           selectedPlanId: currentPlanId,
           lastPlanChange: new Date().toISOString()
         }
       });
       
-      if (error) throw error;
+      if (authError) throw authError;
+
+      // Update the profiles table with subscription status
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          subscription_status: 'active',
+          subscription_plan_id: currentPlanId,
+          subscription_cancelled_at: null,
+          subscription_expires_at: null // You might want to set this based on billing cycle
+        })
+        .eq('id', userMetadata?.sub);
+
+      if (profileError) throw profileError;
       
       // Update the context only after successful DB update
       updateSelectedPlan(currentPlanId);
@@ -206,14 +219,27 @@ export const useSubscriptionSettings = ({
     
     try {
       // Update user metadata to indicate cancelled subscription
-      const { error } = await supabase.auth.updateUser({
+      const { error: authError } = await supabase.auth.updateUser({
         data: { 
           selectedPlanId: 'cancelled',
           subscriptionCancelledAt: new Date().toISOString()
         }
       });
       
-      if (error) throw error;
+      if (authError) throw authError;
+
+      // Update the profiles table with subscription cancellation
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          subscription_status: 'cancelled',
+          subscription_plan_id: null,
+          subscription_cancelled_at: new Date().toISOString(),
+          subscription_expires_at: null
+        })
+        .eq('id', userMetadata?.sub);
+
+      if (profileError) throw profileError;
       
       // Update the context
       updateSelectedPlan('cancelled');
