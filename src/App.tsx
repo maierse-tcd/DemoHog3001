@@ -14,7 +14,6 @@ import Privacy from './pages/Privacy';
 import ImageManager from './pages/ImageManager';
 import ContentDetail from './pages/ContentDetail';
 import { PostHogProvider } from './components/PostHogProvider';
-import { PostHogIdentificationProvider } from './contexts/PostHogIdentificationContext';
 import { Toaster } from './components/ui/toaster';
 import { AuthProvider } from './hooks/auth/useAuthContext';
 import { ProfileSettingsProvider } from './contexts/ProfileSettingsContext';
@@ -49,14 +48,12 @@ function App() {
   return (
     <PostHogProvider>
       <AuthProvider>
-        <PostHogIdentificationProvider>
-          <ProfileSettingsProvider>
-            <Router>
-              <AppContent />
-            </Router>
-            <Toaster />
-          </ProfileSettingsProvider>
-        </PostHogIdentificationProvider>
+        <ProfileSettingsProvider>
+          <Router>
+            <AppContent />
+          </Router>
+          <Toaster />
+        </ProfileSettingsProvider>
       </AuthProvider>
     </PostHogProvider>
   );

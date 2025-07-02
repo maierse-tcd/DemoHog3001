@@ -11,7 +11,6 @@ interface AuthIntegrationProps {
   updateSubscription: (planName: string, planId: string, planPrice: string) => void;
   setCurrentSubscriptionName: React.Dispatch<React.SetStateAction<string | null>>;
   setCurrentSubscription: React.Dispatch<React.SetStateAction<string | null>>;
-  onUserIdentified?: () => void;
 }
 
 export const useAuthIntegration = ({
@@ -20,8 +19,7 @@ export const useAuthIntegration = ({
   updateUserType,
   updateSubscription,
   setCurrentSubscriptionName,
-  setCurrentSubscription,
-  onUserIdentified
+  setCurrentSubscription
 }: AuthIntegrationProps) => {
   const isMountedRef = useRef<boolean>(true);
 
@@ -131,13 +129,6 @@ export const useAuthIntegration = ({
           if (posthog && typeof posthog.reloadFeatureFlags === 'function') {
             posthog.reloadFeatureFlags();
             console.log('PostHog: Feature flags reloaded successfully');
-            
-            // Notify that user identification is complete
-            setTimeout(() => {
-              if (onUserIdentified) {
-                onUserIdentified();
-              }
-            }, 200); // Additional delay to ensure flags are processed
           }
         }, 100);
         

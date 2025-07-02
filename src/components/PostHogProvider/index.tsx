@@ -25,14 +25,6 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     initializeState
   } = stateManager;
 
-  // Callback when user identification is complete
-  const handleUserIdentified = () => {
-    console.log('PostHog: User identification completed, notifying components');
-    if ((window as any).__postHogIdentified) {
-      (window as any).__postHogIdentified();
-    }
-  };
-
   // Initialize Supabase auth integration
   const { checkAndIdentifyCurrentUser } = useAuthIntegration({
     posthogLoadedRef,
@@ -40,8 +32,7 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     updateUserType: userManager.updateUserType,
     updateSubscription: subscriptionManager.updateSubscription,
     setCurrentSubscriptionName: stateManager.setCurrentSubscriptionName,
-    setCurrentSubscription: stateManager.setCurrentSubscription,
-    onUserIdentified: handleUserIdentified
+    setCurrentSubscription: stateManager.setCurrentSubscription
   });
 
   // Initialize state from localStorage on mount
