@@ -11,6 +11,7 @@ interface AuthIntegrationProps {
   updateSubscription: (planName: string, planId: string, planPrice: string) => void;
   setCurrentSubscriptionName: React.Dispatch<React.SetStateAction<string | null>>;
   setCurrentSubscription: React.Dispatch<React.SetStateAction<string | null>>;
+  onUserIdentified?: () => void;
 }
 
 export const useAuthIntegration = ({
@@ -19,7 +20,8 @@ export const useAuthIntegration = ({
   updateUserType,
   updateSubscription,
   setCurrentSubscriptionName,
-  setCurrentSubscription
+  setCurrentSubscription,
+  onUserIdentified
 }: AuthIntegrationProps) => {
   const isMountedRef = useRef<boolean>(true);
 
@@ -29,8 +31,33 @@ export const useAuthIntegration = ({
       checkAndIdentifyCurrentUser();
     }
     
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('PostHog: Auth state changed:', event);
+      
+      if (event === 'SIGNED_IN' && session?.user && posthogLoadedRef.current) {
+        console.log('PostHog: User signed in, identifying immediately');
+        const email = session.user.email;
+        if (email) {
+          // Reset if different user
+          if (currentUserRef.current && currentUserRef.current !== email) {
+            console.log(`PostHog: Different user detected, resetting: ${email}`);
+            resetIdentity();
+          }
+          
+          // Identify user immediately on sign in
+          identifyUserWithProfile(email, session.user.id, session.user.user_metadata);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        console.log('PostHog: User signed out, resetting identity');
+        resetIdentity();
+        currentUserRef.current = null;
+      }
+    });
+    
     return () => {
       isMountedRef.current = false;
+      subscription.unsubscribe();
     };
   }, [posthogLoadedRef.current]);
 
@@ -98,12 +125,19 @@ export const useAuthIntegration = ({
         console.log('PostHog: Identifying user with properties:', userProperties);
         identifyUser(email, userProperties);
         
-        // Reload feature flags after identification to ensure they are up to date
+        // Reload feature flags after identification with proper timing
         console.log('PostHog: Reloading feature flags after user identification');
         setTimeout(() => {
           if (posthog && typeof posthog.reloadFeatureFlags === 'function') {
             posthog.reloadFeatureFlags();
             console.log('PostHog: Feature flags reloaded successfully');
+            
+            // Notify that user identification is complete
+            setTimeout(() => {
+              if (onUserIdentified) {
+                onUserIdentified();
+              }
+            }, 200); // Additional delay to ensure flags are processed
           }
         }, 100);
         

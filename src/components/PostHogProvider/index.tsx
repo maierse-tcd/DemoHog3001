@@ -1,6 +1,7 @@
 
 import { useEffect, useMemo } from 'react';
 import { PostHogContextProvider } from '../../contexts/PostHogContext';
+import { PostHogIdentificationProvider } from '../../contexts/PostHogIdentificationContext';
 import { usePostHogUserManager } from '../../posthog/UserManager';
 import { usePostHogSubscriptionManager } from '../../posthog/SubscriptionManager';
 import { usePostHogStateManager } from '../../posthog/StateManager';
@@ -25,6 +26,14 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     initializeState
   } = stateManager;
 
+  // Callback when user identification is complete
+  const handleUserIdentified = () => {
+    console.log('PostHog: User identification completed, notifying components');
+    if ((window as any).__postHogIdentified) {
+      (window as any).__postHogIdentified();
+    }
+  };
+
   // Initialize Supabase auth integration
   const { checkAndIdentifyCurrentUser } = useAuthIntegration({
     posthogLoadedRef,
@@ -32,7 +41,8 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
     updateUserType: userManager.updateUserType,
     updateSubscription: subscriptionManager.updateSubscription,
     setCurrentSubscriptionName: stateManager.setCurrentSubscriptionName,
-    setCurrentSubscription: stateManager.setCurrentSubscription
+    setCurrentSubscription: stateManager.setCurrentSubscription,
+    onUserIdentified: handleUserIdentified
   });
 
   // Initialize state from localStorage on mount
@@ -70,13 +80,15 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
 
   return (
     <PostHogContextProvider value={contextValue}>
-      <PostHogInitializer 
-        apiKey={POSTHOG_KEY} 
-        apiHost={POSTHOG_HOST} 
-        onLoaded={handlePostHogLoaded}
-      >
-        {children}
-      </PostHogInitializer>
+      <PostHogIdentificationProvider>
+        <PostHogInitializer 
+          apiKey={POSTHOG_KEY} 
+          apiHost={POSTHOG_HOST} 
+          onLoaded={handlePostHogLoaded}
+        >
+          {children}
+        </PostHogInitializer>
+      </PostHogIdentificationProvider>
     </PostHogContextProvider>
   );
 };
