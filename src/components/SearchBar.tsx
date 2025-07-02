@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Search, X, Film } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../integrations/supabase/client';
+import { trackEvent } from '../utils/posthog/simple';
 
 export const SearchBar = () => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -43,6 +44,12 @@ export const SearchBar = () => {
     try {
       setIsLoading(true);
       
+      // Track search event
+      trackEvent('search_performed', {
+        query: query.trim(),
+        query_length: query.trim().length
+      });
+      
       const { data, error } = await supabase
         .from('content_items')
         .select('*')
@@ -54,6 +61,12 @@ export const SearchBar = () => {
         return;
       }
       
+      // Track search results
+      trackEvent('search_results', {
+        query: query.trim(),
+        results_count: data?.length || 0
+      });
+      
       setResults(data || []);
     } catch (error) {
       console.error('Search error:', error);
@@ -62,7 +75,14 @@ export const SearchBar = () => {
     }
   };
 
-  const handleContentClick = (id: string) => {
+  const handleContentClick = (id: string, title: string) => {
+    // Track search result click
+    trackEvent('search_result_clicked', {
+      content_id: id,
+      content_title: title,
+      query: query.trim()
+    });
+    
     // Reset search
     setQuery('');
     setIsExpanded(false);
@@ -133,13 +153,13 @@ export const SearchBar = () => {
               {results.map((item) => (
                 <div 
                   key={item.id}
-                  onClick={() => handleContentClick(item.id)}
+                  onClick={() => handleContentClick(item.id, item.title)}
                   className="flex items-center p-2 hover:bg-netflix-gray/20 cursor-pointer transition-colors"
                 >
-                  {item.poster_url ? (
+                  {item.poster_url || item.backdrop_url ? (
                     <div className="w-12 h-16 mr-3 overflow-hidden rounded">
                       <img 
-                        src={item.poster_url} 
+                        src={item.poster_url || item.backdrop_url} 
                         alt={item.title}
                         className="w-full h-full object-cover"
                         onError={(e) => {
