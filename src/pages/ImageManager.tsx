@@ -20,6 +20,7 @@ import { PlanManager } from '../components/ImageManager/PlanManager';
 import { 
   extractFilenameFromUrl, 
   loadImagesFromStorage, 
+  loadImagesFromDatabase,
   filterUniqueImages 
 } from '../utils/imageUtils/urlUtils';
 import { loadContentFromSupabase, deleteContentFromSupabase } from '../utils/contentUtils';
@@ -43,7 +44,7 @@ const ImageManager = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState('content');
   
-  // Load uploaded images using recursive storage listing
+  // Load uploaded images using optimized database-first approach
   const loadUploadedImages = async () => {
     if (!isLoggedIn && !user?.id) {
       console.log('ImageManager - User not logged in, but we will try to load images anyway');
@@ -51,9 +52,9 @@ const ImageManager = () => {
     
     setIsLoadingImages(true);
     try {
-      // Use the new recursive listing function that includes subfolders
-      const urls = await loadImagesFromStorage();
-      console.log('ImageManager - Loaded all images from storage (including subfolders):', urls.length);
+      // Use database-first approach with pagination for better performance
+      const urls = await loadImagesFromDatabase(50, 0);
+      console.log('ImageManager - Loaded images from database:', urls.length);
       
       // Filter unique images to avoid duplicates
       const filteredUrls = filterUniqueImages(urls);

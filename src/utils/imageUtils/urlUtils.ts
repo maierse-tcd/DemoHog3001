@@ -156,15 +156,19 @@ export const filterUniqueImages = (urls: string[]): string[] => {
   return deduplicatedUrls;
 };
 
-// Load images from the content_images database table
-export const loadImagesFromDatabase = async (): Promise<string[]> => {
+// Cache for image URLs to avoid repeated getPublicUrl calls
+const imageUrlCache = new Map<string, string>();
+
+// Load images from the content_images database table with caching
+export const loadImagesFromDatabase = async (limit: number = 50, offset: number = 0): Promise<string[]> => {
   try {
-    console.log('Loading images from content_images database table');
+    console.log('Loading images from content_images database table with pagination');
     
     const { data: images, error } = await supabase
       .from('content_images')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('image_path, id')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
     
     if (error) {
       console.error("Error fetching images from database:", error);
@@ -172,35 +176,43 @@ export const loadImagesFromDatabase = async (): Promise<string[]> => {
     }
     
     if (!images || images.length === 0) {
-      console.log('No images found in database, falling back to storage listing');
-      return loadImagesFromStorage(); // If no DB records, fall back to storage
+      console.log('No images found in database');
+      return [];
     }
     
     console.log(`Found ${images.length} images in database`);
     
-    // Convert DB records to image URLs
+    // Convert DB records to image URLs with caching
     const imageUrls = images.map(image => {
+      // Check cache first
+      if (imageUrlCache.has(image.image_path)) {
+        return imageUrlCache.get(image.image_path)!;
+      }
+      
+      let imageUrl: string;
+      
       // CRITICAL FIX: Check if image_path is already a full URL
       if (image.image_path.startsWith('http')) {
-        console.log('Using existing full URL:', image.image_path);
-        return image.image_path;
+        imageUrl = image.image_path;
       } else {
         // If it's a relative path, generate the public URL
-        console.log('Generating public URL for path:', image.image_path);
         const { data } = supabase.storage
           .from('media')
           .getPublicUrl(image.image_path);
           
-        return data.publicUrl;
+        imageUrl = data.publicUrl;
       }
+      
+      // Cache the URL
+      imageUrlCache.set(image.image_path, imageUrl);
+      return imageUrl;
     });
     
     console.log('Generated image URLs:', imageUrls.length);
     return imageUrls;
   } catch (error) {
     console.error("Error loading images from database:", error);
-    console.log("Falling back to storage listing");
-    return loadImagesFromStorage();
+    return [];
   }
 };
 

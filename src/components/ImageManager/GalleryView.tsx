@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { RefreshCcw, Trash2, ImageIcon } from 'lucide-react';
 import { DEFAULT_IMAGES } from '../../utils/imageUtils';
 import { filterUniqueImages } from '../../utils/imageUtils/urlUtils';
+import { LazyImage } from '../ui/lazy-image';
 
 interface GalleryViewProps {
   isLoadingImages: boolean;
@@ -61,14 +62,12 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
           {filteredImages.map((url, index) => (
             <div key={`image-${index}-${url.slice(-8)}`} className="relative group">
               <div className="aspect-video w-full overflow-hidden rounded-md bg-netflix-gray/20">
-                <img 
+                <LazyImage
                   src={url} 
                   alt={`Uploaded ${index + 1}`} 
                   className="rounded-md w-full h-full object-cover"
-                  onError={(e) => {
-                    console.error('Image failed to load:', url);
-                    e.currentTarget.src = DEFAULT_IMAGES.backdrop;
-                  }}
+                  fallbackSrc={DEFAULT_IMAGES.backdrop}
+                  placeholder={<ImageIcon className="h-4 w-4 text-muted-foreground" />}
                 />
               </div>
               <div className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">

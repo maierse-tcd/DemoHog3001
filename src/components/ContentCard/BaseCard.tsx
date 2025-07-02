@@ -1,6 +1,8 @@
 
 import React from 'react';
 import { DEFAULT_IMAGES } from '../../utils/imageUtils';
+import { LazyImage } from '../ui/lazy-image';
+import { ImageIcon } from 'lucide-react';
 
 interface BaseCardProps {
   title: string;
@@ -18,12 +20,11 @@ export const BaseCard: React.FC<BaseCardProps> = ({ title, imageUrl, onClick }) 
       
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent z-10"></div>
       
-      <img 
+      <LazyImage
         src={imageUrl}
         alt={title}
-        onError={(e) => {
-          (e.target as HTMLImageElement).src = DEFAULT_IMAGES.backdrop;
-        }}
+        fallbackSrc={DEFAULT_IMAGES.backdrop}
+        placeholder={<ImageIcon className="h-8 w-8 text-muted-foreground" />}
         className="relative w-full h-full object-cover z-0" 
       />
       

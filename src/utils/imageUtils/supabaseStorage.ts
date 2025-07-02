@@ -46,21 +46,57 @@ export const listFilesRecursively = async (prefix = ''): Promise<string[]> => {
   }
 };
 
+// Function to compress and resize image
+const compressImage = async (file: File, quality: number = 0.6, maxWidth: number = 1920): Promise<File> => {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    img.onload = () => {
+      // Calculate new dimensions maintaining aspect ratio
+      const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+      canvas.width = img.width * ratio;
+      canvas.height = img.height * ratio;
+      
+      // Draw and compress
+      ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+      
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const compressedFile = new File([blob], file.name, {
+            type: 'image/webp', // Convert to WebP for better compression
+            lastModified: Date.now()
+          });
+          resolve(compressedFile);
+        } else {
+          resolve(file); // Fallback to original if compression fails
+        }
+      }, 'image/webp', quality);
+    };
+    
+    img.src = URL.createObjectURL(file);
+  });
+};
+
 // Function to upload an image to Supabase storage
 export const uploadImageToSupabase = async (
   file: File, 
   imageType: string, 
   contentId?: string
 ): Promise<string> => {
-  const fileExt = file.name.split('.').pop();
+  // Compress image before upload
+  const compressedFile = await compressImage(file, 0.6, 1920);
+  
+  const fileExt = 'webp'; // Always use WebP extension
   const fileName = `${contentId ? contentId + '_' : ''}${imageType}_${uuidv4()}.${fileExt}`;
   const filePath = `${fileName}`;
   
   try {
     const { error } = await supabase.storage
       .from('media')
-      .upload(filePath, file, {
-        cacheControl: '3600',
+      .upload(filePath, compressedFile, {
+        cacheControl: '2592000', // 30 days cache (increased from 1 hour)
         upsert: false
       });
       
