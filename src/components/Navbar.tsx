@@ -18,7 +18,6 @@ export const Navbar = () => {
   const isDarkTheme = location.pathname !== '/login' && location.pathname !== '/signup';
   const hidePlan = useFeatureFlagEnabled('hide_plan');
   const debugOn = useFeatureFlagEnabled('debug_on');
-  const showAnalytics = useFeatureFlagEnabled('show_analytics_link');
   
   // Determine if we should show the Plans menu item
   // Only hide plans when the user is logged in AND the hidePlan flag is true
@@ -88,10 +87,6 @@ export const Navbar = () => {
                 <CreditCard size={16} />
                 Plans
               </Link>
-            )}
-            
-            {showAnalytics && (
-              <Link to="/analytics" className="text-netflix-gray hover:text-netflix-white transition-colors">Analytics</Link>
             )}
             
             {/* Admin link is now handled by the AdminNavItems component */}
