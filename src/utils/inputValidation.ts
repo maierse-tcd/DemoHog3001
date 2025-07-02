@@ -53,9 +53,13 @@ export const validateFileSize = (file: File, maxSizeInMB: number): boolean => {
   return file.size <= maxSizeInBytes;
 };
 
-export const rateLimitCheck = (key: string, limit: number, windowMs: number): boolean => {
+export const rateLimitCheck = (key: string, limit: number, windowMs: number, adminOverride?: { limit?: number; windowMs?: number }): boolean => {
   const now = Date.now();
-  const windowStart = now - windowMs;
+  
+  // Use admin override values if provided
+  const effectiveLimit = adminOverride?.limit ?? limit;
+  const effectiveWindowMs = adminOverride?.windowMs ?? windowMs;
+  const windowStart = now - effectiveWindowMs;
   
   // Get existing requests from localStorage
   const storedData = localStorage.getItem(`rateLimit_${key}`);
@@ -65,7 +69,7 @@ export const rateLimitCheck = (key: string, limit: number, windowMs: number): bo
   requests = requests.filter(timestamp => timestamp > windowStart);
   
   // Check if we're at the limit
-  if (requests.length >= limit) {
+  if (requests.length >= effectiveLimit) {
     return false;
   }
   

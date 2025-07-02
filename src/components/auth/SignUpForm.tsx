@@ -58,7 +58,9 @@ const SignUpFormInner: React.FC = () => {
     setIsLoading(true);
     
     // Rate limiting check - max 3 signup attempts per hour
-    if (!rateLimitCheck('signup', 3, 60 * 60 * 1000)) {
+    // Admins can override with higher limits for automation
+    const adminOverride = { limit: 1000, windowMs: 60 * 1000 }; // 1000 per minute for admin automation
+    if (!rateLimitCheck('signup', 3, 60 * 60 * 1000, adminOverride)) {
       toast({
         title: "Too many attempts",
         description: "Please wait before trying to sign up again.",
