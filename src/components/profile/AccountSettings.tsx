@@ -22,10 +22,24 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
   const [adminRateOverride, setAdminRateOverride] = useState(false);
   const posthog = usePostHog();
   
-  // Load admin rate override setting from localStorage
+  // Load admin rate override setting from database
   useEffect(() => {
-    const storedOverride = localStorage.getItem('adminRateOverride');
-    setAdminRateOverride(storedOverride === 'true');
+    const loadAdminOverride = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('admin_override')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile) {
+          setAdminRateOverride(profile.admin_override || false);
+        }
+      }
+    };
+    
+    loadAdminOverride();
   }, []);
   
   const handleSettingsSave = async (e: React.FormEvent) => {
@@ -215,16 +229,36 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
                 <input 
                   type="checkbox" 
                   checked={adminRateOverride}
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     const enabled = e.target.checked;
                     setAdminRateOverride(enabled);
-                    localStorage.setItem('adminRateOverride', enabled.toString());
-                    toast({
-                      title: enabled ? 'Rate override enabled' : 'Rate override disabled',
-                      description: enabled 
-                        ? 'High-rate automation mode is now active' 
-                        : 'Normal rate limits restored'
-                    });
+                    
+                    try {
+                      const { data: { user } } = await supabase.auth.getUser();
+                      if (user) {
+                        const { error } = await supabase
+                          .from('profiles')
+                          .update({ admin_override: enabled })
+                          .eq('id', user.id);
+                        
+                        if (error) throw error;
+                        
+                        toast({
+                          title: enabled ? 'Rate override enabled' : 'Rate override disabled',
+                          description: enabled 
+                            ? 'High-rate automation mode is now active' 
+                            : 'Normal rate limits restored'
+                        });
+                      }
+                    } catch (error) {
+                      console.error('Error updating admin override:', error);
+                      setAdminRateOverride(!enabled); // Revert on error
+                      toast({
+                        title: 'Error',
+                        description: 'Failed to update rate override setting',
+                        variant: 'destructive'
+                      });
+                    }
                   }}
                   className="sr-only peer" 
                 />

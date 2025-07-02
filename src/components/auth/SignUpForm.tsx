@@ -59,8 +59,19 @@ const SignUpFormInner: React.FC = () => {
     
     // Rate limiting check - max 3 signup attempts per hour
     // Admins can override with higher limits for automation
-    const adminOverrideEnabled = localStorage.getItem('adminRateOverride') === 'true';
-    const adminOverride = adminOverrideEnabled ? { limit: 1000, windowMs: 60 * 1000 } : undefined;
+    let adminOverride = undefined;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('admin_override')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (profile?.admin_override) {
+        adminOverride = { limit: 1000, windowMs: 60 * 1000 };
+      }
+    }
     if (!rateLimitCheck('signup', 3, 60 * 60 * 1000, adminOverride)) {
       toast({
         title: "Too many attempts",
