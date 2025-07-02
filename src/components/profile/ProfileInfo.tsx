@@ -91,20 +91,6 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
       if (hasChanges) {
         changes.updated_at = new Date().toISOString();
         
-        // Hash password if it's being updated and not empty
-        if (changes.access_password && changes.access_password.trim() !== '') {
-          const { data: hashedPassword, error: hashError } = await supabase.rpc('hash_password', {
-            password: changes.access_password
-          });
-          
-          if (hashError) {
-            console.error('Password hashing error:', hashError);
-            throw new Error('Failed to secure password');
-          }
-          
-          changes.access_password = hashedPassword;
-        }
-        
         console.log('Updating profile with changes:', changes);
         const { error } = await supabase
           .from('profiles')
@@ -113,7 +99,7 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ settings, updateSettin
 
         if (error) throw error;
         
-        // Now update the context with all changes
+        // Now update the context with all changes to keep it in sync
         const settingsChanges: Partial<ProfileSettings> = {};
         
         if (localName !== settings.name) {
