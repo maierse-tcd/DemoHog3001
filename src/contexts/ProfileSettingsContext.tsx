@@ -141,14 +141,9 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
 
   // Save settings to both database (if authenticated) and localStorage
   const updateSettings = async (newSettings: Partial<ProfileSettings>) => {
-    // Prevent concurrent updates
+    // Prevent concurrent updates with a simple debounce
     if (updateInProgressRef.current) {
-      console.log('Settings update already in progress, adding to pending updates');
-      // Store in pending updates
-      pendingUpdatesRef.current = {
-        ...pendingUpdatesRef.current,
-        ...newSettings
-      };
+      console.log('Settings update already in progress, ignoring duplicate update');
       return;
     }
     
@@ -198,22 +193,11 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
         
         return updated;
       });
-      
-      // Process any pending updates from a queue
-      const pendingUpdates = pendingUpdatesRef.current;
-      pendingUpdatesRef.current = {};
-      
-      if (Object.keys(pendingUpdates).length > 0) {
-        // Wait briefly to ensure current update completes
-        setTimeout(() => {
-          updateSettings(pendingUpdates);
-        }, 500);
-      }
     } finally {
       // Clear update flag after a short delay
       setTimeout(() => {
         updateInProgressRef.current = false;
-      }, 300);
+      }, 1000); // Longer delay to prevent rapid successive updates
     }
   };
 
