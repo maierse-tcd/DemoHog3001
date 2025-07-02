@@ -17,6 +17,7 @@ export const Navbar = () => {
   const { isLoggedIn, userEmail } = useAuth();
   const isDarkTheme = location.pathname !== '/login' && location.pathname !== '/signup';
   const hidePlan = useFeatureFlagEnabled('hide_plan');
+  const debugOn = useFeatureFlagEnabled('debug_on');
   
   // Determine if we should show the Plans menu item
   // Only hide plans when the user is logged in AND the hidePlan flag is true
@@ -170,8 +171,8 @@ export const Navbar = () => {
         </div>
       )}
       
-      {/* Debug component - only shows when enabled or in development */}
-      <PostHogDebug enabled={true} />
+      {/* Debug component - only shows when debug_on feature flag is enabled */}
+      <PostHogDebug enabled={debugOn} />
     </nav>
   );
 };
