@@ -3,8 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../integrations/supabase/client';
 import { Skeleton } from '../components/ui/skeleton';
-import { Play, Plus, ChevronLeft } from 'lucide-react';
+import { Play, Plus, Check, ChevronLeft } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
+import { useMyList } from '../utils/posthog/myList';
 import { safeCapture } from '../utils/posthog';
 import {
   Dialog,
@@ -19,6 +20,7 @@ const ContentDetail = () => {
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { addToList, removeFromList, isInList } = useMyList();
 
   // Fetch content details
   useEffect(() => {
@@ -60,18 +62,35 @@ const ContentDetail = () => {
     fetchContent();
   }, [id, toast]);
 
-  // Visual-only handler for My List button (no functionality)
-  const handleMyListClick = () => {
-    // Track the click event without actually adding to a list
-    safeCapture('my_list_button_clicked', {
-      contentId: content?.id,
-      contentTitle: content?.title,
-      location: 'content_detail'
-    });
+  // Handler for My List button
+  const handleMyListClick = async () => {
+    if (!content) return;
     
-    toast({
-      title: 'Added to My List',
-      description: `"${content?.title}" has been added to My List.`,
+    const isCurrentlyInList = isInList(content.id);
+    
+    if (isCurrentlyInList) {
+      const success = await removeFromList(content.id);
+      if (success) {
+        toast({
+          title: 'Removed from My List',
+          description: `"${content.title}" has been removed from My List.`
+        });
+      }
+    } else {
+      const success = await addToList(content.id);
+      if (success) {
+        toast({
+          title: 'Added to My List',
+          description: `"${content.title}" has been added to My List.`
+        });
+      }
+    }
+    
+    safeCapture('my_list_button_clicked', {
+      contentId: content.id,
+      contentTitle: content.title,
+      location: 'content_detail',
+      action: isCurrentlyInList ? 'remove' : 'add'
     });
   };
 
@@ -239,13 +258,21 @@ const ContentDetail = () => {
                     Play
                   </button>
                   
-                  {/* Purely visual My List button with no functionality */}
                   <button 
                     className="bg-[#333] hover:bg-[#444] text-white py-2 px-6 rounded flex items-center gap-2"
                     onClick={handleMyListClick}
                   >
-                    <Plus size={20} />
-                    Add to My List
+                    {content && isInList(content.id) ? (
+                      <>
+                        <Check size={20} />
+                        Remove from My List
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={20} />
+                        Add to My List
+                      </>
+                    )}
                   </button>
                 </div>
                 

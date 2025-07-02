@@ -2,10 +2,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Content } from '../data/mockData';
-import { Play, Plus, ThumbsUp, ChevronDown } from 'lucide-react';
+import { Play, Plus, Check, ThumbsUp, ChevronDown } from 'lucide-react';
 import { DEFAULT_IMAGES } from '../utils/imageUtils';
 import { safeCapture } from '../utils/posthog';
 import { useToast } from '../hooks/use-toast';
+import { useMyList } from '../utils/posthog/myList';
 import { Dialog, DialogContent } from './ui/dialog';
 import './ContentCard.css';
 
@@ -16,6 +17,7 @@ interface ContentCardProps {
 export const ContentCard = ({ content }: ContentCardProps) => {
   const [showVideo, setShowVideo] = useState(false);
   const { toast } = useToast();
+  const { addToList, removeFromList, isInList } = useMyList();
   
   // Use backdrop image if available, otherwise fallback to poster or default
   const displayImage = content.backdropUrl || content.posterUrl || DEFAULT_IMAGES.backdrop;
@@ -24,19 +26,35 @@ export const ContentCard = ({ content }: ContentCardProps) => {
   const videoUrl = content.videoUrl || 'https://www.youtube.com/embed/dQw4w9WgXcQ';
   
   // Handler for My List button
-  const handleMyListClick = (e: React.MouseEvent) => {
+  const handleMyListClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    
+    const isCurrentlyInList = isInList(content.id);
+    
+    if (isCurrentlyInList) {
+      const success = await removeFromList(content.id);
+      if (success) {
+        toast({
+          title: 'Removed from My List',
+          description: `"${content.title}" has been removed from My List.`
+        });
+      }
+    } else {
+      const success = await addToList(content.id);
+      if (success) {
+        toast({
+          title: 'Added to My List',
+          description: `"${content.title}" has been added to My List.`
+        });
+      }
+    }
     
     safeCapture('my_list_button_clicked', {
       contentId: content.id,
       contentTitle: content.title,
-      location: 'content_card'
-    });
-    
-    toast({
-      title: 'Added to My List',
-      description: `"${content.title}" has been added to My List.`
+      location: 'content_card',
+      action: isCurrentlyInList ? 'remove' : 'add'
     });
   };
   
@@ -115,9 +133,9 @@ export const ContentCard = ({ content }: ContentCardProps) => {
                 <button 
                   className="control-button"
                   onClick={handleMyListClick}
-                  aria-label="Add to My List"
+                  aria-label={isInList(content.id) ? "Remove from My List" : "Add to My List"}
                 >
-                  <Plus size={16} />
+                  {isInList(content.id) ? <Check size={16} /> : <Plus size={16} />}
                 </button>
                 
                 <button 

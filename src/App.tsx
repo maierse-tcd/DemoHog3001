@@ -13,6 +13,7 @@ import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import ImageManager from './pages/ImageManager';
 import ContentDetail from './pages/ContentDetail';
+import MyList from './pages/MyList';
 import { PostHogProvider } from './components/PostHogProvider';
 import { Toaster } from './components/ui/toaster';
 import { AuthProvider } from './hooks/auth/useAuthContext';
@@ -39,6 +40,7 @@ function AppContent() {
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/image-manager" element={<ImageManager />} />
       <Route path="/content/:id" element={<ContentDetail />} />
+      <Route path="/mylist" element={<MyList />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

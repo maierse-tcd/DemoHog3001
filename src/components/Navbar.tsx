@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, ChevronDown, Home, Video, Film, CreditCard } from 'lucide-react';
+import { Menu, ChevronDown, Home, Video, Film, CreditCard, ListVideo } from 'lucide-react';
 import { ProfileDropdown } from './ProfileDropdown';
 import { SearchBar } from './SearchBar';
 import { useAuth } from '../hooks/useAuth';
@@ -78,6 +78,17 @@ export const Navbar = () => {
               Movies
             </Link>
             
+            {/* My List - only show when logged in */}
+            {isLoggedIn && (
+              <Link 
+                to="/mylist" 
+                className={`text-sm font-medium flex items-center gap-2 ${location.pathname === '/mylist' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
+              >
+                <ListVideo size={16} />
+                My List
+              </Link>
+            )}
+            
             {/* Only show Plans when showPlansMenuItem is true */}
             {showPlansMenuItem && (
               <Link 
@@ -153,6 +164,18 @@ export const Navbar = () => {
             <Film size={16} />
             Movies
           </Link>
+          
+          {/* My List in mobile menu - only show when logged in */}
+          {isLoggedIn && (
+            <Link 
+              to="/mylist" 
+              className={`flex items-center gap-2 px-4 py-2 ${location.pathname === '/mylist' ? 'text-netflix-white' : 'text-netflix-gray'}`}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <ListVideo size={16} />
+              My List
+            </Link>
+          )}
           
           {/* Only show Plans in mobile menu when showPlansMenuItem is true */}
           {showPlansMenuItem && (
