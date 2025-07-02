@@ -4,6 +4,7 @@ import { supabase } from '../integrations/supabase/client';
 import { useAuth } from '../hooks/useAuth';
 import { toast } from '../hooks/use-toast';
 import { safeGroupIdentify, getLastIdentifiedGroup } from '../utils/posthog';
+import { identifyUser } from '../utils/posthog/simple';
 
 export interface ProfileSettings {
   name: string;
@@ -176,6 +177,11 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
           if (newSettings.name !== undefined || newSettings.email !== undefined || 
               newSettings.language !== undefined) {
             queueUserProfileUpdate(updated);
+            
+            // Update PostHog person properties if language changed
+            if (newSettings.language !== undefined && newSettings.language !== prev.language) {
+              queuePostHogPersonUpdate(updated);
+            }
           }
           
           // If selectedPlanId is being updated, update it in user metadata
@@ -383,6 +389,27 @@ export const ProfileSettingsProvider: React.FC<{ children: React.ReactNode }> = 
         debounceTimerRef.current = null;
       }
     }, 1000); // Longer debounce for kids account changes
+  };
+
+  // Queue an update to PostHog person properties
+  const queuePostHogPersonUpdate = (updatedSettings: ProfileSettings) => {
+    if (!isLoggedIn || !updatedSettings.email) return;
+    
+    // Use a debounce to avoid rapid updates
+    setTimeout(() => {
+      try {
+        console.log(`PostHog: Updating person properties - language: ${updatedSettings.language}`);
+        identifyUser(updatedSettings.email, {
+          name: updatedSettings.name,
+          language: updatedSettings.language,
+          is_kids_account: updatedSettings.isKidsAccount,
+          email: updatedSettings.email,
+          supabase_id: user?.id,
+        });
+      } catch (error) {
+        console.error('Error updating PostHog person properties:', error);
+      }
+    }, 300); // Short delay to ensure database update completes first
   };
 
   // Update selected plan - public facing method
