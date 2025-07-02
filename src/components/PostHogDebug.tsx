@@ -5,9 +5,16 @@ import { useAuth } from '../hooks/useAuth';
  * Debug component to help troubleshoot PostHog feature flag issues
  * Only shows when the debug_on feature flag is enabled
  */
-export const PostHogDebug = ({ enabled = false }: { enabled?: boolean }) => {
+export const PostHogDebug = ({
+  enabled = false
+}: {
+  enabled?: boolean;
+}) => {
   const posthog = usePostHog();
-  const { userEmail, isLoggedIn } = useAuth();
+  const {
+    userEmail,
+    isLoggedIn
+  } = useAuth();
   const isAdminEnabled = useFeatureFlagEnabled('is_admin');
   const activeFlags = useActiveFeatureFlags();
 
@@ -15,7 +22,6 @@ export const PostHogDebug = ({ enabled = false }: { enabled?: boolean }) => {
   if (!enabled) {
     return null;
   }
-
   const distinctId = posthog?.get_distinct_id?.();
   const flagsLoaded = activeFlags !== undefined;
 
@@ -32,16 +38,10 @@ export const PostHogDebug = ({ enabled = false }: { enabled?: boolean }) => {
       posthog.reloadFeatureFlags();
     }
   };
-
-  return (
-    <div className="fixed bottom-4 right-4 bg-black/90 text-white p-4 rounded-lg text-xs max-w-sm z-50">
+  return <div className="fixed bottom-4 right-4 bg-black/90 text-white p-4 rounded-lg text-xs max-w-sm z-50">
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-bold">PostHog Debug</h3>
-        <button 
-          onClick={handleRefreshFlags}
-          className="bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-xs"
-          title="Manually refresh feature flags"
-        >
+        <button onClick={handleRefreshFlags} className="bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-xs" title="Manually refresh feature flags">
           🔄 Refresh
         </button>
       </div>
@@ -59,9 +59,6 @@ export const PostHogDebug = ({ enabled = false }: { enabled?: boolean }) => {
           </pre>
         </div>
       </div>
-      <div className="text-xs text-gray-400 mt-2 border-t border-gray-600 pt-2">
-        💡 PostHog polls for flag updates every ~30s. Use refresh button for immediate check.
-      </div>
-    </div>
-  );
+      
+    </div>;
 };
