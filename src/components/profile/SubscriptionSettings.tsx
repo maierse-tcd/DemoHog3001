@@ -192,6 +192,57 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
     }
   };
 
+  const handleCancelSubscription = async () => {
+    if (!isLoggedIn) {
+      toast({
+        title: 'Authentication required',
+        description: 'You must be logged in to cancel your subscription',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // For simulation purposes, we'll update the user's plan to a cancelled state
+    setIsLoading(true);
+    
+    try {
+      // Update user metadata to indicate cancelled subscription
+      const { error } = await supabase.auth.updateUser({
+        data: { 
+          selectedPlanId: 'cancelled',
+          subscriptionCancelledAt: new Date().toISOString()
+        }
+      });
+      
+      if (error) throw error;
+      
+      // Update the context
+      updateSelectedPlan('cancelled');
+      setCurrentPlanId('cancelled');
+      
+      // Track cancellation in PostHog
+      safeCapture('subscription_cancelled', {
+        previous_plan_id: initialPlanId,
+        cancelled_at: new Date().toISOString(),
+        reason: 'user_initiated'
+      });
+      
+      toast({
+        title: 'Subscription cancelled',
+        description: 'Your subscription has been cancelled successfully. You can reactivate it at any time.',
+      });
+    } catch (error: any) {
+      console.error("Error cancelling subscription:", error);
+      toast({
+        title: 'Error cancelling subscription',
+        description: error.message || 'Failed to cancel your subscription',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const hasChanges = currentPlanId !== initialPlanId;
 
   if (isLoadingPlans) {
@@ -240,13 +291,23 @@ export const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
         ))}
       </div>
       
-      <button 
-        onClick={handleSaveChanges} 
-        className="bg-netflix-red hover:bg-red-700 text-white px-6 py-3 rounded font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        disabled={isLoading || !hasChanges}
-      >
-        {isLoading ? "Saving..." : hasChanges ? "Save Changes" : "No Changes to Save"}
-      </button>
+      <div className="flex gap-4">
+        <button 
+          onClick={handleSaveChanges} 
+          className="bg-netflix-red hover:bg-red-700 text-white px-6 py-3 rounded font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={isLoading || !hasChanges}
+        >
+          {isLoading ? "Saving..." : hasChanges ? "Save Changes" : "No Changes to Save"}
+        </button>
+        
+        <button 
+          onClick={handleCancelSubscription}
+          className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={isLoading}
+        >
+          Cancel Subscription
+        </button>
+      </div>
     </div>
   );
 };
