@@ -1,7 +1,6 @@
 
 import { useEffect, useMemo } from 'react';
 import { PostHogContextProvider } from '../../contexts/PostHogContext';
-import { PostHogIdentificationProvider } from '../../contexts/PostHogIdentificationContext';
 import { usePostHogUserManager } from '../../posthog/UserManager';
 import { usePostHogSubscriptionManager } from '../../posthog/SubscriptionManager';
 import { usePostHogStateManager } from '../../posthog/StateManager';
@@ -80,15 +79,13 @@ export const PostHogProvider = ({ children }: { children: React.ReactNode }) => 
 
   return (
     <PostHogContextProvider value={contextValue}>
-      <PostHogIdentificationProvider>
-        <PostHogInitializer 
-          apiKey={POSTHOG_KEY} 
-          apiHost={POSTHOG_HOST} 
-          onLoaded={handlePostHogLoaded}
-        >
-          {children}
-        </PostHogInitializer>
-      </PostHogIdentificationProvider>
+      <PostHogInitializer 
+        apiKey={POSTHOG_KEY} 
+        apiHost={POSTHOG_HOST} 
+        onLoaded={handlePostHogLoaded}
+      >
+        {children}
+      </PostHogInitializer>
     </PostHogContextProvider>
   );
 };
