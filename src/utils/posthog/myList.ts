@@ -68,6 +68,7 @@ export const useMyList = () => {
         return false;
       }
 
+      console.log('MyList Hook: Adding item', contentId, 'to list. New list:', newList);
       setMyList(newList);
       
       // Track event
@@ -106,6 +107,7 @@ export const useMyList = () => {
         return false;
       }
 
+      console.log('MyList Hook: Removing item', contentId, 'from list. New list:', newList);
       setMyList(newList);
       
       // Track event

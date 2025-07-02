@@ -10,34 +10,49 @@ import { toast } from '../hooks/use-toast';
 import { safeCapture } from '../utils/posthog';
 
 const MyList = () => {
-  const [allContent, setAllContent] = useState<Content[]>([]);
+  const [myListContent, setMyListContent] = useState<Content[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { myList, isLoading: isMyListLoading } = useMyList();
   
-  // Load all content once on mount
+  // Load content for My List - this will update whenever myList changes
   useEffect(() => {
-    const loadAllContent = async () => {
+    const loadMyListContent = async () => {
+      if (isMyListLoading) return;
+      
       try {
         setIsLoading(true);
         setError(null);
         
-        // Load all content from Supabase once
-        const contentData = await loadContentFromSupabase();
-        console.log('MyList: Loaded all content, count:', contentData.length);
-        setAllContent(contentData);
+        console.log('MyList Page: Loading content for myList:', myList);
+        
+        if (myList.length === 0) {
+          console.log('MyList Page: Empty list, setting empty content');
+          setMyListContent([]);
+          setIsLoading(false);
+          return;
+        }
+        
+        // Load all content from Supabase
+        const allContent = await loadContentFromSupabase();
+        console.log('MyList Page: Loaded all content, count:', allContent.length);
+        
+        // Filter for items in My List
+        const myContent = allContent.filter(item => myList.includes(item.id));
+        console.log('MyList Page: Filtered content for my list, count:', myContent.length);
+        setMyListContent(myContent);
         
         // Track page view
         safeCapture('page_view', { 
           page: 'my_list',
-          total_content: contentData.length 
+          item_count: myContent.length 
         });
       } catch (error) {
-        console.error("Error loading content:", error);
-        setError("There was a problem loading content. Please try again later.");
+        console.error("Error loading My List content:", error);
+        setError("There was a problem loading your saved content. Please try again later.");
         toast({
-          title: "Error loading content",
-          description: "There was a problem loading content. Please try again later.",
+          title: "Error loading My List",
+          description: "There was a problem loading your saved content. Please try again later.",
           variant: "destructive"
         });
       } finally {
@@ -45,18 +60,18 @@ const MyList = () => {
       }
     };
     
-    loadAllContent();
+    loadMyListContent();
     
-    // Listen for content updates (when new content is added/modified)
-    window.addEventListener('content-updated', loadAllContent);
+    // Listen for My List updates
+    window.addEventListener('my-list-updated', loadMyListContent);
+    // Listen for content updates
+    window.addEventListener('content-updated', loadMyListContent);
     
     return () => {
-      window.removeEventListener('content-updated', loadAllContent);
+      window.removeEventListener('my-list-updated', loadMyListContent);
+      window.removeEventListener('content-updated', loadMyListContent);
     };
-  }, []);
-
-  // Filter content based on current myList state
-  const myListContent = allContent.filter(item => myList.includes(item.id));
+  }, [myList, isMyListLoading]);
   
   // Group content by type (movies and series)
   const movies = myListContent.filter(item => item.type === 'movie');
