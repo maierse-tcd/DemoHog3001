@@ -109,11 +109,11 @@ const MyList = () => {
           ) : (
             <>
               {movies.length > 0 && (
-                <ContentRow title="Movies" contentList={movies} />
+                <ContentRow title="Movies" contentList={movies} isOnMyListPage={true} />
               )}
               
               {series.length > 0 && (
-                <ContentRow title="TV Shows" contentList={series} />
+                <ContentRow title="TV Shows" contentList={series} isOnMyListPage={true} />
               )}
             </>
           )}

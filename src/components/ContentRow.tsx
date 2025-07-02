@@ -9,9 +9,10 @@ import './ContentRow.css';
 interface ContentRowProps {
   title: string;
   contentList: Content[];
+  isOnMyListPage?: boolean;
 }
 
-export const ContentRow = ({ title, contentList }: ContentRowProps) => {
+export const ContentRow = ({ title, contentList, isOnMyListPage = false }: ContentRowProps) => {
   const rowRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(true);
@@ -70,7 +71,7 @@ export const ContentRow = ({ title, contentList }: ContentRowProps) => {
           >
             {contentList.map((content) => (
               <div key={content.id}>
-                <ContentCard content={content} />
+                <ContentCard content={content} isOnMyListPage={isOnMyListPage} />
               </div>
             ))}
           </div>

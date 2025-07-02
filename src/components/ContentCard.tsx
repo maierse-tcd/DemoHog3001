@@ -12,9 +12,10 @@ import './ContentCard.css';
 
 interface ContentCardProps {
   content: Content;
+  isOnMyListPage?: boolean; // New prop to indicate if we're on the My List page
 }
 
-export const ContentCard = ({ content }: ContentCardProps) => {
+export const ContentCard = ({ content, isOnMyListPage = false }: ContentCardProps) => {
   const [showVideo, setShowVideo] = useState(false);
   const { toast } = useToast();
   const { addToList, removeFromList, isInList } = useMyList();
@@ -70,14 +71,39 @@ export const ContentCard = ({ content }: ContentCardProps) => {
     });
   };
   
-  // Handler for Like button
-  const handleThumbsUp = (e: React.MouseEvent) => {
+  // Handler for Like/Thumbs Up button
+  const handleThumbsUp = async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    toast({
-      title: "Liked",
-      description: "We'll recommend more like this."
-    });
+    
+    // If we're on My List page, remove from list when thumbs up is clicked
+    if (isOnMyListPage) {
+      const success = await removeFromList(content.id);
+      if (success) {
+        toast({
+          title: 'Removed from My List',
+          description: `"${content.title}" has been removed from My List.`
+        });
+      }
+      
+      safeCapture('my_list_item_removed', {
+        contentId: content.id,
+        contentTitle: content.title,
+        location: 'my_list_page_thumbs_up'
+      });
+    } else {
+      // Normal like behavior on other pages
+      toast({
+        title: "Liked",
+        description: "We'll recommend more like this."
+      });
+      
+      safeCapture('content_liked', {
+        contentId: content.id,
+        contentTitle: content.title,
+        location: 'content_card'
+      });
+    }
   };
 
   // Handler for More Info button
