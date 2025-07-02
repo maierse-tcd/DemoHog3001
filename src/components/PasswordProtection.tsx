@@ -60,8 +60,8 @@ export const PasswordProtection: React.FC<{ children: React.ReactNode }> = ({ ch
     fetchAccessPassword();
   }, [isPasswordProtected, siteAccessPassword]);
 
-  // Verify the input password against the current password
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  // Verify the input password against the current password using secure hashing
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // If no password is set or feature flag is off, always allow access
@@ -71,19 +71,43 @@ export const PasswordProtection: React.FC<{ children: React.ReactNode }> = ({ ch
       return;
     }
     
-    // Check if password matches
-    if (passwordInput === currentPassword) {
-      setIsUnlocked(true);
-      setIsModalOpen(false);
-      localStorage.setItem('hogflix_unlocked', 'true');
-      toast({
-        title: "Access granted",
-        description: "Welcome to Hogflix!",
+    try {
+      // Use Supabase RPC to verify password securely
+      const { data: isValid, error } = await supabase.rpc('verify_password', {
+        password: passwordInput,
+        hash: currentPassword
       });
-    } else {
+
+      if (error) {
+        console.error('Password verification error:', error);
+        toast({
+          title: "Verification error",
+          description: "Unable to verify password. Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (isValid) {
+        setIsUnlocked(true);
+        setIsModalOpen(false);
+        localStorage.setItem('hogflix_unlocked', 'true');
+        toast({
+          title: "Access granted",
+          description: "Welcome to Hogflix!",
+        });
+      } else {
+        toast({
+          title: "Incorrect password",
+          description: "Please try again.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Password verification failed:', error);
       toast({
-        title: "Incorrect password",
-        description: "Please try again.",
+        title: "Verification failed",
+        description: "Unable to verify password. Please try again.",
         variant: "destructive"
       });
     }

@@ -13,6 +13,7 @@ import { identifyUser, setUserType, setSubscriptionPlan, trackEvent } from '../.
 import { PlanProvider, usePlanContext } from './signup/PlanContext';
 import { PasswordFields, passwordSchema } from './signup/PasswordFields';
 import { KidsAccountToggle, kidsAccountSchema } from './signup/KidsAccountToggle';
+import { validateEmail, sanitizeInput, rateLimitCheck, auditLog } from '../../utils/inputValidation';
 
 // Define the schema for the form
 const formSchema = z.object({
@@ -55,6 +56,31 @@ const SignUpFormInner: React.FC = () => {
   // Function to handle form submission
   const onSubmit: SubmitHandler<z.infer<typeof formSchema>> = async (values) => {
     setIsLoading(true);
+    
+    // Rate limiting check - max 3 signup attempts per hour
+    if (!rateLimitCheck('signup', 3, 60 * 60 * 1000)) {
+      toast({
+        title: "Too many attempts",
+        description: "Please wait before trying to sign up again.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+    
+    // Additional email validation
+    if (!validateEmail(values.email)) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+    
+    // Sanitize inputs
+    const sanitizedEmail = sanitizeInput(values.email).toLowerCase();
     
     if (!selectedPlanId) {
       toast({

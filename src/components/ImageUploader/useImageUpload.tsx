@@ -3,6 +3,7 @@ import { useToast } from '../../hooks/use-toast';
 import { safeCapture } from '../../utils/posthogUtils';
 import { uploadImageToSupabase } from '../../utils/imageUtils';
 import { useAuth } from '../../hooks/useAuth';
+import { validateFileType, validateFileSize, sanitizeFileName, rateLimitCheck } from '../../utils/inputValidation';
 
 interface UseImageUploadProps {
   onImageUploaded?: (imageUrl: string) => void;
@@ -30,22 +31,43 @@ export const useImageUpload = ({
   const canUpload = isPostHogUser || !!user?.id;
 
   const validateFile = (file: File): boolean => {
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
+    // Rate limiting check - max 10 uploads per hour
+    if (!rateLimitCheck('image_upload', 10, 60 * 60 * 1000)) {
       toast({
-        title: "Invalid file type",
-        description: "Please select an image file (JPEG, PNG, etc.).",
+        title: "Upload limit reached",
+        description: "Please wait before uploading more images.",
         variant: "destructive"
       });
       return false;
     }
     
-    // Validate file size
-    const maxSize = maxSizeMB * 1024 * 1024;
-    if (file.size > maxSize) {
+    // Enhanced file type validation
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!validateFileType(file, allowedTypes)) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select a JPEG, PNG, or WebP image file.",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    // Enhanced file size validation
+    if (!validateFileSize(file, maxSizeMB)) {
       toast({
         title: "File too large",
         description: `Please select an image smaller than ${maxSizeMB}MB.`,
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    // Validate file name
+    const sanitizedName = sanitizeFileName(file.name);
+    if (sanitizedName !== file.name) {
+      toast({
+        title: "Invalid file name",
+        description: "File name contains invalid characters.",
         variant: "destructive"
       });
       return false;

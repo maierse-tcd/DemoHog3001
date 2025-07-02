@@ -144,6 +144,42 @@ export type Database = {
         }
         Relationships: []
       }
+      security_audit_log: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          ip_address: unknown | null
+          new_values: Json | null
+          old_values: Json | null
+          table_name: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          table_name?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          table_name?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       subscription_plans: {
         Row: {
           created_at: string
@@ -206,9 +242,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      hash_password: {
+        Args: { password: string }
+        Returns: string
+      }
+      is_admin_or_override: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       is_admin_user: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      sanitize_html_content: {
+        Args: { content: string }
+        Returns: string
       }
       seed_content_items: {
         Args: { content_items: Json }
@@ -217,6 +265,14 @@ export type Database = {
       upsert_my_list: {
         Args: { p_user_id: string; p_content_ids: string[] }
         Returns: undefined
+      }
+      validate_email: {
+        Args: { email: string }
+        Returns: boolean
+      }
+      verify_password: {
+        Args: { password: string; hash: string }
+        Returns: boolean
       }
     }
     Enums: {

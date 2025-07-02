@@ -6,6 +6,7 @@ import { Button } from '../ui/button';
 import { useToast } from '../../hooks/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { safeCapture, safeReloadFeatureFlags } from '../../utils/posthog';
+import { validateEmail, sanitizeInput, rateLimitCheck, auditLog } from '../../utils/inputValidation';
 
 interface LoginFormProps {
   fetchUserProfile: (userId: string) => Promise<void>;
@@ -23,6 +24,17 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
     setIsLoading(true);
     
     try {
+      // Rate limiting check - max 5 login attempts per 15 minutes
+      if (!rateLimitCheck('login', 5, 15 * 60 * 1000)) {
+        toast({
+          title: "Too many attempts",
+          description: "Please wait before trying to login again.",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+      
       // Basic validation
       if (!email || !password) {
         toast({
@@ -34,11 +46,25 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
         return;
       }
       
-      console.log("Attempting to login with:", email);
+      // Enhanced email validation
+      if (!validateEmail(email)) {
+        toast({
+          title: "Invalid email",
+          description: "Please enter a valid email address",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      // Sanitize email input
+      const sanitizedEmail = sanitizeInput(email).toLowerCase();
+      
+      console.log("Attempting to login with:", sanitizedEmail);
       
       // Try to sign in with email/password
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: sanitizedEmail,
         password
       });
       
