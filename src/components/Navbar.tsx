@@ -17,6 +17,7 @@ export const Navbar = () => {
   const { isLoggedIn, userEmail } = useAuth();
   const isDarkTheme = location.pathname !== '/login' && location.pathname !== '/signup';
   const hidePlan = useFeatureFlagEnabled('hide_plan');
+  const showMyListFeature = useFeatureFlagEnabled('show_my_list_feature');
   const debugOn = useFeatureFlagEnabled('debug_on');
   
   // Determine if we should show the Plans menu item
@@ -78,8 +79,8 @@ export const Navbar = () => {
               Movies
             </Link>
             
-            {/* My List - only show when logged in */}
-            {isLoggedIn && (
+            {/* My List - only show when logged in AND feature flag is enabled */}
+            {isLoggedIn && showMyListFeature && (
               <Link 
                 to="/mylist" 
                 className={`text-sm font-medium flex items-center gap-2 ${location.pathname === '/mylist' ? 'text-netflix-white' : 'text-netflix-gray hover:text-netflix-white'}`}
@@ -165,8 +166,8 @@ export const Navbar = () => {
             Movies
           </Link>
           
-          {/* My List in mobile menu - only show when logged in */}
-          {isLoggedIn && (
+          {/* My List in mobile menu - only show when logged in AND feature flag is enabled */}
+          {isLoggedIn && showMyListFeature && (
             <Link 
               to="/mylist" 
               className={`flex items-center gap-2 px-4 py-2 ${location.pathname === '/mylist' ? 'text-netflix-white' : 'text-netflix-gray'}`}

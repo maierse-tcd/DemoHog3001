@@ -7,6 +7,7 @@ import { DEFAULT_IMAGES } from '../utils/imageUtils';
 import { safeCapture } from '../utils/posthog';
 import { useToast } from '../hooks/use-toast';
 import { useMyList } from '../utils/posthog/myList';
+import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { Dialog, DialogContent } from './ui/dialog';
 import './ContentCard.css';
 
@@ -19,6 +20,7 @@ export const ContentCard = ({ content, isOnMyListPage = false }: ContentCardProp
   const [showVideo, setShowVideo] = useState(false);
   const { toast } = useToast();
   const { addToList, removeFromList, isInList } = useMyList();
+  const showMyListFeature = useFeatureFlagEnabled('show_my_list_feature');
   
   // Use backdrop image if available, otherwise fallback to poster or default
   const displayImage = content.backdropUrl || content.posterUrl || DEFAULT_IMAGES.backdrop;
@@ -156,13 +158,16 @@ export const ContentCard = ({ content, isOnMyListPage = false }: ContentCardProp
                   <Play />
                 </button>
                 
-                <button 
-                  className="control-button"
-                  onClick={handleMyListClick}
-                  aria-label={isInList(content.id) ? "Remove from My List" : "Add to My List"}
-                >
-                  {isInList(content.id) ? <Check size={16} /> : <Plus size={16} />}
-                </button>
+                {/* My List button - only show when feature flag is enabled */}
+                {showMyListFeature && (
+                  <button 
+                    className="control-button"
+                    onClick={handleMyListClick}
+                    aria-label={isInList(content.id) ? "Remove from My List" : "Add to My List"}
+                  >
+                    {isInList(content.id) ? <Check size={16} /> : <Plus size={16} />}
+                  </button>
+                )}
                 
                 <button 
                   className="control-button"

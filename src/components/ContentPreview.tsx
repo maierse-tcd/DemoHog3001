@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Content } from '../data/mockData';
 import { Play, Plus, X } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
+import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { safeCapture } from '../utils/posthog';
 import { Dialog, DialogContent } from './ui/dialog';
 
@@ -14,6 +15,7 @@ interface ContentPreviewProps {
 export const ContentPreview = ({ content, onClose }: ContentPreviewProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const { toast } = useToast();
+  const showMyListFeature = useFeatureFlagEnabled('show_my_list_feature');
   
   // Get video URL - use content's specific URL or default
   const videoUrl = content.videoUrl || 'https://www.youtube.com/embed/dQw4w9WgXcQ';
@@ -86,12 +88,15 @@ export const ContentPreview = ({ content, onClose }: ContentPreviewProps) => {
                 <Play className="mr-2 h-5 w-5" /> Play
               </button>
               
-              <button 
-                className="border border-gray-400 hover:bg-white/10 text-white py-2 px-6 rounded-md flex items-center transition-colors"
-                onClick={handleMyListClick}
-              >
-                <Plus className="mr-2 h-5 w-5" /> My List
-              </button>
+              {/* My List button - only show when feature flag is enabled */}
+              {showMyListFeature && (
+                <button 
+                  className="border border-gray-400 hover:bg-white/10 text-white py-2 px-6 rounded-md flex items-center transition-colors"
+                  onClick={handleMyListClick}
+                >
+                  <Plus className="mr-2 h-5 w-5" /> My List
+                </button>
+              )}
             </div>
           </div>
         )}

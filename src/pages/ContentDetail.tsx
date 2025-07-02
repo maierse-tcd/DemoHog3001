@@ -6,6 +6,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import { Play, Plus, Check, ChevronLeft } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 import { useMyList } from '../utils/posthog/myList';
+import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { safeCapture } from '../utils/posthog';
 import {
   Dialog,
@@ -21,6 +22,7 @@ const ContentDetail = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { addToList, removeFromList, isInList } = useMyList();
+  const showMyListFeature = useFeatureFlagEnabled('show_my_list_feature');
 
   // Fetch content details
   useEffect(() => {
@@ -258,22 +260,25 @@ const ContentDetail = () => {
                     Play
                   </button>
                   
-                  <button 
-                    className="bg-[#333] hover:bg-[#444] text-white py-2 px-6 rounded flex items-center gap-2"
-                    onClick={handleMyListClick}
-                  >
-                    {content && isInList(content.id) ? (
-                      <>
-                        <Check size={20} />
-                        Remove from My List
-                      </>
-                    ) : (
-                      <>
-                        <Plus size={20} />
-                        Add to My List
-                      </>
-                    )}
-                  </button>
+                  {/* My List button - only show when feature flag is enabled */}
+                  {showMyListFeature && (
+                    <button 
+                      className="bg-[#333] hover:bg-[#444] text-white py-2 px-6 rounded flex items-center gap-2"
+                      onClick={handleMyListClick}
+                    >
+                      {content && isInList(content.id) ? (
+                        <>
+                          <Check size={20} />
+                          Remove from My List
+                        </>
+                      ) : (
+                        <>
+                          <Plus size={20} />
+                          Add to My List
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
                 
                 <p className="text-netflix-white max-w-3xl">{content.description}</p>
