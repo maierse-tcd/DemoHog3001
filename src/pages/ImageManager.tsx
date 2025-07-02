@@ -22,7 +22,7 @@ import {
   loadImagesFromStorage, 
   loadImagesFromDatabase,
   filterUniqueImages 
-} from '../utils/imageUtils/urlUtils';
+} from '../utils/imageUtils';
 import { loadContentFromSupabase, deleteContentFromSupabase } from '../utils/contentUtils';
 
 const ImageManager = () => {

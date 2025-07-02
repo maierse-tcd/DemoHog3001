@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { Button } from '../ui/button';
 import { RefreshCcw, Trash2, ImageIcon } from 'lucide-react';
 import { DEFAULT_IMAGES } from '../../utils/imageUtils';
-import { filterUniqueImages } from '../../utils/imageUtils/urlUtils';
+import { filterUniqueImages } from '../../utils/imageUtils';
 import { LazyImage } from '../ui/lazy-image';
 
 interface GalleryViewProps {

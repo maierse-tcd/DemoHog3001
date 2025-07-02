@@ -10,7 +10,7 @@ import { Content, Genre } from '../data/mockData';
 import { supabase } from '../integrations/supabase/client';
 import { DetailsTab } from './ContentEditor/DetailsTab';
 import { MediaTab } from './ContentEditor/MediaTab';
-import { loadImagesFromStorage, filterUniqueImages, extractFilenameFromUrl } from '../utils/imageUtils/urlUtils';
+import { loadImagesFromStorage, filterUniqueImages, extractFilenameFromUrl } from '../utils/imageUtils';
 import { saveContentToSupabase } from '../utils/contentUtils';
 
 // Define ContentEditorProps interface
