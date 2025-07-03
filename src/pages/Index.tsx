@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Navbar } from '../components/Navbar';
+import { PersistentSubBanner } from '../components/PersistentSubBanner';
 import { HeroSection } from '../components/HeroSection';
 import { ContentRow } from '../components/ContentRow';
 import { Footer } from '../components/Footer';
@@ -149,6 +150,7 @@ const Index = () => {
   return (
     <div className="bg-netflix-black min-h-screen">
       <Navbar />
+      <PersistentSubBanner />
       
       <main>
         {featuredContent && <HeroSection content={featuredContent} />}

@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Navbar } from '../components/Navbar';
+import { PersistentSubBanner } from '../components/PersistentSubBanner';
 import { Footer } from '../components/Footer';
 import { ContentRow } from '../components/ContentRow';
 import { Content } from '../data/mockData';
@@ -71,6 +72,7 @@ const Movies = () => {
   return (
     <div className="bg-netflix-black min-h-screen">
       <Navbar />
+      <PersistentSubBanner />
       
       <main className="pt-24 pb-12">
         <div className="px-4 md:px-8 lg:px-16 max-w-7xl mx-auto">
