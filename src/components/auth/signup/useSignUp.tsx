@@ -8,7 +8,8 @@ import {
   setSubscriptionPlan, 
   trackEvent,
   setSubscriptionStatus,
-  trackSubscriptionEvent 
+  trackSubscriptionStarted,
+  type SubscriptionMetadata
 } from '../../../utils/posthog/simple';
 import { validateEmail, sanitizeInput, rateLimitCheck } from '../../../utils/inputValidation';
 import { SignUpFormData } from './signupSchema';
@@ -112,6 +113,16 @@ export const useSignUp = ({ selectedPlanId, planName, planCost }: UseSignUpProps
         // Enhanced PostHog identification with subscription status
         const subscriptionStatus = planName ? 'active' : 'none';
         
+        // Enhanced subscription metadata for better cohort analysis
+        const subscriptionMetadata: SubscriptionMetadata = {
+          planId: selectedPlanId,
+          planName: planName,
+          price: planCost.toString(),
+          subscriptionStartDate: signupDate,
+          subscriptionValue: planCost,
+          reactivationCount: 0
+        };
+        
         identifyUserWithSubscription(
           values.email,
           {
@@ -124,11 +135,7 @@ export const useSignUp = ({ selectedPlanId, planName, planCost }: UseSignUpProps
             $set_once: { first_seen: signupDate }
           },
           subscriptionStatus,
-          {
-            planId: selectedPlanId,
-            planName: planName,
-            price: planCost.toString()
-          }
+          subscriptionMetadata
         );
 
         // Set user type
@@ -140,12 +147,8 @@ export const useSignUp = ({ selectedPlanId, planName, planCost }: UseSignUpProps
           setSubscriptionPlan(planName, selectedPlanId, planCost.toString());
         }
 
-        // Set subscription status (for cohort analysis)
-        setSubscriptionStatus(subscriptionStatus, {
-          planId: selectedPlanId,
-          planName: planName,
-          price: planCost.toString()
-        });
+        // Enhanced subscription status tracking with journey metadata
+        setSubscriptionStatus(subscriptionStatus, subscriptionMetadata);
 
         // Track signup event
         trackEvent('user_signup', {
@@ -159,15 +162,13 @@ export const useSignUp = ({ selectedPlanId, planName, planCost }: UseSignUpProps
           subscription_status: subscriptionStatus
         });
 
-        // Track subscription activation if user selected a plan
+        // Track subscription started with enhanced tracking
         if (planName) {
-          trackSubscriptionEvent('subscription_activated', {
+          trackSubscriptionStarted(selectedPlanId, planName, {
             user_id: data.user.id,
-            plan_id: selectedPlanId,
-            plan_name: planName,
             plan_cost: planCost,
             source: 'signup',
-            activated_at: signupDate
+            is_first_subscription: true
           });
         }
 

@@ -9,8 +9,11 @@ import { usePostHogSubscription } from '../../../hooks/usePostHogFeatures';
 import { slugifyGroupKey, formatSubscriptionGroupProps, extractPriceValue } from '../../../utils/posthog/helpers';
 import { 
   setSubscriptionStatus, 
-  trackSubscriptionEvent,
-  syncSubscriptionStatusToPostHog 
+  trackSubscriptionCancelled,
+  trackSubscriptionStarted,
+  syncSubscriptionStatusToPostHog,
+  SUBSCRIPTION_EVENTS,
+  type SubscriptionMetadata 
 } from '../../../utils/posthog/simple';
 
 interface UseSubscriptionSettingsProps {
@@ -140,13 +143,12 @@ export const useSubscriptionSettings = ({
         price: selectedPlan.price
       });
       
-      // Track subscription lifecycle event
-      trackSubscriptionEvent('subscription_plan_changed', {
-        plan_id: currentPlanId,
-        plan_name: selectedPlan.name,
+      // Track subscription plan change with enhanced data
+      trackSubscriptionStarted(currentPlanId, selectedPlan.name, {
         plan_cost: extractPriceValue(selectedPlan.price),
         previous_plan_id: initialPlanId,
         source: 'profile_settings',
+        is_plan_change: true,
         changed_at: new Date().toISOString()
       });
       
@@ -274,11 +276,9 @@ export const useSubscriptionSettings = ({
         reason: 'user_initiated'
       });
       
-      // Track subscription lifecycle event
-      trackSubscriptionEvent('subscription_cancelled', {
-        previous_plan_id: initialPlanId,
+      // Track subscription cancellation with enhanced data
+      trackSubscriptionCancelled('user_initiated', initialPlanId, undefined, {
         cancelled_at: cancelledAt,
-        reason: 'user_initiated',
         source: 'profile_settings'
       });
       

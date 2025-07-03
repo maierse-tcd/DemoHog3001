@@ -6,7 +6,8 @@ import {
   setUserType, 
   setSubscriptionPlan, 
   resetIdentity,
-  syncSubscriptionStatusToPostHog 
+  syncSubscriptionStatusToPostHog,
+  type SubscriptionMetadata
 } from '../../utils/posthog/simple';
 import posthog from 'posthog-js';
 

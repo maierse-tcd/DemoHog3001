@@ -12,10 +12,15 @@ export { identifyUser, getCurrentUserId, resetIdentity } from './simpleIdentity'
 export { identifyGroup, setUserType, setSubscriptionPlan } from './simpleGroups';
 export { 
   setSubscriptionStatus, 
-  trackSubscriptionEvent, 
+  trackSubscriptionEvent,
+  trackSubscriptionStarted,
+  trackSubscriptionCancelled,
+  trackSubscriptionReactivated,
   syncSubscriptionStatusToPostHog,
   identifyUserWithSubscription,
-  type SubscriptionStatus 
+  SUBSCRIPTION_EVENTS,
+  type SubscriptionStatus,
+  type SubscriptionMetadata 
 } from './subscriptionStatus';
 
 // Re-export core utilities that are still useful
