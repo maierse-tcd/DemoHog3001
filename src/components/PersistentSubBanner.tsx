@@ -5,6 +5,7 @@ import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { useAuth } from '../hooks/useAuth';
 import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
+import { syncSubscriptionStatusToPostHog } from '../utils/posthog/simple';
 
 export const PersistentSubBanner = () => {
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
@@ -51,7 +52,17 @@ export const PersistentSubBanner = () => {
             },
             (payload) => {
               if (payload.new && payload.new.subscription_status) {
-                setSubscriptionStatus(payload.new.subscription_status);
+                const newStatus = payload.new.subscription_status;
+                setSubscriptionStatus(newStatus);
+                
+                // Sync to PostHog for cohort analysis
+                syncSubscriptionStatusToPostHog(
+                  data.session.user.id, 
+                  newStatus,
+                  {
+                    planId: payload.new.subscription_plan_id
+                  }
+                );
               }
             }
           )

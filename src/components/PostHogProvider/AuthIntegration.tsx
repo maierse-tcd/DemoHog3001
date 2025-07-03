@@ -1,7 +1,13 @@
 
 import { useEffect, useRef } from 'react';
 import { supabase } from '../../integrations/supabase/client';
-import { identifyUser, setUserType, setSubscriptionPlan, resetIdentity } from '../../utils/posthog/simple';
+import { 
+  identifyUserWithSubscription, 
+  setUserType, 
+  setSubscriptionPlan, 
+  resetIdentity,
+  syncSubscriptionStatusToPostHog 
+} from '../../utils/posthog/simple';
 import posthog from 'posthog-js';
 
 interface AuthIntegrationProps {
@@ -119,9 +125,33 @@ export const useAuthIntegration = ({
           $set_once: { first_seen: new Date().toISOString() }
         };
         
-        // Simple identification using new utilities
+        // Enhanced identification with subscription status sync
         console.log('PostHog: Identifying user with properties:', userProperties);
-        identifyUser(email, userProperties);
+        
+        // Fetch subscription status from profiles and sync to PostHog
+        supabase
+          .from('profiles')
+          .select('subscription_status, subscription_plan_id')
+          .eq('id', userId)
+          .maybeSingle()
+          .then(({ data: subscriptionData }) => {
+            if (!isMountedRef.current) return;
+            
+            const subscriptionStatus = subscriptionData?.subscription_status || 'none';
+            const planId = subscriptionData?.subscription_plan_id;
+            
+            // Identify user with subscription properties
+            identifyUserWithSubscription(
+              email, 
+              userProperties, 
+              subscriptionStatus === 'active' ? 'active' : 
+              subscriptionStatus === 'cancelled' ? 'cancelled' : 'none',
+              planId ? { planId } : undefined
+            );
+            
+            // Sync subscription status for cohort analysis
+            syncSubscriptionStatusToPostHog(userId, subscriptionStatus, { planId });
+          });
         
         // Reload feature flags after identification with proper timing
         console.log('PostHog: Reloading feature flags after user identification');

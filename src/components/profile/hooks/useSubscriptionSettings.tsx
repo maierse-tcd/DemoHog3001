@@ -7,6 +7,11 @@ import { safeCapture, captureEventWithGroup } from '../../../utils/posthog';
 import { usePostHog } from 'posthog-js/react';
 import { usePostHogSubscription } from '../../../hooks/usePostHogFeatures';
 import { slugifyGroupKey, formatSubscriptionGroupProps, extractPriceValue } from '../../../utils/posthog/helpers';
+import { 
+  setSubscriptionStatus, 
+  trackSubscriptionEvent,
+  syncSubscriptionStatusToPostHog 
+} from '../../../utils/posthog/simple';
 
 interface UseSubscriptionSettingsProps {
   selectedPlanId: string;
@@ -128,7 +133,24 @@ export const useSubscriptionSettings = ({
       // Update the context only after successful DB update
       updateSelectedPlan(currentPlanId);
       
-      // Track plan change in PostHog
+      // Update subscription status in PostHog (for cohort analysis)
+      setSubscriptionStatus('active', {
+        planId: currentPlanId,
+        planName: selectedPlan.name,
+        price: selectedPlan.price
+      });
+      
+      // Track subscription lifecycle event
+      trackSubscriptionEvent('subscription_plan_changed', {
+        plan_id: currentPlanId,
+        plan_name: selectedPlan.name,
+        plan_cost: extractPriceValue(selectedPlan.price),
+        previous_plan_id: initialPlanId,
+        source: 'profile_settings',
+        changed_at: new Date().toISOString()
+      });
+      
+      // Track plan change in PostHog (legacy event)
       safeCapture('plan_changed', {
         plan_id: currentPlanId,
         plan_type: selectedPlan.name,
@@ -245,10 +267,25 @@ export const useSubscriptionSettings = ({
       updateSelectedPlan('cancelled');
       setCurrentPlanId('cancelled');
       
-      // Track cancellation in PostHog
+      // Update subscription status in PostHog (for cohort analysis)
+      const cancelledAt = new Date().toISOString();
+      setSubscriptionStatus('cancelled', {
+        cancelledAt: cancelledAt,
+        reason: 'user_initiated'
+      });
+      
+      // Track subscription lifecycle event
+      trackSubscriptionEvent('subscription_cancelled', {
+        previous_plan_id: initialPlanId,
+        cancelled_at: cancelledAt,
+        reason: 'user_initiated',
+        source: 'profile_settings'
+      });
+      
+      // Track cancellation in PostHog (legacy event)
       safeCapture('subscription_cancelled', {
         previous_plan_id: initialPlanId,
-        cancelled_at: new Date().toISOString(),
+        cancelled_at: cancelledAt,
         reason: 'user_initiated'
       });
       

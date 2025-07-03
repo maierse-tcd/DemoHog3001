@@ -10,6 +10,13 @@ import posthog from 'posthog-js';
 export { trackEvent, trackGroupEvent } from './simpleEvents';
 export { identifyUser, getCurrentUserId, resetIdentity } from './simpleIdentity';
 export { identifyGroup, setUserType, setSubscriptionPlan } from './simpleGroups';
+export { 
+  setSubscriptionStatus, 
+  trackSubscriptionEvent, 
+  syncSubscriptionStatusToPostHog,
+  identifyUserWithSubscription,
+  type SubscriptionStatus 
+} from './subscriptionStatus';
 
 // Re-export core utilities that are still useful
 export { isPostHogAvailable, getPostHogInstance } from './core';

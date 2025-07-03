@@ -2,7 +2,14 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../../hooks/use-toast';
 import { supabase } from '../../../integrations/supabase/client';
-import { identifyUser, setUserType, setSubscriptionPlan, trackEvent } from '../../../utils/posthog/simple';
+import { 
+  identifyUserWithSubscription, 
+  setUserType, 
+  setSubscriptionPlan, 
+  trackEvent,
+  setSubscriptionStatus,
+  trackSubscriptionEvent 
+} from '../../../utils/posthog/simple';
 import { validateEmail, sanitizeInput, rateLimitCheck } from '../../../utils/inputValidation';
 import { SignUpFormData } from './signupSchema';
 
@@ -102,25 +109,43 @@ export const useSignUp = ({ selectedPlanId, planName, planCost }: UseSignUpProps
       if (data?.user) {
         console.log(`PostHog: Identifying new user during signup: ${values.email}`);
         
-        // Immediate PostHog identification with simplified utilities
-        identifyUser(values.email, {
-          name: values.email.split('@')[0],
-          is_kids_account: values.isKidsAccount || false,
-          language: values.language,
-          email: values.email,
-          supabase_id: data.user.id,
-          signup_date: signupDate,
-          $set_once: { first_seen: signupDate }
-        });
+        // Enhanced PostHog identification with subscription status
+        const subscriptionStatus = planName ? 'active' : 'none';
+        
+        identifyUserWithSubscription(
+          values.email,
+          {
+            name: values.email.split('@')[0],
+            is_kids_account: values.isKidsAccount || false,
+            language: values.language,
+            email: values.email,
+            supabase_id: data.user.id,
+            signup_date: signupDate,
+            $set_once: { first_seen: signupDate }
+          },
+          subscriptionStatus,
+          {
+            planId: selectedPlanId,
+            planName: planName,
+            price: planCost.toString()
+          }
+        );
 
         // Set user type
         setUserType(values.isKidsAccount || false);
 
-        // Set subscription if available
+        // Set subscription plan (for group analysis)
         if (planName) {
           console.log(`PostHog: Setting subscription for new user: ${planName}`);
           setSubscriptionPlan(planName, selectedPlanId, planCost.toString());
         }
+
+        // Set subscription status (for cohort analysis)
+        setSubscriptionStatus(subscriptionStatus, {
+          planId: selectedPlanId,
+          planName: planName,
+          price: planCost.toString()
+        });
 
         // Track signup event
         trackEvent('user_signup', {
@@ -130,8 +155,21 @@ export const useSignUp = ({ selectedPlanId, planName, planCost }: UseSignUpProps
           plan_type: planName || 'Unknown Plan',
           plan_cost: planCost,
           is_kids_account: values.isKidsAccount || false,
-          signup_date: signupDate
+          signup_date: signupDate,
+          subscription_status: subscriptionStatus
         });
+
+        // Track subscription activation if user selected a plan
+        if (planName) {
+          trackSubscriptionEvent('subscription_activated', {
+            user_id: data.user.id,
+            plan_id: selectedPlanId,
+            plan_name: planName,
+            plan_cost: planCost,
+            source: 'signup',
+            activated_at: signupDate
+          });
+        }
 
         console.log(`PostHog: Successfully identified and tracked signup for: ${values.email}`);
       }
