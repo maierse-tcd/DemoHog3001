@@ -74,8 +74,8 @@ const Series = () => {
       <Navbar />
       <PersistentSubBanner />
       
-      <main className="pt-24 pb-12">
-        <div className="px-4 md:px-8 lg:px-16 max-w-7xl mx-auto">
+      <main className="pb-12">
+        <div className="px-4 md:px-8 lg:px-16 max-w-7xl mx-auto pt-24">
           <h1 className="text-3xl md:text-4xl font-bold mb-8">TV Series</h1>
           
           {Object.entries(seriesByGenre).map(([genre, series]) => (
