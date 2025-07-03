@@ -81,12 +81,19 @@ export const ContentPreview = ({ content, onClose }: ContentPreviewProps) => {
             <p className="text-gray-300 mb-6 line-clamp-3">{content.description}</p>
             
             <div className="flex space-x-3">
-              <button 
-                className="bg-white hover:bg-white/90 text-black py-2 px-6 rounded-md flex items-center transition-colors"
-                onClick={() => setIsPlaying(true)}
-              >
-                <Play className="mr-2 h-5 w-5" /> Play
-              </button>
+            <button 
+              className="bg-white hover:bg-white/90 text-black py-2 px-6 rounded-md flex items-center transition-colors"
+              onClick={() => {
+                setIsPlaying(true);
+                safeCapture('content_play_clicked', {
+                  contentId: content.id,
+                  contentTitle: content.title,
+                  location: 'content_preview'
+                });
+              }}
+            >
+              <Play className="mr-2 h-5 w-5" /> Play
+            </button>
               
               {/* My List button - only show when feature flag is enabled */}
               {showMyListFeature && (
