@@ -7,38 +7,78 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 
 export const PersistentSubBanner = () => {
-  const [subscriptionStatus, setSubscriptionStatus] = useState<string>('none');
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const { isLoggedIn } = useAuth();
   const showBanner = useFeatureFlagEnabled('persistent_sub_notification');
 
   useEffect(() => {
+    let channel: any = null;
+
     const fetchSubscriptionStatus = async () => {
-      if (!isLoggedIn) return;
+      if (!isLoggedIn) {
+        setIsLoading(false);
+        return;
+      }
       
       try {
+        setIsLoading(true);
         const { data } = await supabase.auth.getSession();
-        if (!data.session?.user?.email) return;
+        if (!data.session?.user?.id) {
+          setIsLoading(false);
+          return;
+        }
 
         const { data: profileData } = await supabase
           .from('profiles')
           .select('subscription_status')
-          .eq('email', data.session.user.email)
+          .eq('id', data.session.user.id)
           .maybeSingle();
 
         if (profileData) {
           setSubscriptionStatus(profileData.subscription_status || 'none');
+        } else {
+          setSubscriptionStatus('none');
         }
+
+        // Set up real-time listener for this specific user
+        channel = supabase
+          .channel('subscription-status-changes')
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'profiles',
+              filter: `id=eq.${data.session.user.id}`
+            },
+            (payload) => {
+              if (payload.new && payload.new.subscription_status) {
+                setSubscriptionStatus(payload.new.subscription_status);
+              }
+            }
+          )
+          .subscribe();
       } catch (error) {
         console.error('Error fetching subscription status:', error);
+        setSubscriptionStatus('none');
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchSubscriptionStatus();
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
   }, [isLoggedIn]);
 
-  // Don't show banner if feature flag is off, user is not logged in, user is subscribed, or banner is dismissed
-  if (!showBanner || !isLoggedIn || subscriptionStatus === 'active' || !isVisible) {
+  // Don't show banner if feature flag is off, user is not logged in, still loading, user is subscribed, or banner is dismissed
+  if (!showBanner || !isLoggedIn || isLoading || subscriptionStatus === 'active' || !isVisible) {
     return null;
   }
 
