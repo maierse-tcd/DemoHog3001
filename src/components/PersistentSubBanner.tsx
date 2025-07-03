@@ -9,7 +9,6 @@ import { supabase } from '../integrations/supabase/client';
 export const PersistentSubBanner = () => {
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
   const { isLoggedIn } = useAuth();
   const showBanner = useFeatureFlagEnabled('persistent_sub_notification');
 
@@ -18,15 +17,12 @@ export const PersistentSubBanner = () => {
 
     const fetchSubscriptionStatus = async () => {
       if (!isLoggedIn) {
-        setIsLoading(false);
         return;
       }
       
       try {
-        setIsLoading(true);
         const { data } = await supabase.auth.getSession();
         if (!data.session?.user?.id) {
-          setIsLoading(false);
           return;
         }
 
@@ -63,8 +59,6 @@ export const PersistentSubBanner = () => {
       } catch (error) {
         console.error('Error fetching subscription status:', error);
         setSubscriptionStatus('none');
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -77,8 +71,8 @@ export const PersistentSubBanner = () => {
     };
   }, [isLoggedIn]);
 
-  // Don't show banner if feature flag is off, user is not logged in, still loading, user is subscribed, or banner is dismissed
-  if (!showBanner || !isLoggedIn || isLoading || subscriptionStatus === 'active' || !isVisible) {
+  // Show banner optimistically if user is logged in and feature flag is on, hide only if confirmed subscribed
+  if (!showBanner || !isLoggedIn || subscriptionStatus === 'active' || !isVisible) {
     return null;
   }
 
