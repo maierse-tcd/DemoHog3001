@@ -71,8 +71,8 @@ export const PersistentSubBanner = () => {
     };
   }, [isLoggedIn]);
 
-  // Show banner optimistically if user is logged in and feature flag is on, hide only if confirmed subscribed
-  if (!showBanner || !isLoggedIn || subscriptionStatus === 'active' || !isVisible) {
+  // Only show banner if feature flag is explicitly enabled, user is logged in, and not subscribed
+  if (!showBanner || showBanner !== true || !isLoggedIn || subscriptionStatus === 'active' || !isVisible) {
     return null;
   }
 
