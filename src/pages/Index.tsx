@@ -66,8 +66,11 @@ const Index = () => {
             // Silent error - only tracked in PostHog
             const posthog = getPostHogInstance();
             posthog?.capture('$exception', {
-              $exception_type: validationError.name || 'ValidationError',
-              $exception_message: validationError.message,
+              $exception_list: [{
+                type: validationError.name || 'Error',
+                value: validationError.message,
+                mechanism: { handled: true, type: 'generic' }
+              }],
               $exception_source: 'content_validation',
               page: 'homepage'
             });
@@ -120,8 +123,11 @@ const Index = () => {
       // Silent error - only tracked in PostHog
       const posthog = getPostHogInstance();
       posthog?.capture('$exception', {
-        $exception_type: apiError.name || 'APIError',
-        $exception_message: apiError.message,
+        $exception_list: [{
+          type: apiError.name || 'Error',
+          value: apiError.message,
+          mechanism: { handled: true, type: 'generic' }
+        }],
         $exception_source: 'feature_flags',
         page: 'homepage',
         timeout_duration: 5000
@@ -148,8 +154,11 @@ const Index = () => {
         // Silent error - only tracked in PostHog
         const posthog = getPostHogInstance();
         posthog?.capture('$exception', {
-          $exception_type: metadataError.name || 'TypeError',
-          $exception_message: metadataError.message,
+          $exception_list: [{
+            type: metadataError.name || 'TypeError',
+            value: metadataError.message,
+            mechanism: { handled: true, type: 'generic' }
+          }],
           $exception_source: 'content_impressions',
           page: 'homepage',
           content_id: featuredContent.id
@@ -174,8 +183,11 @@ const Index = () => {
       // Silent error - only tracked in PostHog
       const posthog = getPostHogInstance();
       posthog?.capture('$exception', {
-        $exception_type: categoryError.name || 'ReferenceError',
-        $exception_message: categoryError.message,
+        $exception_list: [{
+          type: categoryError.name || 'ReferenceError',
+          value: categoryError.message,
+          mechanism: { handled: true, type: 'generic' }
+        }],
         $exception_source: 'category_rendering',
         page: 'homepage',
         category_count: categories.length
