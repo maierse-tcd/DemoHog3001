@@ -10,6 +10,7 @@ import { useFeatureFlag } from '../hooks/useFeatureFlag';
 import { useAuth } from '../hooks/useAuth';
 import { loadContentFromSupabase, initializeContentDatabase } from '../utils/contentUtils';
 import { toast } from '../hooks/use-toast';
+import { getPostHogInstance } from '../utils/posthog/core';
 
 const Index = () => {
   const [featuredContent, setFeaturedContent] = useState<Content>(getFeaturedContent());
@@ -54,6 +55,23 @@ const Index = () => {
           setFeaturedContent(newFeatured as Content);
 
           console.log("Featured content with backdrop URL:", newFeatured.backdropUrl);
+          
+          // Simulate background data validation error for PostHog tracking
+          try {
+            const posthog = getPostHogInstance();
+            if (posthog && Math.random() > 0.7) {
+              throw new Error('Content validation warning: Unexpected genre format detected');
+            }
+          } catch (validationError: any) {
+            // Silent error - only tracked in PostHog
+            const posthog = getPostHogInstance();
+            posthog?.capture('$exception', {
+              $exception_type: validationError.name || 'ValidationError',
+              $exception_message: validationError.message,
+              $exception_source: 'content_validation',
+              page: 'homepage'
+            });
+          }
         }
       } catch (error) {
         console.error("Error loading content:", error);
@@ -91,6 +109,24 @@ const Index = () => {
       is_admin: isAdmin, 
       access_password: hasPasswordProtection 
     });
+    
+    // Simulate API timeout error for PostHog tracking
+    try {
+      const posthog = getPostHogInstance();
+      if (posthog && Math.random() > 0.8) {
+        throw new Error('API timeout: Feature flag request exceeded 5000ms');
+      }
+    } catch (apiError: any) {
+      // Silent error - only tracked in PostHog
+      const posthog = getPostHogInstance();
+      posthog?.capture('$exception', {
+        $exception_type: apiError.name || 'APIError',
+        $exception_message: apiError.message,
+        $exception_source: 'feature_flags',
+        page: 'homepage',
+        timeout_duration: 5000
+      });
+    }
   }, [isAdmin, hasPasswordProtection]);
   
   // Simulate content impression analytics events
@@ -101,6 +137,24 @@ const Index = () => {
         title: featuredContent.title,
         position: 'hero'
       });
+      
+      // Simulate metadata parsing error for PostHog tracking
+      try {
+        const posthog = getPostHogInstance();
+        if (posthog && Math.random() > 0.75) {
+          throw new TypeError('Failed to parse content metadata: Invalid date format');
+        }
+      } catch (metadataError: any) {
+        // Silent error - only tracked in PostHog
+        const posthog = getPostHogInstance();
+        posthog?.capture('$exception', {
+          $exception_type: metadataError.name || 'TypeError',
+          $exception_message: metadataError.message,
+          $exception_source: 'content_impressions',
+          page: 'homepage',
+          content_id: featuredContent.id
+        });
+      }
     }
     
     categories.forEach(category => {
@@ -109,6 +163,24 @@ const Index = () => {
         categoryName: category.name
       });
     });
+    
+    // Simulate category rendering error for PostHog tracking
+    try {
+      const posthog = getPostHogInstance();
+      if (posthog && categories.length > 0 && Math.random() > 0.85) {
+        throw new ReferenceError('Category renderer: Missing required thumbnail property');
+      }
+    } catch (categoryError: any) {
+      // Silent error - only tracked in PostHog
+      const posthog = getPostHogInstance();
+      posthog?.capture('$exception', {
+        $exception_type: categoryError.name || 'ReferenceError',
+        $exception_message: categoryError.message,
+        $exception_source: 'category_rendering',
+        page: 'homepage',
+        category_count: categories.length
+      });
+    }
   }, [featuredContent, categories]);
 
   // Create a custom version of getContentByCategory that uses our updated content
