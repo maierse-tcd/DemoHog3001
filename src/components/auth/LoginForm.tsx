@@ -7,6 +7,8 @@ import { useToast } from '../../hooks/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { safeCapture, safeReloadFeatureFlags } from '../../utils/posthog';
 import { validateEmail, sanitizeInput, rateLimitCheck, auditLog } from '../../utils/inputValidation';
+import { identifyUserWithSubscription, setUserType } from '../../utils/posthog/simple';
+import type { SubscriptionMetadata } from '../../utils/posthog/simple';
 
 interface LoginFormProps {
   fetchUserProfile: (userId: string) => Promise<void>;
@@ -105,36 +107,98 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
   };
   
   const handleSuccessfulLogin = async (userId: string, userEmail: string) => {
-    console.log('Login success, user ID:', userId);
+    console.log(`[${new Date().toISOString()}] Login success, user ID: ${userId}`);
     
-    // PostHog identification is centralized in PostHogProvider
-    safeCapture('user_login_success');
-    
-    // Fetch user profile data
-    await fetchUserProfile(userId);
-    
-    // After successful login, explicitly reload feature flags
-    // with a slight delay to ensure identification is complete
-    setTimeout(async () => {
-      console.log('Reloading feature flags after login...');
-      try {
-        await safeReloadFeatureFlags();
-        console.log('Feature flags reloaded successfully');
-        
-        // Dispatch a custom event to notify components that feature flags have been updated
-        window.dispatchEvent(new CustomEvent('posthog-feature-flags-updated'));
-      } catch (err) {
-        console.error('Error reloading feature flags:', err);
+    try {
+      // CRITICAL: Explicitly identify user in PostHog BEFORE navigation
+      console.log(`[${new Date().toISOString()}] PostHog: Identifying returning user on login: ${userEmail}`);
+      
+      // Fetch profile data first to ensure accurate identification
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('is_kids, subscription_status, subscription_plan_id, name, language')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (profileError) {
+        console.warn(`[${new Date().toISOString()}] Profile fetch error:`, profileError);
       }
-    }, 1500);
-    
-    toast({
-      title: "Login successful",
-      description: `Welcome back!`,
-    });
-    
-    // Redirect to home page
-    navigate('/');
+      
+      if (profileData) {
+        console.log(`[${new Date().toISOString()}] PostHog: Profile fetched for ${userEmail}:`, {
+          is_kids: profileData.is_kids,
+          subscription_status: profileData.subscription_status
+        });
+        
+        // Identify with full profile data
+        const subscriptionMetadata: SubscriptionMetadata | undefined = profileData.subscription_plan_id 
+          ? { planId: profileData.subscription_plan_id }
+          : undefined;
+        
+        identifyUserWithSubscription(
+          userEmail,
+          {
+            name: profileData.name || userEmail.split('@')[0],
+            is_kids_account: profileData.is_kids || false,
+            language: profileData.language || 'English',
+            email: userEmail,
+            supabase_id: userId,
+            returning_user: true, // Mark as returning
+            last_login: new Date().toISOString()
+          },
+          profileData.subscription_status === 'active' ? 'active' : 
+          profileData.subscription_status === 'cancelled' ? 'cancelled' : 'none',
+          subscriptionMetadata
+        );
+        
+        // Set user type group
+        console.log(`[${new Date().toISOString()}] PostHog: Setting user type - isKid: ${profileData.is_kids || false}`);
+        setUserType(profileData.is_kids || false);
+        
+        console.log(`[${new Date().toISOString()}] PostHog: User identification complete for ${userEmail}`);
+      }
+      
+      // Capture login event with returning user flag
+      safeCapture('user_login_success', {
+        returning_user: true,
+        login_timestamp: new Date().toISOString()
+      });
+      
+      // Fetch user profile data for app state
+      await fetchUserProfile(userId);
+      
+      // Reload feature flags with reduced timeout
+      setTimeout(async () => {
+        console.log(`[${new Date().toISOString()}] Reloading feature flags after login...`);
+        try {
+          await safeReloadFeatureFlags();
+          console.log(`[${new Date().toISOString()}] Feature flags reloaded successfully`);
+          
+          // Dispatch a custom event to notify components that feature flags have been updated
+          window.dispatchEvent(new CustomEvent('posthog-feature-flags-updated'));
+        } catch (err) {
+          console.error(`[${new Date().toISOString()}] Error reloading feature flags:`, err);
+        }
+      }, 500); // Reduced from 1500ms to 500ms
+      
+      toast({
+        title: "Login successful",
+        description: `Welcome back!`,
+      });
+      
+      // Navigate AFTER PostHog identification completes
+      console.log(`[${new Date().toISOString()}] Navigating to homepage...`);
+      navigate('/');
+    } catch (error) {
+      console.error(`[${new Date().toISOString()}] Error in handleSuccessfulLogin:`, error);
+      
+      // Still navigate even if PostHog fails
+      toast({
+        title: "Login successful",
+        description: `Welcome back!`,
+      });
+      navigate('/');
+    }
   };
 
   return (

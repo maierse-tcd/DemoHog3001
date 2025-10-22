@@ -31,21 +31,21 @@ export const useAuthIntegration = ({
 
   useEffect(() => {
     if (posthogLoadedRef.current) {
-      console.log('PostHog: Auth integration starting - checking current user');
+      console.log(`[${new Date().toISOString()}] PostHog: Auth integration starting - checking current user`);
       checkAndIdentifyCurrentUser();
     }
     
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('PostHog: Auth state changed:', event);
+      console.log(`[${new Date().toISOString()}] PostHog: Auth state changed:`, event);
       
       if (event === 'SIGNED_IN' && session?.user && posthogLoadedRef.current) {
-        console.log('PostHog: User signed in, identifying immediately');
+        console.log(`[${new Date().toISOString()}] PostHog: User signed in, identifying immediately`);
         const email = session.user.email;
         if (email) {
           // Reset if different user
           if (currentUserRef.current && currentUserRef.current !== email) {
-            console.log(`PostHog: Different user detected, resetting: ${email}`);
+            console.log(`[${new Date().toISOString()}] PostHog: Different user detected, resetting: ${email}`);
             resetIdentity();
           }
           
@@ -53,7 +53,7 @@ export const useAuthIntegration = ({
           identifyUserWithProfile(email, session.user.id, session.user.user_metadata);
         }
       } else if (event === 'SIGNED_OUT') {
-        console.log('PostHog: User signed out, resetting identity');
+        console.log(`[${new Date().toISOString()}] PostHog: User signed out, resetting identity`);
         resetIdentity();
         currentUserRef.current = null;
       }
@@ -76,11 +76,11 @@ export const useAuthIntegration = ({
         const email = user.email;
         
         if (email) {
-          console.log(`PostHog: Found authenticated user: ${email}`);
+          console.log(`[${new Date().toISOString()}] PostHog: Found authenticated user: ${email}`);
           
           // Reset if different user
           if (currentUserRef.current && currentUserRef.current !== email) {
-            console.log(`PostHog: Different user detected, resetting: ${email}`);
+            console.log(`[${new Date().toISOString()}] PostHog: Different user detected, resetting: ${email}`);
             resetIdentity();
           }
           
@@ -88,7 +88,7 @@ export const useAuthIntegration = ({
           identifyUserWithProfile(email, user.id, user.user_metadata);
         }
       } else {
-        console.log('PostHog: No authenticated user found');
+        console.log(`[${new Date().toISOString()}] PostHog: No authenticated user found`);
       }
     }).catch(err => {
       console.error('Error checking session:', err);
@@ -98,7 +98,7 @@ export const useAuthIntegration = ({
   const identifyUserWithProfile = (email: string, userId: string, metadata?: any) => {
     if (!posthogLoadedRef.current || !isMountedRef.current) return;
 
-    console.log(`PostHog: Identifying user with profile data: ${email}`);
+    console.log(`[${new Date().toISOString()}] PostHog: Identifying user with profile data: ${email}`);
     currentUserRef.current = email;
     
     // Fetch profile FIRST - CRITICAL for accurate data
@@ -111,9 +111,11 @@ export const useAuthIntegration = ({
         if (!isMountedRef.current) return;
         
         if (error) {
-          console.warn('PostHog: Profile fetch error:', error);
+          console.warn(`[${new Date().toISOString()}] PostHog: Profile fetch error:`, error);
           // Continue with defaults but log warning
         }
+        
+        console.log(`[${new Date().toISOString()}] PostHog: Profile data fetched for ${email}`);
         
         // ONLY proceed if we have profile data OR if we explicitly want to use defaults
         const isKid = profileData?.is_kids === true;
@@ -144,25 +146,25 @@ export const useAuthIntegration = ({
         syncSubscriptionStatusToPostHog(userId, subscriptionStatus, { planId });
         
         // Reload feature flags ONCE after identification
-        console.log('PostHog: Reloading feature flags after user identification');
+        console.log(`[${new Date().toISOString()}] PostHog: Reloading feature flags after user identification`);
         setTimeout(() => {
           if (posthog && typeof posthog.reloadFeatureFlags === 'function') {
             posthog.reloadFeatureFlags();
-            console.log('PostHog: Feature flags reloaded successfully');
+            console.log(`[${new Date().toISOString()}] PostHog: Feature flags reloaded successfully`);
           }
         }, 100);
         
         // Set user type - SINGLE CALL, uses actual is_kids value
-        console.log(`PostHog: Setting user type - isKid: ${isKid}`);
+        console.log(`[${new Date().toISOString()}] PostHog: Setting user type - isKid: ${isKid}`);
         updateUserType(isKid);
         
         // Handle subscription if present from metadata (signup flow)
         if (metadata?.selectedPlanId) {
-          console.log(`PostHog: Processing subscription from signup: ${metadata.selectedPlanId}`);
+          console.log(`[${new Date().toISOString()}] PostHog: Processing subscription from signup: ${metadata.selectedPlanId}`);
           fetchAndSetSubscription(metadata.selectedPlanId);
         }
       }, (err: any) => {
-        console.error('PostHog: Error in identifyUserWithProfile:', err);
+        console.error(`[${new Date().toISOString()}] PostHog: Error in identifyUserWithProfile:`, err);
         // Still mark user as current to prevent retries
         currentUserRef.current = email;
       });
@@ -183,7 +185,7 @@ export const useAuthIntegration = ({
         }
         
         const planName = planData.name;
-        console.log(`PostHog: Setting subscription plan: ${planName}`);
+        console.log(`[${new Date().toISOString()}] PostHog: Setting subscription plan: ${planName}`);
         
         setCurrentSubscriptionName(planName);
         updateSubscription(planName, planId, planData.price || '0');
