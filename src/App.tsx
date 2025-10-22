@@ -19,6 +19,7 @@ import { Toaster } from './components/ui/toaster';
 import { AuthProvider } from './hooks/auth/useAuthContext';
 import { ProfileSettingsProvider } from './contexts/ProfileSettingsContext';
 import { usePageviewTracking } from './hooks/usePageviewTracking';
+import { DemoModeBanner } from './components/DemoModeBanner';
 import './App.css';
 
 // Component that includes the pageview tracking hook
@@ -52,6 +53,7 @@ function App() {
       <AuthProvider>
         <ProfileSettingsProvider>
           <Router>
+            <DemoModeBanner />
             <AppContent />
           </Router>
           <Toaster />

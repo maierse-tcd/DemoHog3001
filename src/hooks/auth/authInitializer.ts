@@ -1,6 +1,8 @@
 import { supabase } from '../../integrations/supabase/client';
 import { AuthState } from './authTypes';
 import { fetchUserProfile } from './authProfile';
+import { isDemoMode, getDemoSession } from '../../utils/demoAuth';
+import { identifyUserWithSubscription, setUserType } from '../../utils/posthog/simple';
 
 // Initialize auth state and set up listeners
 export const initializeAuth = async (
@@ -9,7 +11,43 @@ export const initializeAuth = async (
   fetchUserProfileRef: (userId: string) => Promise<void>
 ) => {
   try {
-    // First check for existing session
+    // Check for demo mode first
+    if (isDemoMode()) {
+      const demoSession = getDemoSession();
+      if (demoSession) {
+        console.log(`🎭 [${new Date().toISOString()}] Restored demo session: ${demoSession.user.email}`);
+        
+        updateAuthState({
+          isLoggedIn: true,
+          userEmail: demoSession.user.email,
+          userName: demoSession.user.user_metadata.name,
+          userMetadata: demoSession.user.user_metadata,
+          user: { id: demoSession.user.id },
+          isLoading: false
+        });
+        
+        // Identify in PostHog
+        identifyUserWithSubscription(
+          demoSession.user.email,
+          {
+            name: demoSession.user.user_metadata.name,
+            is_kids_account: demoSession.user.user_metadata.is_kids_account,
+            language: demoSession.user.user_metadata.language,
+            email: demoSession.user.email,
+            demo_user: true,
+            session_restored: true
+          },
+          demoSession.user.user_metadata.subscription_status as 'active' | 'cancelled' | 'expired' | 'none',
+          { planId: demoSession.user.user_metadata.subscription_plan_id }
+        );
+        
+        setUserType(demoSession.user.user_metadata.is_kids_account);
+        
+        return;
+      }
+    }
+    
+    // Production mode: Check for existing Supabase session
     const { data: sessionData } = await supabase.auth.getSession();
     
     if (sessionData?.session?.user) {

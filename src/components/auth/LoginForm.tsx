@@ -9,6 +9,8 @@ import { safeCapture, safeReloadFeatureFlags } from '../../utils/posthog';
 import { validateEmail, sanitizeInput, rateLimitCheck, auditLog } from '../../utils/inputValidation';
 import { identifyUserWithSubscription, setUserType } from '../../utils/posthog/simple';
 import type { SubscriptionMetadata } from '../../utils/posthog/simple';
+import { useDemoMode } from '../../hooks/useDemoMode';
+import { createDemoSession } from '../../utils/demoAuth';
 
 interface LoginFormProps {
   fetchUserProfile: (userId: string) => Promise<void>;
@@ -20,12 +22,77 @@ export const LoginForm = ({ fetchUserProfile }: LoginFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isDemoMode } = useDemoMode();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
+      // Demo mode: Skip Supabase authentication entirely
+      if (isDemoMode) {
+        console.log(`🎭 [${new Date().toISOString()}] Demo mode: Using fake authentication`);
+        
+        // Basic validation
+        if (!email || !password) {
+          toast({
+            title: "Missing credentials",
+            description: "Please enter both email and password",
+            variant: "destructive"
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        // Sanitize email input
+        const sanitizedEmail = sanitizeInput(email).toLowerCase();
+        
+        // Create demo session (no Supabase call)
+        const demoUser = {
+          name: sanitizedEmail.split('@')[0],
+          is_kids_account: false,
+          subscription_status: 'active',
+          subscription_plan_id: 'premium'
+        };
+        
+        createDemoSession(sanitizedEmail, demoUser);
+        
+        // Identify in PostHog with demo user
+        identifyUserWithSubscription(
+          sanitizedEmail,
+          {
+            name: demoUser.name,
+            is_kids_account: demoUser.is_kids_account,
+            language: 'English',
+            email: sanitizedEmail,
+            demo_user: true,
+            returning_user: true,
+            last_login: new Date().toISOString()
+          },
+          'active',
+          { planId: 'premium' }
+        );
+        
+        setUserType(false);
+        
+        // Capture demo login event
+        safeCapture('user_login_success', {
+          demo_user: true,
+          returning_user: true,
+          login_timestamp: new Date().toISOString()
+        });
+        
+        toast({
+          title: "Demo login successful",
+          description: "You're now using Hogflix in demo mode"
+        });
+        
+        setIsLoading(false);
+        navigate('/');
+        return;
+      }
+      
+      // Production mode: Use Supabase authentication
       // Rate limiting check - max 5 login attempts per 15 minutes
       // Admins can override with higher limits for automation
       let adminOverride = undefined;

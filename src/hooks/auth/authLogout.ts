@@ -2,6 +2,7 @@ import { supabase } from '../../integrations/supabase/client';
 import { safeReset } from '../../utils/posthog';
 import { cleanupAllAuthData } from './authCleanup';
 import { AuthState, initialAuthState } from './authTypes';
+import { isDemoMode, clearDemoSession } from '../../utils/demoAuth';
 
 // Enhanced logout with comprehensive cleanup
 export const handleLogout = async (
@@ -18,12 +19,18 @@ export const handleLogout = async (
     console.log('Resetting PostHog identity...');
     safeReset();
     
-    // Step 3: Sign out from Supabase with global scope
-    console.log('Signing out from Supabase...');
-    try {
-      await supabase.auth.signOut({ scope: 'global' });
-    } catch (supabaseError) {
-      console.warn('Supabase signOut error (continuing anyway):', supabaseError);
+    // Step 3: Handle demo mode vs production logout
+    if (isDemoMode()) {
+      console.log('🎭 Demo mode: Clearing demo session...');
+      clearDemoSession();
+    } else {
+      // Sign out from Supabase with global scope
+      console.log('Signing out from Supabase...');
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+      } catch (supabaseError) {
+        console.warn('Supabase signOut error (continuing anyway):', supabaseError);
+      }
     }
     
     // Step 4: Reset auth state

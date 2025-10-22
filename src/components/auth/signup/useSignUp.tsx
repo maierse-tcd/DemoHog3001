@@ -5,6 +5,8 @@ import { SignUpFormData } from './signupSchema';
 import { validateSignupData } from './signupValidation';
 import { createSupabaseUser } from './signupSupabase';
 import { trackSignupSuccess } from './signupTracking';
+import { useDemoMode } from '../../../hooks/useDemoMode';
+import { createDemoUser } from './signupDemo';
 
 interface UseSignUpProps {
   selectedPlanId: string | null;
@@ -16,6 +18,7 @@ export const useSignUp = ({ selectedPlanId, planName, planCost }: UseSignUpProps
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isDemoMode } = useDemoMode();
 
   const signUp = async (values: SignUpFormData) => {
     setIsLoading(true);
@@ -29,13 +32,26 @@ export const useSignUp = ({ selectedPlanId, planName, planCost }: UseSignUpProps
 
       const signupDate = new Date().toISOString();
       
-      // Create user in Supabase
-      const data = await createSupabaseUser(validation.sanitizedEmail, values, {
-        selectedPlanId: selectedPlanId!,
-        planName,
-        planCost,
-        signupDate
-      });
+      let data;
+      
+      // Demo mode: Skip Supabase authentication
+      if (isDemoMode) {
+        console.log(`🎭 [${new Date().toISOString()}] Demo mode: Creating fake user`);
+        data = await createDemoUser(validation.sanitizedEmail, values, {
+          selectedPlanId: selectedPlanId!,
+          planName,
+          planCost,
+          signupDate
+        });
+      } else {
+        // Production mode: Create user in Supabase
+        data = await createSupabaseUser(validation.sanitizedEmail, values, {
+          selectedPlanId: selectedPlanId!,
+          planName,
+          planCost,
+          signupDate
+        });
+      }
 
       // Track signup success in PostHog
       if (data?.user) {
