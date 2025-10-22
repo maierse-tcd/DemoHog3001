@@ -27,19 +27,21 @@ export function usePostHogUserManager() {
       
       safeGroupIdentify('user_type', userType, groupProperties);
       debounceTimerRef.current = null;
-    }, 300);
+    }, 100); // Reduced from 300ms for faster automation response
   }, []);
 
   // Update user type (exposed to other components through context)
   const updateUserType = useCallback((isKid: boolean) => {
     const newUserType = isKid ? 'Kid' : 'Adult';
     
-    console.log(`Updating user type to: ${newUserType}`);
+    console.log(`[PostHog UserManager] updateUserType called: ${newUserType}`);
+    console.log(`[PostHog UserManager] Current timestamp: ${new Date().toISOString()}`);
     
     // Get user info from Supabase to include in group properties
     supabase.auth.getUser().then(({ data }) => {
       if (data?.user) {
         const userId = data.user.id;
+        console.log(`[PostHog UserManager] Fetching profile for user: ${userId}`);
         
         // Fetch profile info
         supabase
@@ -50,6 +52,8 @@ export function usePostHogUserManager() {
           .then(({ data: profileData }) => {
             const dateJoined = profileData?.created_at || new Date().toISOString();
             
+            console.log(`[PostHog UserManager] Profile fetched, calling identifyUserGroup`);
+            
             // Identify the group with relevant properties
             identifyUserGroup(newUserType, {
               name: newUserType, // REQUIRED for UI visibility
@@ -57,11 +61,17 @@ export function usePostHogUserManager() {
               date_joined: dateJoined
             });
             
+            console.log(`[PostHog UserManager] Group identified, capturing event`);
+            
             // Also capture an event with the new group
             captureEventWithGroup('user_type_changed', 'user_type', newUserType, {
               changed_at: new Date().toISOString()
             });
+            
+            console.log(`[PostHog UserManager] updateUserType complete for: ${newUserType}`);
           });
+      } else {
+        console.warn(`[PostHog UserManager] No user data available, group identification skipped`);
       }
     });
   }, [identifyUserGroup]);

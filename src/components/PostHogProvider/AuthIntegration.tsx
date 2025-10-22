@@ -3,7 +3,6 @@ import { useEffect, useRef } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { 
   identifyUserWithSubscription, 
-  setUserType, 
   setSubscriptionPlan, 
   resetIdentity,
   syncSubscriptionStatusToPostHog,
@@ -102,10 +101,10 @@ export const useAuthIntegration = ({
     console.log(`PostHog: Identifying user with profile data: ${email}`);
     currentUserRef.current = email;
     
-    // Fetch profile and identify
+    // Fetch profile FIRST - CRITICAL for accurate data
     supabase
       .from('profiles')
-      .select('is_admin, admin_override, created_at, name, language, is_kids')
+      .select('is_admin, admin_override, created_at, name, language, is_kids, subscription_status, subscription_plan_id')
       .eq('id', userId)
       .maybeSingle()
       .then(({ data: profileData, error }) => {
@@ -113,48 +112,38 @@ export const useAuthIntegration = ({
         
         if (error) {
           console.warn('PostHog: Profile fetch error:', error);
+          // Continue with defaults but log warning
         }
         
-        // Create user properties
+        // ONLY proceed if we have profile data OR if we explicitly want to use defaults
+        const isKid = profileData?.is_kids === true;
+        const subscriptionStatus = profileData?.subscription_status || 'none';
+        const planId = profileData?.subscription_plan_id;
+        
+        // Create user properties with ACTUAL profile data
         const userProperties = {
           name: profileData?.name || metadata?.name || email?.split('@')[0],
-          is_kids_account: profileData?.is_kids || false,
+          is_kids_account: isKid, // Will be accurate now
           language: profileData?.language || 'English',
           is_admin_user: profileData?.admin_override || profileData?.is_admin || false,
           email: email,
           supabase_id: userId,
-          $set_once: { first_seen: new Date().toISOString() }
+          $set_once: { first_seen: profileData?.created_at || new Date().toISOString() }
         };
         
-        // Enhanced identification with subscription status sync
-        console.log('PostHog: Identifying user with properties:', userProperties);
+        // Identify user with subscription properties
+        identifyUserWithSubscription(
+          email, 
+          userProperties, 
+          subscriptionStatus === 'active' ? 'active' : 
+          subscriptionStatus === 'cancelled' ? 'cancelled' : 'none',
+          planId ? { planId } : undefined
+        );
         
-        // Fetch subscription status from profiles and sync to PostHog
-        supabase
-          .from('profiles')
-          .select('subscription_status, subscription_plan_id')
-          .eq('id', userId)
-          .maybeSingle()
-          .then(({ data: subscriptionData }) => {
-            if (!isMountedRef.current) return;
-            
-            const subscriptionStatus = subscriptionData?.subscription_status || 'none';
-            const planId = subscriptionData?.subscription_plan_id;
-            
-            // Identify user with subscription properties
-            identifyUserWithSubscription(
-              email, 
-              userProperties, 
-              subscriptionStatus === 'active' ? 'active' : 
-              subscriptionStatus === 'cancelled' ? 'cancelled' : 'none',
-              planId ? { planId } : undefined
-            );
-            
-            // Sync subscription status for cohort analysis
-            syncSubscriptionStatusToPostHog(userId, subscriptionStatus, { planId });
-          });
+        // Sync subscription status
+        syncSubscriptionStatusToPostHog(userId, subscriptionStatus, { planId });
         
-        // Reload feature flags after identification with proper timing
+        // Reload feature flags ONCE after identification
         console.log('PostHog: Reloading feature flags after user identification');
         setTimeout(() => {
           if (posthog && typeof posthog.reloadFeatureFlags === 'function') {
@@ -163,17 +152,19 @@ export const useAuthIntegration = ({
           }
         }, 100);
         
-        // Set user type
-        const isKid = profileData?.is_kids === true;
+        // Set user type - SINGLE CALL, uses actual is_kids value
         console.log(`PostHog: Setting user type - isKid: ${isKid}`);
-        setUserType(isKid);
         updateUserType(isKid);
         
-        // Handle subscription if present
+        // Handle subscription if present from metadata (signup flow)
         if (metadata?.selectedPlanId) {
-          console.log(`PostHog: Processing subscription: ${metadata.selectedPlanId}`);
+          console.log(`PostHog: Processing subscription from signup: ${metadata.selectedPlanId}`);
           fetchAndSetSubscription(metadata.selectedPlanId);
         }
+      }, (err: any) => {
+        console.error('PostHog: Error in identifyUserWithProfile:', err);
+        // Still mark user as current to prevent retries
+        currentUserRef.current = email;
       });
   };
   
