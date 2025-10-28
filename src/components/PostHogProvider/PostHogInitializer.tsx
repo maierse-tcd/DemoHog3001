@@ -28,6 +28,7 @@ export const PostHogInitializer = ({
         persistence: 'localStorage' as const,
         capture_pageview: false, // Disable automatic pageview capture - we'll handle it manually
         autocapture: true,
+        disable_web_experiments: false, // Enable web experiments for A/B testing
         loaded: (posthogInstance: any) => {
           console.log('PostHog loaded successfully');
           onLoaded();
