@@ -1,32 +1,19 @@
 
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { trackEvent } from '../utils/posthog/simple';
+import { usePostHog } from 'posthog-js/react';
 
 /**
  * Hook that automatically tracks pageviews on route changes
+ * Uses the PostHog instance from the provider to ensure correct initialization
  */
 export const usePageviewTracking = () => {
   const location = useLocation();
+  const posthog = usePostHog();
 
   useEffect(() => {
-    // Get page title
-    const pageTitle = document.title || 'Hogflix';
-    
-    // Create pageview properties
-    const pageviewProps = {
-      $current_url: window.location.href,
-      $pathname: location.pathname,
-      $search: location.search,
-      $hash: location.hash,
-      page_title: pageTitle,
-      referrer: document.referrer,
-      timestamp: new Date().toISOString()
-    };
-
-    // Track the pageview
-    trackEvent('$pageview', pageviewProps);
-    
-    console.log(`PostHog: Pageview tracked for route: ${location.pathname}`);
-  }, [location.pathname, location.search, location.hash]);
+    if (posthog) {
+      posthog.capture('$pageview');
+    }
+  }, [location.pathname, location.search, location.hash, posthog]);
 };
