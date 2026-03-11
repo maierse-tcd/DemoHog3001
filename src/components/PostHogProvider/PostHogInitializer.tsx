@@ -27,6 +27,7 @@ export const PostHogInitializer = ({
         api_host: apiHost,
         persistence: 'localStorage' as const,
         capture_pageview: false, // Disable automatic pageview capture - we'll handle it manually
+        capture_pageleave: true, // Enable pageleave for web analytics session tracking
         autocapture: true,
         disable_web_experiments: false, // Enable web experiments for A/B testing
         loaded: (posthogInstance: any) => {
