@@ -29,6 +29,7 @@ export const PostHogInitializer = ({
         capture_pageview: false, // Disable automatic pageview capture - we'll handle it manually
         capture_pageleave: true, // Enable pageleave for web analytics session tracking
         autocapture: true,
+        enable_recording_console_log: true, // Capture console logs for PostHog Logs product
         disable_web_experiments: false, // Enable web experiments for A/B testing
         loaded: (posthogInstance: any) => {
           console.log('PostHog loaded successfully');
